@@ -1,0 +1,329 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Dépannage & Support
+
+**Référence :** UG-012
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide décrit les procédures de diagnostic, de dépannage et d'assistance de MORACare Enterprise.
+
+Il fournit les bonnes pratiques permettant d'identifier rapidement les incidents, d'appliquer les premières actions correctives et d'assurer une collaboration efficace avec le support technique.
+
+---
+
+# 2. Public concerné
+
+Ce guide s'adresse aux :
+
+- Administrateurs de la plateforme ;
+- Responsables d'établissement ;
+- Administrateurs système ;
+- Personnel informatique ;
+- Utilisateurs autorisés ;
+- Support technique MORA Shawiri.
+
+---
+
+# 3. Classification des incidents
+
+Les incidents sont classés selon leur niveau de gravité.
+
+## Critique
+
+- Arrêt complet du système
+- Base de données indisponible
+- Impossible de connecter les utilisateurs
+- Perte de données
+- Cyberattaque
+
+---
+
+## Majeur
+
+- Module inaccessible
+- Dysfonctionnement d'un service
+- Échec des sauvegardes
+- Performances fortement dégradées
+
+---
+
+## Mineur
+
+- Problème d'affichage
+- Erreur d'impression
+- Notification non envoyée
+- Anomalie sans impact majeur
+
+---
+
+# 4. Première vérification
+
+Avant toute demande d'assistance :
+
+- vérifier la connexion Internet ;
+- contrôler l'alimentation électrique ;
+- redémarrer le navigateur ;
+- vérifier l'état du serveur ;
+- consulter les notifications système.
+
+---
+
+# 5. Problèmes de connexion
+
+En cas d'impossibilité de se connecter :
+
+1. vérifier les identifiants ;
+2. contrôler les droits d'accès ;
+3. vérifier la connexion réseau ;
+4. réinitialiser le mot de passe si nécessaire ;
+5. consulter les journaux d'authentification.
+
+---
+
+# 6. Performances lentes
+
+Si l'application devient lente :
+
+- vérifier la charge du serveur ;
+- contrôler l'utilisation de la mémoire ;
+- vérifier l'espace disque ;
+- optimiser la base de données ;
+- analyser les journaux système.
+
+---
+
+# 7. Base de données indisponible
+
+En cas d'indisponibilité :
+
+- vérifier que PostgreSQL est démarré ;
+- contrôler la connexion réseau ;
+- vérifier les paramètres de connexion ;
+- consulter les journaux de la base ;
+- restaurer une sauvegarde si nécessaire.
+
+---
+
+# 8. Sauvegardes
+
+Si une sauvegarde échoue :
+
+- vérifier l'espace disque ;
+- contrôler les droits d'accès ;
+- vérifier le planificateur de tâches ;
+- consulter les journaux ;
+- effectuer une sauvegarde manuelle.
+
+---
+
+# 9. Impression PDF
+
+En cas d'échec d'impression :
+
+- vérifier le navigateur ;
+- contrôler les paramètres PDF ;
+- vérifier les modèles d'impression ;
+- tester avec un autre document.
+
+---
+
+# 10. Notifications
+
+Si les notifications ne sont plus envoyées :
+
+- vérifier la configuration SMTP ;
+- contrôler la connexion Internet ;
+- consulter les journaux ;
+- tester l'envoi d'un message.
+
+---
+
+# 11. Problèmes de modules
+
+Si un module est inaccessible :
+
+- vérifier qu'il est activé ;
+- contrôler les permissions ;
+- vérifier les journaux ;
+- redémarrer les services.
+
+---
+
+# 12. Gestion des erreurs
+
+Chaque erreur doit être documentée avec :
+
+- date ;
+- heure ;
+- utilisateur concerné ;
+- module concerné ;
+- description ;
+- captures d'écran ;
+- journaux disponibles.
+
+---
+
+# 13. Journaux système
+
+Les journaux permettent de consulter :
+
+- erreurs applicatives ;
+- connexions ;
+- opérations utilisateurs ;
+- erreurs de base de données ;
+- erreurs serveur ;
+- événements de sécurité.
+
+Ils constituent la principale source d'information pour le diagnostic.
+
+---
+
+# 14. Procédure d'escalade
+
+Si le problème n'est pas résolu :
+
+### Niveau 1
+
+Support informatique de l'établissement.
+
+### Niveau 2
+
+Administrateur plateforme.
+
+### Niveau 3
+
+Support technique MORA Shawiri.
+
+### Niveau 4
+
+Équipe de développement MORACare Enterprise.
+
+Chaque escalade doit inclure toutes les informations de diagnostic disponibles.
+
+---
+
+# 15. Restauration des sauvegardes
+
+Avant toute restauration :
+
+- vérifier l'intégrité de la sauvegarde ;
+- informer les utilisateurs ;
+- arrêter les services concernés.
+
+Après restauration :
+
+- contrôler la cohérence des données ;
+- vérifier les connexions ;
+- effectuer des tests fonctionnels.
+
+---
+
+# 16. Maintenance préventive
+
+Il est recommandé de :
+
+- appliquer les mises à jour ;
+- contrôler les sauvegardes ;
+- surveiller les performances ;
+- vérifier les certificats SSL ;
+- nettoyer régulièrement les journaux.
+
+---
+
+# 17. Maintenance corrective
+
+Lors d'un incident :
+
+- identifier la cause ;
+- appliquer le correctif ;
+- vérifier le fonctionnement ;
+- documenter l'intervention ;
+- informer les utilisateurs concernés.
+
+---
+
+# 18. Bonnes pratiques
+
+Il est recommandé de :
+
+- documenter chaque incident ;
+- conserver les journaux système ;
+- tester régulièrement les sauvegardes ;
+- limiter les droits administrateurs ;
+- mettre à jour le serveur et les dépendances ;
+- former les utilisateurs.
+
+---
+
+# 19. Support MORA Shawiri
+
+Lors d'une demande d'assistance, fournir :
+
+- version de MORACare Enterprise ;
+- description détaillée du problème ;
+- captures d'écran ;
+- journaux d'erreurs ;
+- navigateur utilisé ;
+- système d'exploitation ;
+- date et heure de l'incident ;
+- actions déjà réalisées.
+
+Ces informations permettent d'accélérer le diagnostic.
+
+---
+
+# 20. Questions fréquentes
+
+## Le système est inaccessible.
+
+Vérifier le serveur, la connexion réseau et l'état des services avant de contacter le support.
+
+---
+
+## Une erreur apparaît lors d'une consultation.
+
+Noter le message d'erreur, effectuer une capture d'écran et consulter les journaux applicatifs.
+
+---
+
+## Les utilisateurs ne reçoivent plus les notifications.
+
+Vérifier la configuration SMTP et les journaux d'envoi.
+
+---
+
+## Une mise à jour a échoué.
+
+Restaurer la dernière sauvegarde fonctionnelle si nécessaire, puis contacter le support avec les journaux de mise à jour.
+
+---
+
+# 21. Conclusion
+
+Le Guide Dépannage & Support constitue la référence opérationnelle pour la résolution des incidents et la maintenance de MORACare Enterprise. En appliquant les procédures décrites dans ce document, les équipes techniques peuvent réduire les temps d'arrêt, améliorer la disponibilité du système et garantir la continuité des services au sein des établissements de santé.
+
+---
+
+# Fin du document
+
+**Référence :** UG-012
+
+**Titre :** Guide Dépannage & Support
+
+**Version :** 1.0

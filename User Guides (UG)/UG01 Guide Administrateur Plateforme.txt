@@ -1,0 +1,280 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Administrateur Plateforme
+
+**Référence :** UG-001
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide décrit l'utilisation de l'espace Administrateur de la plateforme MORACare Enterprise.
+
+Il s'adresse exclusivement aux administrateurs de MORA Shawiri chargés de gérer la plateforme SaaS.
+
+Les responsables d'établissement et les utilisateurs des cliniques disposent de guides distincts.
+
+---
+
+# 2. Responsabilités de l'administrateur
+
+L'administrateur plateforme est responsable de :
+
+- gérer les établissements clients ;
+- gérer les abonnements ;
+- superviser les licences ;
+- surveiller la plateforme ;
+- assister les établissements ;
+- administrer les paramètres globaux.
+
+L'administrateur n'intervient pas dans les activités médicales quotidiennes des établissements.
+
+---
+
+# 3. Connexion
+
+Depuis la page d'authentification :
+
+1. saisir son adresse e-mail ;
+2. saisir son mot de passe ;
+3. cliquer sur **Connexion**.
+
+Selon la politique de sécurité, une authentification multifacteur peut être demandée.
+
+---
+
+# 4. Tableau de bord
+
+Le tableau de bord affiche notamment :
+
+- nombre d'établissements ;
+- abonnements actifs ;
+- abonnements expirés ;
+- utilisateurs ;
+- alertes système ;
+- incidents techniques ;
+- statistiques générales.
+
+---
+
+# 5. Gestion des établissements
+
+L'administrateur peut :
+
+- créer un établissement ;
+- modifier ses informations ;
+- suspendre un établissement ;
+- réactiver un établissement ;
+- consulter son historique.
+
+Chaque établissement possède un identifiant unique.
+
+---
+
+# 6. Création d'un établissement
+
+Pour créer un établissement :
+
+1. ouvrir le menu **Établissements** ;
+2. cliquer sur **Créer** ;
+3. renseigner les informations demandées ;
+4. enregistrer.
+
+Le système génère automatiquement les références nécessaires.
+
+---
+
+# 7. Gestion des abonnements
+
+L'administrateur peut :
+
+- créer un abonnement ;
+- renouveler un abonnement ;
+- suspendre un abonnement ;
+- modifier un plan ;
+- consulter les échéances.
+
+---
+
+# 8. Gestion des licences
+
+Depuis le menu **Licences**, il est possible de :
+
+- consulter les licences actives ;
+- attribuer une licence ;
+- désactiver une licence ;
+- consulter les historiques.
+
+---
+
+# 9. Gestion des utilisateurs
+
+L'administrateur plateforme peut :
+
+- créer un administrateur ;
+- réinitialiser un mot de passe ;
+- désactiver un compte ;
+- attribuer des rôles.
+
+Les comptes des établissements restent sous la responsabilité de chaque établissement.
+
+---
+
+# 10. Paramètres globaux
+
+Les paramètres comprennent notamment :
+
+- langues ;
+- paramètres généraux ;
+- notifications ;
+- modèles de documents ;
+- configuration des services.
+
+Toute modification est journalisée.
+
+---
+
+# 11. Supervision
+
+Le tableau de supervision permet de consulter :
+
+- disponibilité ;
+- performances ;
+- espace de stockage ;
+- erreurs ;
+- alertes ;
+- traitements en attente.
+
+---
+
+# 12. Journaux
+
+Les journaux permettent de retrouver :
+
+- connexions ;
+- modifications ;
+- erreurs ;
+- actions administratives.
+
+Ils sont accessibles uniquement aux administrateurs autorisés.
+
+---
+
+# 13. Assistance
+
+L'administrateur peut :
+
+- consulter les demandes d'assistance ;
+- suivre leur traitement ;
+- répondre aux établissements ;
+- clôturer les demandes.
+
+---
+
+# 14. Notifications
+
+L'espace affiche :
+
+- renouvellements ;
+- incidents ;
+- alertes ;
+- sauvegardes ;
+- informations importantes.
+
+---
+
+# 15. Sauvegardes
+
+L'administrateur peut :
+
+- vérifier les sauvegardes ;
+- consulter leur historique ;
+- lancer une restauration selon les procédures autorisées.
+
+---
+
+# 16. Sécurité
+
+L'administrateur doit :
+
+- protéger ses identifiants ;
+- utiliser un mot de passe robuste ;
+- fermer sa session après utilisation ;
+- signaler toute activité inhabituelle.
+
+---
+
+# 17. Bonnes pratiques
+
+Il est recommandé de :
+
+- contrôler régulièrement les abonnements ;
+- surveiller les alertes ;
+- vérifier les sauvegardes ;
+- consulter les journaux ;
+- maintenir la plateforme à jour.
+
+---
+
+# 18. Déconnexion
+
+Pour quitter la plateforme :
+
+1. ouvrir le menu utilisateur ;
+2. cliquer sur **Déconnexion**.
+
+La session est immédiatement fermée.
+
+---
+
+# 19. Questions fréquentes
+
+## Je ne peux plus me connecter.
+
+Utiliser la procédure de réinitialisation du mot de passe ou contacter un administrateur habilité.
+
+---
+
+## Un établissement ne peut plus accéder à la plateforme.
+
+Vérifier :
+
+- l'abonnement ;
+- la licence ;
+- le statut de l'établissement ;
+- les journaux système.
+
+---
+
+## Où consulter les alertes ?
+
+Depuis le tableau de bord, section **Notifications**.
+
+---
+
+# 20. Conclusion
+
+Le présent guide permet aux administrateurs de MORA Shawiri d'exploiter efficacement la plateforme MORACare Enterprise. En appliquant les procédures décrites, ils assurent la gestion des établissements, la supervision du service SaaS, le suivi des abonnements et le bon fonctionnement global de la plateforme.
+
+---
+
+# Fin du document
+
+**Référence :** UG-001
+
+**Titre :** Guide Administrateur Plateforme
+
+**Version :** 1.0

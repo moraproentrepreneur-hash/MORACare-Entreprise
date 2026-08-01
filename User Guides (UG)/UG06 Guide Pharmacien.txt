@@ -1,0 +1,312 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Pharmacien
+
+**Référence :** UG-006
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide explique l'utilisation de MORACare Enterprise par les pharmaciens et le personnel de la pharmacie.
+
+Il décrit les procédures de gestion des prescriptions médicales, de délivrance des médicaments, de gestion des stocks, des inventaires et de la traçabilité pharmaceutique.
+
+---
+
+# 2. Profil concerné
+
+Ce guide s'adresse aux :
+
+- Pharmaciens ;
+- Pharmaciens responsables ;
+- Préparateurs en pharmacie ;
+- Personnel autorisé de la pharmacie.
+
+Les fonctionnalités disponibles dépendent des permissions attribuées par le Responsable d'Établissement.
+
+---
+
+# 3. Connexion
+
+Pour accéder à MORACare Enterprise :
+
+1. Ouvrir la plateforme.
+2. Saisir l'adresse e-mail professionnelle.
+3. Entrer le mot de passe.
+4. Cliquer sur **Connexion**.
+
+Toutes les opérations sont enregistrées dans le journal d'audit.
+
+---
+
+# 4. Tableau de bord
+
+Le tableau de bord de la pharmacie présente notamment :
+
+- prescriptions en attente ;
+- délivrances du jour ;
+- médicaments en rupture ;
+- produits proches de la péremption ;
+- mouvements de stock ;
+- alertes pharmaceutiques.
+
+---
+
+# 5. Consultation des prescriptions
+
+Le pharmacien peut consulter les prescriptions selon différents critères :
+
+- patient ;
+- médecin prescripteur ;
+- date ;
+- statut ;
+- service.
+
+Chaque prescription possède une référence unique.
+
+---
+
+# 6. Vérification d'une prescription
+
+Avant toute délivrance, le pharmacien vérifie :
+
+- identité du patient ;
+- validité de la prescription ;
+- allergies connues ;
+- contre-indications éventuelles ;
+- disponibilité des médicaments.
+
+Toute anomalie doit être signalée au médecin prescripteur.
+
+---
+
+# 7. Délivrance des médicaments
+
+Pour délivrer une prescription :
+
+1. ouvrir la prescription ;
+2. vérifier les médicaments ;
+3. sélectionner les lots disponibles ;
+4. confirmer les quantités délivrées ;
+5. valider la délivrance.
+
+Le stock est mis à jour automatiquement.
+
+---
+
+# 8. Gestion des médicaments
+
+Le catalogue des médicaments comprend notamment :
+
+- nom commercial ;
+- dénomination commune internationale (DCI) ;
+- forme pharmaceutique ;
+- dosage ;
+- unité de conditionnement ;
+- catégorie thérapeutique.
+
+Chaque médicament possède une référence métier unique.
+
+---
+
+# 9. Gestion des stocks
+
+Le pharmacien peut :
+
+- consulter le stock disponible ;
+- enregistrer une entrée ;
+- enregistrer une sortie ;
+- effectuer un ajustement ;
+- consulter l'historique des mouvements.
+
+Chaque mouvement est tracé.
+
+---
+
+# 10. Gestion des lots
+
+Chaque lot comprend :
+
+- numéro de lot ;
+- fournisseur ;
+- quantité ;
+- date de réception ;
+- date de péremption ;
+- emplacement de stockage.
+
+Les lots sont suivis individuellement.
+
+---
+
+# 11. Gestion des dates de péremption
+
+Le système surveille automatiquement :
+
+- produits expirés ;
+- produits proches de la péremption ;
+- produits à retirer.
+
+Des alertes sont générées selon les seuils définis par l'établissement.
+
+---
+
+# 12. Réapprovisionnement
+
+Le pharmacien peut :
+
+- consulter les seuils minimums ;
+- préparer une commande ;
+- enregistrer une livraison ;
+- valider les nouvelles entrées en stock.
+
+Les mouvements sont automatiquement historisés.
+
+---
+
+# 13. Inventaire
+
+Le module Inventaire permet :
+
+- de réaliser un inventaire complet ;
+- d'effectuer un inventaire partiel ;
+- de comparer le stock physique au stock théorique ;
+- d'enregistrer les écarts.
+
+Chaque inventaire est archivé.
+
+---
+
+# 14. Historique des mouvements
+
+Le pharmacien peut consulter :
+
+- toutes les entrées ;
+- toutes les sorties ;
+- les délivrances ;
+- les ajustements ;
+- les inventaires.
+
+Chaque mouvement comporte :
+
+- date ;
+- heure ;
+- utilisateur ;
+- motif.
+
+---
+
+# 15. Alertes
+
+Le système affiche automatiquement les alertes concernant :
+
+- rupture de stock ;
+- stock faible ;
+- péremption prochaine ;
+- lots expirés ;
+- anomalies de stock.
+
+---
+
+# 16. Rapports
+
+La pharmacie peut générer différents rapports PDF :
+
+- état du stock ;
+- mouvements de stock ;
+- inventaire ;
+- médicaments périmés ;
+- consommation par période ;
+- délivrances par patient.
+
+---
+
+# 17. Recherche
+
+Le moteur de recherche permet de retrouver un médicament grâce à :
+
+- son nom ;
+- sa DCI ;
+- son code ;
+- son lot ;
+- sa catégorie.
+
+---
+
+# 18. Sécurité
+
+Le pharmacien doit :
+
+- protéger ses identifiants ;
+- respecter les prescriptions médicales ;
+- contrôler les dates de péremption ;
+- verrouiller sa session en cas d'absence.
+
+Toutes les opérations sont journalisées.
+
+---
+
+# 19. Bonnes pratiques
+
+Il est recommandé de :
+
+- vérifier les prescriptions avant toute délivrance ;
+- contrôler systématiquement les dates de péremption ;
+- utiliser en priorité les lots les plus anciens (FEFO) ;
+- effectuer régulièrement les inventaires ;
+- signaler immédiatement toute anomalie de stock.
+
+---
+
+# 20. Questions fréquentes
+
+## Un médicament est en rupture.
+
+Le système affiche une alerte. Le pharmacien peut enregistrer une commande de réapprovisionnement.
+
+---
+
+## Puis-je modifier une délivrance validée ?
+
+Selon les règles de l'établissement, une correction peut être effectuée. Toutes les modifications restent historisées.
+
+---
+
+## Comment consulter les médicaments proches de la péremption ?
+
+Depuis le tableau de bord ou le menu **Alertes**.
+
+---
+
+## Les mouvements de stock sont-ils automatiques ?
+
+Oui. Chaque délivrance, réception ou ajustement met automatiquement le stock à jour.
+
+---
+
+# 21. Conclusion
+
+Le Guide Pharmacien permet d'utiliser efficacement le module Pharmacie de MORACare Enterprise. Il couvre l'ensemble des activités pharmaceutiques : gestion des prescriptions, délivrance des médicaments, suivi des stocks, gestion des lots, contrôle des dates de péremption, inventaires et génération des rapports, tout en assurant une traçabilité complète et la sécurité du circuit du médicament.
+
+---
+
+# Fin du document
+
+**Référence :** UG-006
+
+**Titre :** Guide Pharmacien
+
+**Version :** 1.0

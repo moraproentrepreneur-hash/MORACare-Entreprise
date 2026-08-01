@@ -1,0 +1,300 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Patient
+
+**Référence :** UG-010
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide explique l'utilisation de l'Espace Patient de MORACare Enterprise.
+
+Il décrit les fonctionnalités permettant aux patients de gérer leurs rendez-vous, consulter leur dossier médical, accéder à leurs prescriptions, résultats d'examens, factures et communiquer de manière sécurisée avec leur établissement de santé.
+
+---
+
+# 2. Profil concerné
+
+Ce guide s'adresse aux :
+
+- Patients ;
+- Parents ou tuteurs légaux ;
+- Représentants autorisés.
+
+L'accès est strictement limité aux informations du patient concerné.
+
+---
+
+# 3. Création d'un compte
+
+Pour créer un compte :
+
+1. Accéder au portail patient.
+2. Cliquer sur **Créer un compte**.
+3. Saisir les informations demandées.
+4. Vérifier son adresse e-mail ou son numéro de téléphone.
+5. Définir un mot de passe sécurisé.
+6. Valider l'inscription.
+
+Le compte est automatiquement associé au dossier patient après vérification.
+
+---
+
+# 4. Connexion
+
+Pour accéder à l'espace patient :
+
+1. Saisir son adresse e-mail ou son numéro de téléphone.
+2. Entrer son mot de passe.
+3. Cliquer sur **Connexion**.
+
+En cas d'oubli, utiliser la fonction **Mot de passe oublié**.
+
+---
+
+# 5. Tableau de bord
+
+Le tableau de bord présente :
+
+- prochains rendez-vous ;
+- consultations récentes ;
+- prescriptions actives ;
+- résultats d'analyses disponibles ;
+- examens d'imagerie ;
+- factures ;
+- notifications importantes.
+
+---
+
+# 6. Mon profil
+
+Le patient peut consulter et mettre à jour certaines informations :
+
+- photo de profil ;
+- adresse ;
+- numéro de téléphone ;
+- adresse e-mail ;
+- personne à contacter en cas d'urgence.
+
+Certaines informations administratives ne peuvent être modifiées que par l'établissement.
+
+---
+
+# 7. Prise de rendez-vous
+
+Le patient peut :
+
+- choisir un service ;
+- sélectionner un médecin ;
+- consulter les disponibilités ;
+- réserver un créneau ;
+- recevoir une confirmation.
+
+Les rendez-vous sont synchronisés avec le planning de l'établissement.
+
+---
+
+# 8. Gestion des rendez-vous
+
+Depuis l'espace personnel, le patient peut :
+
+- consulter ses rendez-vous ;
+- demander un report ;
+- annuler un rendez-vous (selon les règles de l'établissement) ;
+- consulter l'historique des consultations.
+
+---
+
+# 9. Consultation du dossier médical
+
+Le patient peut consulter :
+
+- historique des consultations ;
+- diagnostics communiqués ;
+- comptes rendus médicaux ;
+- hospitalisations ;
+- vaccinations ;
+- documents médicaux autorisés.
+
+L'accès dépend des politiques de l'établissement.
+
+---
+
+# 10. Prescriptions médicales
+
+Le module permet de consulter :
+
+- médicaments prescrits ;
+- posologie ;
+- durée du traitement ;
+- recommandations du médecin.
+
+Les prescriptions peuvent être téléchargées au format PDF.
+
+---
+
+# 11. Résultats de laboratoire
+
+Le patient peut accéder :
+
+- aux analyses biologiques validées ;
+- aux comptes rendus ;
+- aux rapports PDF.
+
+Les résultats sont disponibles uniquement après validation du laboratoire.
+
+---
+
+# 12. Examens d'imagerie
+
+Le patient peut consulter :
+
+- comptes rendus radiologiques ;
+- examens réalisés ;
+- images médicales (si autorisées) ;
+- rapports PDF.
+
+---
+
+# 13. Factures et paiements
+
+Le patient peut consulter :
+
+- devis ;
+- factures ;
+- paiements effectués ;
+- reste à payer ;
+- reçus.
+
+Les documents sont téléchargeables au format PDF.
+
+---
+
+# 14. Notifications
+
+Le patient reçoit des notifications concernant :
+
+- nouveaux rendez-vous ;
+- rappels de consultation ;
+- résultats disponibles ;
+- nouvelles factures ;
+- messages de l'établissement.
+
+Les notifications peuvent être envoyées par :
+
+- application ;
+- e-mail ;
+- SMS (si activé).
+
+---
+
+# 15. Téléchargement de documents
+
+Le patient peut télécharger :
+
+- ordonnances ;
+- certificats médicaux ;
+- résultats d'analyses ;
+- comptes rendus ;
+- factures ;
+- reçus.
+
+Tous les documents sont disponibles au format PDF.
+
+---
+
+# 16. Messagerie sécurisée
+
+Selon les fonctionnalités activées, le patient peut :
+
+- envoyer un message à son établissement ;
+- répondre à un message ;
+- joindre des documents ;
+- consulter l'historique des échanges.
+
+Toutes les communications sont chiffrées.
+
+---
+
+# 17. Sécurité du compte
+
+Le patient est invité à :
+
+- utiliser un mot de passe fort ;
+- ne jamais partager ses identifiants ;
+- activer l'authentification à deux facteurs (2FA) si disponible ;
+- se déconnecter après chaque utilisation sur un appareil partagé.
+
+---
+
+# 18. Bonnes pratiques
+
+Il est recommandé de :
+
+- vérifier régulièrement ses rendez-vous ;
+- mettre à jour ses coordonnées ;
+- conserver les documents téléchargés ;
+- consulter rapidement les résultats disponibles ;
+- contacter l'établissement en cas d'erreur dans le dossier.
+
+---
+
+# 19. Questions fréquentes
+
+## Je ne retrouve pas mon dossier.
+
+Contacter le service d'accueil afin de vérifier que votre compte est correctement associé à votre dossier patient.
+
+---
+
+## Puis-je modifier mes informations personnelles ?
+
+Oui, certaines informations comme le téléphone ou l'adresse peuvent être mises à jour depuis votre profil. D'autres informations nécessitent l'intervention de l'établissement.
+
+---
+
+## Pourquoi mes résultats ne sont-ils pas encore visibles ?
+
+Les résultats sont publiés uniquement après validation par le laboratoire ou le médecin responsable.
+
+---
+
+## Puis-je payer mes factures en ligne ?
+
+Oui, si le paiement en ligne est activé par votre établissement.
+
+---
+
+## Comment récupérer mon mot de passe ?
+
+Utilisez la fonction **Mot de passe oublié** disponible sur la page de connexion.
+
+---
+
+# 20. Conclusion
+
+Le Guide Patient permet aux usagers d'utiliser facilement leur espace personnel sur MORACare Enterprise. Il offre un accès sécurisé aux rendez-vous, au dossier médical, aux prescriptions, aux résultats d'examens, aux documents administratifs et aux échanges avec l'établissement, tout en garantissant la confidentialité et la protection des données de santé.
+
+---
+
+# Fin du document
+
+**Référence :** UG-010
+
+**Titre :** Guide Patient
+
+**Version :** 1.0

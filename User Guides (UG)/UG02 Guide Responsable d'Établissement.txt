@@ -1,0 +1,337 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Responsable d'Établissement
+
+**Référence :** UG-002
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide explique l'utilisation de MORACare Enterprise par le Responsable d'Établissement.
+
+Il s'adresse aux :
+
+- directeurs de clinique ;
+- administrateurs de centre médical ;
+- gestionnaires d'hôpital ;
+- responsables d'établissement de santé.
+
+Le Responsable d'Établissement administre uniquement son propre établissement.
+
+---
+
+# 2. Rôle du Responsable d'Établissement
+
+Le Responsable est chargé de :
+
+- gérer les utilisateurs ;
+- organiser les services ;
+- superviser les activités ;
+- consulter les statistiques ;
+- gérer les paramètres de son établissement ;
+- suivre les abonnements.
+
+Il ne peut jamais accéder aux données d'un autre établissement.
+
+---
+
+# 3. Connexion
+
+Pour accéder à MORACare :
+
+1. ouvrir la page de connexion ;
+2. saisir son adresse e-mail ;
+3. saisir son mot de passe ;
+4. cliquer sur **Connexion**.
+
+Lors de la première connexion, un changement de mot de passe est obligatoire.
+
+---
+
+# 4. Tableau de bord
+
+Le tableau de bord présente une vue globale de l'établissement.
+
+Les principaux indicateurs sont :
+
+- patients enregistrés ;
+- consultations du jour ;
+- rendez-vous ;
+- hospitalisations ;
+- personnel présent ;
+- factures ;
+- recettes ;
+- alertes.
+
+---
+
+# 5. Gestion des utilisateurs
+
+Depuis le menu **Utilisateurs**, le responsable peut :
+
+- créer un utilisateur ;
+- modifier un compte ;
+- désactiver un utilisateur ;
+- réinitialiser un mot de passe ;
+- attribuer un rôle.
+
+Les rôles disponibles dépendent des modules activés.
+
+---
+
+# 6. Création d'un utilisateur
+
+Pour créer un utilisateur :
+
+1. ouvrir **Utilisateurs** ;
+2. cliquer sur **Nouveau** ;
+3. compléter les informations ;
+4. sélectionner le rôle ;
+5. enregistrer.
+
+Le système génère automatiquement les identifiants de connexion.
+
+---
+
+# 7. Gestion des patients
+
+Le responsable peut :
+
+- consulter les dossiers patients ;
+- rechercher un patient ;
+- vérifier les statistiques ;
+- suivre les admissions.
+
+La création des patients est généralement réalisée par les réceptionnistes ou le personnel autorisé.
+
+---
+
+# 8. Gestion des services
+
+Le responsable peut gérer les différents services :
+
+- médecine générale ;
+- urgences ;
+- maternité ;
+- laboratoire ;
+- pharmacie ;
+- imagerie ;
+- hospitalisation.
+
+Il peut activer ou désactiver certains services selon l'organisation de l'établissement.
+
+---
+
+# 9. Gestion du personnel
+
+Le responsable peut consulter :
+
+- médecins ;
+- infirmiers ;
+- pharmaciens ;
+- biologistes ;
+- réceptionnistes ;
+- comptables.
+
+Il peut suivre :
+
+- les affectations ;
+- les disponibilités ;
+- les activités.
+
+---
+
+# 10. Gestion des rendez-vous
+
+Le responsable peut :
+
+- consulter le planning général ;
+- rechercher un rendez-vous ;
+- suivre les rendez-vous annulés ;
+- contrôler l'activité des consultations.
+
+---
+
+# 11. Gestion des hospitalisations
+
+Le responsable dispose d'une vue sur :
+
+- les patients hospitalisés ;
+- les chambres disponibles ;
+- les lits occupés ;
+- les transferts ;
+- les sorties.
+
+---
+
+# 12. Gestion financière
+
+Selon les autorisations accordées, le responsable peut consulter :
+
+- les recettes ;
+- les dépenses ;
+- les factures ;
+- les paiements ;
+- les impayés.
+
+Les opérations comptables restent sous la responsabilité du personnel habilité.
+
+---
+
+# 13. Statistiques
+
+Le tableau de bord analytique permet notamment de consulter :
+
+- activité médicale ;
+- fréquentation ;
+- revenus ;
+- taux d'occupation ;
+- consultations ;
+- prescriptions ;
+- examens réalisés.
+
+Les données peuvent être filtrées par période.
+
+---
+
+# 14. Rapports
+
+Le responsable peut générer différents rapports au format PDF :
+
+- activité quotidienne ;
+- activité mensuelle ;
+- statistiques médicales ;
+- rapports financiers ;
+- rapports administratifs.
+
+Chaque document est identifié par une référence métier.
+
+---
+
+# 15. Notifications
+
+Le responsable reçoit des notifications concernant :
+
+- les rendez-vous importants ;
+- les abonnements ;
+- les incidents ;
+- les sauvegardes ;
+- les alertes système.
+
+---
+
+# 16. Paramètres de l'établissement
+
+Le menu **Paramètres** permet notamment de gérer :
+
+- les informations de l'établissement ;
+- le logo ;
+- les coordonnées ;
+- les horaires ;
+- les spécialités ;
+- les préférences générales.
+
+---
+
+# 17. Gestion des abonnements
+
+Le responsable peut consulter :
+
+- le plan souscrit ;
+- la date d'expiration ;
+- les modules actifs ;
+- les licences disponibles.
+
+Le renouvellement est effectué selon les modalités définies par MORA Shawiri.
+
+---
+
+# 18. Sécurité
+
+Le responsable doit :
+
+- conserver ses identifiants confidentiels ;
+- utiliser un mot de passe robuste ;
+- verrouiller sa session en cas d'absence ;
+- signaler toute activité suspecte.
+
+---
+
+# 19. Bonnes pratiques
+
+Il est recommandé de :
+
+- contrôler régulièrement les comptes utilisateurs ;
+- consulter les tableaux de bord ;
+- vérifier les sauvegardes disponibles ;
+- suivre les indicateurs d'activité ;
+- maintenir les informations de l'établissement à jour.
+
+---
+
+# 20. Déconnexion
+
+Pour quitter la plateforme :
+
+1. ouvrir le menu utilisateur ;
+2. cliquer sur **Déconnexion**.
+
+Toutes les sessions sont automatiquement sécurisées.
+
+---
+
+# 21. Questions fréquentes
+
+## Je ne peux pas créer un utilisateur.
+
+Vérifier que votre rôle possède les autorisations nécessaires.
+
+---
+
+## Je ne vois pas certains modules.
+
+Les modules concernés peuvent ne pas être activés dans votre abonnement.
+
+---
+
+## Puis-je consulter les données d'une autre clinique ?
+
+Non.
+
+Chaque établissement est totalement isolé conformément aux règles de sécurité de MORACare Enterprise.
+
+---
+
+## Comment renouveler mon abonnement ?
+
+Consulter la rubrique **Abonnement** ou contacter MORA Shawiri.
+
+---
+
+# 22. Conclusion
+
+Le Guide Responsable d'Établissement permet d'administrer efficacement une clinique ou un établissement de santé avec MORACare Enterprise. En utilisant les fonctionnalités décrites dans ce document, le responsable peut superviser les utilisateurs, les activités médicales, les indicateurs de gestion et les paramètres de son établissement, tout en respectant les règles de sécurité et de confidentialité de la plateforme.
+
+---
+
+# Fin du document
+
+**Référence :** UG-002
+
+**Titre :** Guide Responsable d'Établissement
+
+**Version :** 1.0

@@ -1,0 +1,314 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Réceptionniste
+
+**Référence :** UG-005
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide explique l'utilisation de MORACare Enterprise par les réceptionnistes et agents d'accueil.
+
+Il décrit les procédures d'accueil des patients, d'enregistrement administratif, de gestion des rendez-vous, d'admission et d'orientation des patients au sein de l'établissement.
+
+---
+
+# 2. Profil concerné
+
+Ce guide s'adresse aux :
+
+- Réceptionnistes ;
+- Agents d'accueil ;
+- Secrétaires médicales ;
+- Agents administratifs.
+
+Les fonctionnalités disponibles dépendent des autorisations attribuées par le Responsable d'Établissement.
+
+---
+
+# 3. Connexion
+
+Pour accéder à MORACare Enterprise :
+
+1. Ouvrir la plateforme.
+2. Saisir l'adresse e-mail professionnelle.
+3. Entrer le mot de passe.
+4. Cliquer sur **Connexion**.
+
+Toutes les opérations sont enregistrées dans les journaux d'audit.
+
+---
+
+# 4. Tableau de bord
+
+Le tableau de bord affiche notamment :
+
+- patients attendus ;
+- rendez-vous du jour ;
+- nouvelles admissions ;
+- patients en attente ;
+- rendez-vous annulés ;
+- notifications importantes.
+
+---
+
+# 5. Accueil d'un patient
+
+Lorsqu'un patient se présente :
+
+1. vérifier son identité ;
+2. rechercher son dossier ;
+3. confirmer le rendez-vous ou créer une nouvelle admission ;
+4. orienter le patient vers le service concerné.
+
+---
+
+# 6. Recherche d'un patient
+
+Le patient peut être retrouvé grâce à :
+
+- sa référence patient ;
+- son nom ;
+- son prénom ;
+- son numéro de téléphone ;
+- sa date de naissance.
+
+La recherche est instantanée.
+
+---
+
+# 7. Enregistrement d'un nouveau patient
+
+Pour créer un dossier patient :
+
+1. ouvrir **Patients** ;
+2. cliquer sur **Nouveau patient** ;
+3. renseigner les informations administratives ;
+4. enregistrer.
+
+Le système génère automatiquement :
+
+- la référence patient ;
+- le dossier administratif.
+
+---
+
+# 8. Informations administratives
+
+Les principales informations comprennent :
+
+- identité ;
+- date de naissance ;
+- sexe ;
+- adresse ;
+- téléphone ;
+- e-mail ;
+- personne à contacter en cas d'urgence ;
+- assurance ou organisme payeur.
+
+---
+
+# 9. Gestion des rendez-vous
+
+La réception peut :
+
+- créer un rendez-vous ;
+- modifier un rendez-vous ;
+- annuler un rendez-vous ;
+- déplacer un rendez-vous ;
+- confirmer la présence du patient.
+
+---
+
+# 10. Création d'un rendez-vous
+
+Pour créer un rendez-vous :
+
+1. sélectionner le patient ;
+2. choisir le médecin ;
+3. sélectionner la date ;
+4. choisir l'heure disponible ;
+5. confirmer.
+
+Le patient reçoit une confirmation selon les paramètres de l'établissement.
+
+---
+
+# 11. Admission
+
+Pour une admission :
+
+- vérifier les informations administratives ;
+- confirmer le service concerné ;
+- enregistrer l'arrivée ;
+- remettre les documents nécessaires.
+
+Le personnel médical est automatiquement informé.
+
+---
+
+# 12. Orientation des patients
+
+Le réceptionniste peut orienter les patients vers :
+
+- consultation ;
+- urgences ;
+- laboratoire ;
+- imagerie ;
+- pharmacie ;
+- hospitalisation.
+
+Le statut du patient est mis à jour automatiquement.
+
+---
+
+# 13. Gestion de la file d'attente
+
+La file d'attente permet de consulter :
+
+- ordre d'arrivée ;
+- médecin concerné ;
+- heure du rendez-vous ;
+- statut du patient.
+
+Le personnel peut mettre à jour le statut :
+
+- En attente ;
+- En consultation ;
+- En examen ;
+- Terminé.
+
+---
+
+# 14. Encaissement des frais administratifs
+
+Selon les autorisations accordées, la réception peut enregistrer :
+
+- frais de consultation ;
+- avances ;
+- droits d'admission ;
+- autres paiements administratifs.
+
+Chaque paiement génère un reçu PDF.
+
+---
+
+# 15. Impression de documents
+
+La réception peut générer :
+
+- fiche d'admission ;
+- reçu de paiement ;
+- ticket de consultation ;
+- fiche de rendez-vous ;
+- documents administratifs.
+
+Tous les documents sont produits au format PDF.
+
+---
+
+# 16. Notifications
+
+Le réceptionniste reçoit notamment :
+
+- nouveaux rendez-vous ;
+- annulations ;
+- patients arrivés ;
+- messages internes ;
+- alertes administratives.
+
+---
+
+# 17. Historique
+
+Le système conserve l'historique de :
+
+- rendez-vous ;
+- admissions ;
+- paiements ;
+- modifications administratives.
+
+Toutes les opérations sont datées et signées par leur auteur.
+
+---
+
+# 18. Sécurité
+
+Le réceptionniste doit :
+
+- protéger ses identifiants ;
+- vérifier l'identité des patients ;
+- respecter la confidentialité des informations ;
+- verrouiller sa session lorsqu'il quitte son poste.
+
+L'accès aux données médicales est limité selon les permissions.
+
+---
+
+# 19. Bonnes pratiques
+
+Il est recommandé de :
+
+- vérifier les informations avant validation ;
+- éviter les doublons de dossiers ;
+- confirmer les coordonnées des patients ;
+- contrôler les rendez-vous avant leur création ;
+- enregistrer immédiatement les arrivées.
+
+---
+
+# 20. Questions fréquentes
+
+## Un patient existe déjà mais je ne le retrouve pas.
+
+Utiliser plusieurs critères de recherche (nom, téléphone, date de naissance ou référence patient).
+
+---
+
+## Puis-je modifier un rendez-vous ?
+
+Oui, si les autorisations le permettent et si le rendez-vous n'a pas déjà été clôturé.
+
+---
+
+## Comment annuler un rendez-vous ?
+
+Depuis le planning, sélectionner le rendez-vous puis choisir **Annuler**.
+
+---
+
+## Puis-je consulter le dossier médical ?
+
+Non.
+
+Le réceptionniste accède uniquement aux informations administratives nécessaires à sa mission.
+
+---
+
+# 21. Conclusion
+
+Le Guide Réceptionniste permet d'assurer un accueil rapide, organisé et sécurisé des patients dans MORACare Enterprise. Il couvre l'ensemble des opérations administratives de première ligne : création des dossiers patients, gestion des rendez-vous, admissions, orientation des patients et encaissements administratifs, tout en garantissant la confidentialité des données et la traçabilité des actions.
+
+---
+
+# Fin du document
+
+**Référence :** UG-005
+
+**Titre :** Guide Réceptionniste
+
+**Version :** 1.0

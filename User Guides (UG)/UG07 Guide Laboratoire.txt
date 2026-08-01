@@ -1,0 +1,308 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Laboratoire
+
+**Référence :** UG-007
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide explique l'utilisation du module **Laboratoire** de MORACare Enterprise.
+
+Il décrit les procédures permettant de gérer les demandes d'analyses biologiques, les prélèvements, les examens, la validation des résultats et leur publication dans le dossier médical du patient.
+
+---
+
+# 2. Profil concerné
+
+Ce guide s'adresse aux :
+
+- Biologistes médicaux ;
+- Techniciens de laboratoire ;
+- Responsables de laboratoire ;
+- Personnel autorisé du laboratoire.
+
+Les fonctionnalités disponibles dépendent des autorisations attribuées par le Responsable d'Établissement.
+
+---
+
+# 3. Connexion
+
+Pour accéder à MORACare Enterprise :
+
+1. Ouvrir la plateforme.
+2. Saisir l'adresse e-mail professionnelle.
+3. Entrer le mot de passe.
+4. Cliquer sur **Connexion**.
+
+Toutes les actions sont enregistrées dans le journal d'audit.
+
+---
+
+# 4. Tableau de bord
+
+Le tableau de bord du laboratoire présente :
+
+- examens en attente ;
+- prélèvements à réaliser ;
+- analyses en cours ;
+- résultats à valider ;
+- examens urgents ;
+- notifications.
+
+---
+
+# 5. Consultation des demandes d'examens
+
+Le personnel peut consulter les demandes selon :
+
+- le patient ;
+- le médecin prescripteur ;
+- le service ;
+- la date ;
+- le type d'examen ;
+- le statut.
+
+Chaque demande possède une référence métier unique.
+
+---
+
+# 6. Réception d'une demande
+
+À la réception d'une demande :
+
+1. vérifier les informations du patient ;
+2. contrôler la prescription médicale ;
+3. confirmer la réception ;
+4. préparer le prélèvement.
+
+Le statut passe automatiquement à **En attente de prélèvement**.
+
+---
+
+# 7. Enregistrement d'un prélèvement
+
+Pour enregistrer un prélèvement :
+
+1. ouvrir la demande ;
+2. confirmer l'identité du patient ;
+3. sélectionner le type de prélèvement ;
+4. enregistrer la date et l'heure ;
+5. valider.
+
+Les informations sont historisées.
+
+---
+
+# 8. Gestion des prélèvements
+
+Le laboratoire peut gérer différents types de prélèvements :
+
+- sang ;
+- urine ;
+- selles ;
+- salive ;
+- liquide biologique ;
+- biopsie ;
+- autres prélèvements.
+
+Chaque prélèvement est identifié de manière unique.
+
+---
+
+# 9. Réalisation des analyses
+
+Le technicien enregistre :
+
+- les analyses effectuées ;
+- les méthodes utilisées ;
+- les observations techniques ;
+- les éventuelles anomalies.
+
+Le statut devient **Analyse en cours**.
+
+---
+
+# 10. Saisie des résultats
+
+Les résultats peuvent être saisis :
+
+- manuellement ;
+- automatiquement depuis un équipement compatible.
+
+Chaque valeur est associée à :
+
+- son unité ;
+- les valeurs de référence ;
+- le commentaire éventuel.
+
+---
+
+# 11. Validation biologique
+
+Avant publication, le biologiste vérifie :
+
+- la cohérence des résultats ;
+- les valeurs critiques ;
+- les observations techniques ;
+- la conformité des analyses.
+
+Après validation, les résultats deviennent disponibles pour le médecin prescripteur.
+
+---
+
+# 12. Résultats critiques
+
+Lorsque des valeurs critiques sont détectées :
+
+- une alerte est générée ;
+- le médecin est notifié ;
+- l'événement est enregistré dans le journal d'audit.
+
+---
+
+# 13. Historique des analyses
+
+Le laboratoire peut consulter :
+
+- analyses réalisées ;
+- résultats validés ;
+- corrections ;
+- validations ;
+- historiques des examens.
+
+Aucune donnée n'est supprimée définitivement.
+
+---
+
+# 14. Gestion des échantillons
+
+Le système permet de suivre :
+
+- numéro d'échantillon ;
+- localisation ;
+- statut ;
+- durée de conservation ;
+- date de destruction.
+
+Chaque mouvement est tracé.
+
+---
+
+# 15. Impression des rapports
+
+Le laboratoire peut générer des rapports PDF comprenant :
+
+- identité du patient ;
+- examens réalisés ;
+- résultats ;
+- valeurs de référence ;
+- observations ;
+- signature du biologiste.
+
+Les rapports sont automatiquement archivés.
+
+---
+
+# 16. Notifications
+
+Le laboratoire reçoit notamment :
+
+- nouvelles prescriptions ;
+- prélèvements programmés ;
+- résultats en attente de validation ;
+- alertes critiques ;
+- messages internes.
+
+---
+
+# 17. Recherche
+
+Le moteur de recherche permet de retrouver un examen grâce à :
+
+- la référence d'examen ;
+- le patient ;
+- le médecin ;
+- la date ;
+- le type d'analyse.
+
+---
+
+# 18. Sécurité
+
+Le personnel du laboratoire doit :
+
+- protéger ses identifiants ;
+- vérifier l'identité des patients avant chaque prélèvement ;
+- respecter la confidentialité des résultats ;
+- verrouiller sa session lors de toute absence.
+
+Toutes les opérations sont journalisées.
+
+---
+
+# 19. Bonnes pratiques
+
+Il est recommandé de :
+
+- contrôler les prescriptions avant le prélèvement ;
+- identifier correctement chaque échantillon ;
+- vérifier les résultats avant validation ;
+- traiter immédiatement les valeurs critiques ;
+- archiver correctement les rapports.
+
+---
+
+# 20. Questions fréquentes
+
+## Une demande d'examen est introuvable.
+
+Vérifier la référence de la demande, le patient ou la date de prescription.
+
+---
+
+## Puis-je modifier un résultat validé ?
+
+Oui, uniquement selon les autorisations accordées. Toute modification est enregistrée dans l'historique.
+
+---
+
+## Comment signaler une valeur critique ?
+
+Le système génère automatiquement une alerte. Le biologiste doit ensuite appliquer la procédure interne de l'établissement.
+
+---
+
+## Les résultats sont-ils immédiatement visibles par le médecin ?
+
+Oui, après validation biologique.
+
+---
+
+# 21. Conclusion
+
+Le Guide Laboratoire permet aux professionnels du laboratoire d'utiliser efficacement le module Laboratoire de MORACare Enterprise. Il couvre l'ensemble du cycle biologique, depuis la réception de la prescription jusqu'à la validation et la publication des résultats, en garantissant la traçabilité, la qualité des analyses et la confidentialité des données médicales.
+
+---
+
+# Fin du document
+
+**Référence :** UG-007
+
+**Titre :** Guide Laboratoire
+
+**Version :** 1.0

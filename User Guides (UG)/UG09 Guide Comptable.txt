@@ -1,0 +1,315 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Comptable
+
+**Référence :** UG-009
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide explique l'utilisation du module **Comptabilité & Facturation** de MORACare Enterprise.
+
+Il décrit les procédures de gestion des devis, de la facturation, des paiements, des assurances, des remboursements, de la caisse, des dépenses, des recettes et des rapports financiers de l'établissement.
+
+---
+
+# 2. Profil concerné
+
+Ce guide s'adresse aux :
+
+- Comptables ;
+- Caissiers ;
+- Responsables financiers ;
+- Gestionnaires administratifs ;
+- Personnel autorisé du service financier.
+
+Les fonctionnalités disponibles dépendent des autorisations attribuées par le Responsable d'Établissement.
+
+---
+
+# 3. Connexion
+
+Pour accéder à MORACare Enterprise :
+
+1. Ouvrir la plateforme.
+2. Saisir votre adresse e-mail professionnelle.
+3. Entrer votre mot de passe.
+4. Cliquer sur **Connexion**.
+
+Toutes les opérations financières sont enregistrées dans le journal d'audit.
+
+---
+
+# 4. Tableau de bord financier
+
+Le tableau de bord affiche notamment :
+
+- recettes du jour ;
+- paiements en attente ;
+- factures impayées ;
+- remboursements ;
+- dépenses ;
+- situation de caisse ;
+- statistiques financières.
+
+---
+
+# 5. Gestion des devis
+
+Le comptable peut :
+
+- créer un devis ;
+- modifier un devis ;
+- convertir un devis en facture ;
+- annuler un devis ;
+- imprimer un devis.
+
+Chaque devis reçoit une référence unique.
+
+---
+
+# 6. Gestion des factures
+
+Le système permet de créer des factures pour :
+
+- consultations ;
+- hospitalisations ;
+- laboratoire ;
+- imagerie médicale ;
+- pharmacie ;
+- interventions chirurgicales ;
+- autres prestations.
+
+Chaque facture possède :
+
+- un numéro unique ;
+- un patient associé ;
+- une date ;
+- un montant ;
+- un statut.
+
+---
+
+# 7. Encaissement des paiements
+
+Le comptable peut enregistrer plusieurs modes de paiement :
+
+- espèces ;
+- carte bancaire ;
+- virement bancaire ;
+- paiement mobile ;
+- assurance ;
+- autres moyens de paiement.
+
+Chaque paiement génère automatiquement un reçu.
+
+---
+
+# 8. Gestion des assurances
+
+Le module permet :
+
+- d'associer une assurance à un patient ;
+- de vérifier la couverture ;
+- d'enregistrer la prise en charge ;
+- de suivre les remboursements.
+
+Les informations sont historisées.
+
+---
+
+# 9. Gestion des remboursements
+
+Le comptable peut :
+
+- enregistrer un remboursement ;
+- justifier le motif ;
+- suivre son statut ;
+- imprimer les justificatifs.
+
+Tous les remboursements sont tracés.
+
+---
+
+# 10. Gestion de la caisse
+
+Le module Caisse permet :
+
+- l'ouverture de caisse ;
+- la fermeture de caisse ;
+- le suivi des mouvements ;
+- le contrôle du solde ;
+- le rapprochement de caisse.
+
+Chaque opération est enregistrée.
+
+---
+
+# 11. Gestion des dépenses
+
+Les dépenses peuvent être enregistrées selon différentes catégories :
+
+- achats ;
+- fournitures ;
+- maintenance ;
+- salaires ;
+- services ;
+- fonctionnement ;
+- autres dépenses.
+
+Chaque dépense est associée à un justificatif si nécessaire.
+
+---
+
+# 12. Gestion des recettes
+
+Les recettes proviennent notamment de :
+
+- consultations ;
+- pharmacie ;
+- laboratoire ;
+- imagerie ;
+- hospitalisations ;
+- chirurgie ;
+- autres prestations.
+
+Le tableau de bord est mis à jour automatiquement.
+
+---
+
+# 13. Rapports financiers
+
+Le système permet de générer des rapports PDF concernant :
+
+- chiffre d'affaires ;
+- recettes ;
+- dépenses ;
+- paiements ;
+- remboursements ;
+- situation de caisse ;
+- créances ;
+- statistiques financières.
+
+---
+
+# 14. Recherche
+
+Le moteur de recherche permet de retrouver :
+
+- une facture ;
+- un devis ;
+- un reçu ;
+- un patient ;
+- un paiement ;
+- une assurance.
+
+---
+
+# 15. Historique
+
+Toutes les opérations financières sont historisées :
+
+- création ;
+- modification ;
+- annulation ;
+- paiement ;
+- remboursement.
+
+Chaque opération est datée et signée par son auteur.
+
+---
+
+# 16. Notifications
+
+Le service financier reçoit notamment :
+
+- nouvelles factures ;
+- paiements enregistrés ;
+- remboursements ;
+- factures impayées ;
+- échéances d'assurance.
+
+---
+
+# 17. Sécurité
+
+Le personnel financier doit :
+
+- protéger ses identifiants ;
+- vérifier les montants avant validation ;
+- conserver les justificatifs ;
+- verrouiller sa session en cas d'absence.
+
+Toutes les opérations financières sont journalisées.
+
+---
+
+# 18. Bonnes pratiques
+
+Il est recommandé de :
+
+- vérifier les informations du patient avant la facturation ;
+- contrôler les montants avant validation ;
+- clôturer la caisse quotidiennement ;
+- archiver les justificatifs ;
+- effectuer régulièrement les rapprochements de caisse.
+
+---
+
+# 19. Questions fréquentes
+
+## Une facture comporte une erreur.
+
+Selon les autorisations, elle peut être corrigée ou annulée. Toutes les modifications sont historisées.
+
+---
+
+## Puis-je enregistrer un paiement partiel ?
+
+Oui.
+
+Le système prend en charge les paiements partiels et met automatiquement à jour le solde restant.
+
+---
+
+## Comment imprimer un reçu ?
+
+Depuis la fiche du paiement, cliquer sur **Imprimer le reçu**.
+
+---
+
+## Puis-je consulter les rapports financiers d'une période donnée ?
+
+Oui.
+
+Le module permet de filtrer les rapports par période, service ou type d'opération.
+
+---
+
+# 20. Conclusion
+
+Le Guide Comptable permet aux professionnels du service financier d'utiliser efficacement le module Comptabilité & Facturation de MORACare Enterprise. Il couvre l'ensemble des opérations financières de l'établissement, depuis la création des devis jusqu'à la gestion des paiements, des assurances, des remboursements, des recettes, des dépenses et des rapports financiers, tout en garantissant la traçabilité, la conformité et la sécurité des opérations.
+
+---
+
+# Fin du document
+
+**Référence :** UG-009
+
+**Titre :** Guide Comptable
+
+**Version :** 1.0

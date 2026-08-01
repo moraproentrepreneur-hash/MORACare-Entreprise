@@ -1,0 +1,314 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Médecin
+
+**Référence :** UG-003
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide explique l'utilisation de MORACare Enterprise par les médecins.
+
+Il décrit les principales fonctionnalités permettant de gérer les consultations, les dossiers médicaux, les prescriptions, les examens complémentaires et le suivi des patients.
+
+---
+
+# 2. Profil concerné
+
+Ce guide s'adresse aux :
+
+- Médecins généralistes ;
+- Médecins spécialistes ;
+- Chirurgiens ;
+- Médecins urgentistes ;
+- Médecins hospitaliers.
+
+Les fonctionnalités disponibles dépendent des permissions attribuées par l'établissement.
+
+---
+
+# 3. Connexion
+
+Pour accéder à la plateforme :
+
+1. Ouvrir MORACare Enterprise.
+2. Saisir l'adresse e-mail professionnelle.
+3. Saisir le mot de passe.
+4. Cliquer sur **Connexion**.
+
+Lors de la première connexion, le changement du mot de passe est obligatoire.
+
+---
+
+# 4. Tableau de bord du médecin
+
+Le tableau de bord présente notamment :
+
+- consultations du jour ;
+- rendez-vous à venir ;
+- patients hospitalisés ;
+- patients en attente ;
+- résultats d'examens disponibles ;
+- notifications importantes.
+
+---
+
+# 5. Recherche d'un patient
+
+Depuis le menu **Patients**, le médecin peut rechercher un patient grâce à :
+
+- son nom ;
+- son prénom ;
+- sa référence patient ;
+- sa date de naissance ;
+- son numéro de téléphone.
+
+Le dossier médical est immédiatement accessible selon les autorisations accordées.
+
+---
+
+# 6. Consultation du dossier patient
+
+Le dossier médical regroupe notamment :
+
+- informations administratives ;
+- antécédents médicaux ;
+- allergies ;
+- traitements en cours ;
+- consultations précédentes ;
+- hospitalisations ;
+- résultats biologiques ;
+- examens d'imagerie ;
+- prescriptions.
+
+Toutes les modifications sont historisées.
+
+---
+
+# 7. Nouvelle consultation
+
+Pour enregistrer une consultation :
+
+1. ouvrir le dossier du patient ;
+2. cliquer sur **Nouvelle consultation** ;
+3. renseigner les informations médicales ;
+4. enregistrer.
+
+Chaque consultation reçoit une référence métier unique.
+
+---
+
+# 8. Informations médicales
+
+Une consultation peut contenir :
+
+- motif de consultation ;
+- interrogatoire ;
+- constantes vitales ;
+- examen clinique ;
+- diagnostic ;
+- diagnostic différentiel ;
+- observations.
+
+---
+
+# 9. Diagnostic
+
+Le médecin peut enregistrer :
+
+- diagnostic principal ;
+- diagnostics secondaires ;
+- pathologies associées.
+
+Le diagnostic est conservé dans l'historique médical.
+
+---
+
+# 10. Prescription médicale
+
+Le module Prescription permet de créer :
+
+- médicaments ;
+- posologies ;
+- durée du traitement ;
+- recommandations.
+
+Les prescriptions sont transmises à la pharmacie selon les procédures de l'établissement.
+
+---
+
+# 11. Examens complémentaires
+
+Le médecin peut demander :
+
+- analyses biologiques ;
+- radiographie ;
+- échographie ;
+- scanner ;
+- IRM ;
+- autres examens spécialisés.
+
+Chaque demande reçoit une référence unique.
+
+---
+
+# 12. Consultation des résultats
+
+Lorsque les examens sont validés :
+
+- une notification est affichée ;
+- les résultats deviennent consultables dans le dossier patient.
+
+Les comptes rendus PDF restent archivés.
+
+---
+
+# 13. Hospitalisation
+
+Le médecin peut :
+
+- demander une hospitalisation ;
+- consulter les chambres disponibles ;
+- suivre les patients hospitalisés ;
+- préparer la sortie du patient.
+
+---
+
+# 14. Certificats médicaux
+
+Le médecin peut générer différents documents :
+
+- certificat médical ;
+- arrêt de travail ;
+- certificat d'aptitude ;
+- compte rendu.
+
+Tous les documents sont générés au format PDF.
+
+---
+
+# 15. Historique médical
+
+Le dossier permet de consulter :
+
+- toutes les consultations ;
+- prescriptions ;
+- examens ;
+- interventions ;
+- hospitalisations ;
+- documents.
+
+Aucune donnée médicale n'est supprimée définitivement.
+
+---
+
+# 16. Agenda
+
+Le médecin consulte :
+
+- ses rendez-vous ;
+- ses consultations programmées ;
+- les visites hospitalières.
+
+Le planning est mis à jour en temps réel.
+
+---
+
+# 17. Notifications
+
+Le médecin reçoit notamment :
+
+- nouveaux rendez-vous ;
+- résultats disponibles ;
+- admissions ;
+- urgences ;
+- messages internes.
+
+---
+
+# 18. Signature des actes
+
+Les consultations validées peuvent être signées électroniquement selon la politique de l'établissement.
+
+Après validation, les modifications sont limitées et journalisées.
+
+---
+
+# 19. Sécurité
+
+Le médecin doit :
+
+- protéger ses identifiants ;
+- verrouiller sa session lors de ses absences ;
+- respecter la confidentialité des données médicales ;
+- ne jamais partager son compte.
+
+Toutes les actions sont enregistrées dans les journaux d'audit.
+
+---
+
+# 20. Bonnes pratiques
+
+Il est recommandé de :
+
+- compléter entièrement chaque consultation ;
+- vérifier les allergies avant toute prescription ;
+- consulter les antécédents médicaux ;
+- documenter les diagnostics ;
+- relire les prescriptions avant validation.
+
+---
+
+# 21. Questions fréquentes
+
+## Je ne retrouve pas un patient.
+
+Vérifier les critères de recherche ou contacter la réception afin de confirmer que le patient est bien enregistré.
+
+---
+
+## Puis-je modifier une consultation validée ?
+
+Selon les règles de l'établissement, certaines informations peuvent être corrigées. Toutes les modifications restent historisées.
+
+---
+
+## Comment consulter les résultats du laboratoire ?
+
+Les résultats validés sont disponibles directement dans le dossier du patient, rubrique **Examens**.
+
+---
+
+## Les prescriptions sont-elles envoyées automatiquement ?
+
+Oui, lorsque le circuit de prescription électronique est activé dans l'établissement.
+
+---
+
+# 22. Conclusion
+
+Le Guide Médecin permet aux praticiens d'utiliser efficacement MORACare Enterprise pour assurer la prise en charge des patients. Il couvre l'ensemble du parcours médical, depuis la consultation jusqu'au suivi thérapeutique, en garantissant la traçabilité, la sécurité et la confidentialité des données de santé.
+
+---
+
+# Fin du document
+
+**Référence :** UG-003
+
+**Titre :** Guide Médecin
+
+**Version :** 1.0

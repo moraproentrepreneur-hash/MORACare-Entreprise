@@ -1,0 +1,334 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Installation & Configuration
+
+**Référence :** UG-011
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide décrit la procédure complète d'installation, de configuration et de mise en service de MORACare Enterprise.
+
+Il s'adresse aux administrateurs techniques chargés du déploiement de la plateforme dans un établissement de santé.
+
+---
+
+# 2. Public concerné
+
+Ce guide est destiné aux :
+
+- Administrateurs système ;
+- Administrateurs réseau ;
+- Administrateurs de bases de données ;
+- Équipe informatique de l'établissement ;
+- Équipe technique de MORA Shawiri.
+
+---
+
+# 3. Prérequis matériels
+
+Configuration minimale recommandée :
+
+## Serveur
+
+- Processeur : 4 cœurs
+- Mémoire : 8 Go RAM minimum
+- Stockage SSD : 100 Go minimum
+- Sauvegarde automatique
+- Connexion Internet stable
+
+## Configuration recommandée
+
+- 8 cœurs ou plus
+- 16 à 32 Go RAM
+- SSD NVMe
+- Sauvegarde externe
+- Onduleur (UPS)
+
+---
+
+# 4. Prérequis logiciels
+
+Le serveur doit disposer de :
+
+- Linux Ubuntu LTS recommandé
+- Docker
+- Docker Compose
+- Git
+- Node.js LTS
+- PostgreSQL (si installation hors conteneur)
+- Navigateur récent (Chrome, Edge ou Firefox)
+
+---
+
+# 5. Téléchargement
+
+Télécharger la dernière version de MORACare Enterprise depuis le dépôt officiel ou le package fourni par MORA Shawiri.
+
+Vérifier l'intégrité des fichiers avant toute installation.
+
+---
+
+# 6. Installation
+
+Étapes générales :
+
+1. Copier les fichiers sur le serveur.
+2. Décompresser l'archive.
+3. Configurer les variables d'environnement.
+4. Installer les dépendances.
+5. Initialiser la base de données.
+6. Lancer les services.
+7. Vérifier le bon fonctionnement.
+
+---
+
+# 7. Configuration de la base de données
+
+Configurer notamment :
+
+- nom de la base ;
+- utilisateur ;
+- mot de passe ;
+- hôte ;
+- port.
+
+Tester la connexion avant le démarrage de l'application.
+
+---
+
+# 8. Variables d'environnement
+
+Configurer les paramètres suivants :
+
+- URL de l'application ;
+- paramètres PostgreSQL ;
+- clés JWT ;
+- clés de chiffrement ;
+- SMTP ;
+- stockage des fichiers ;
+- sauvegardes ;
+- paramètres de sécurité.
+
+Les informations sensibles ne doivent jamais être intégrées au code source.
+
+---
+
+# 9. Première connexion
+
+Après l'installation :
+
+1. ouvrir l'application ;
+2. se connecter avec le compte administrateur initial ;
+3. modifier immédiatement le mot de passe.
+
+---
+
+# 10. Création du premier établissement
+
+L'administrateur plateforme renseigne :
+
+- nom de l'établissement ;
+- type d'établissement ;
+- adresse ;
+- téléphone ;
+- e-mail ;
+- logo ;
+- paramètres régionaux.
+
+L'établissement devient alors opérationnel.
+
+---
+
+# 11. Configuration des utilisateurs
+
+Créer les comptes des différents profils :
+
+- Responsable d'établissement ;
+- Médecins ;
+- Infirmiers ;
+- Réceptionnistes ;
+- Pharmaciens ;
+- Laboratoire ;
+- Imagerie médicale ;
+- Comptables.
+
+Attribuer les rôles et les permissions appropriés.
+
+---
+
+# 12. Paramètres généraux
+
+Configurer :
+
+- langues ;
+- fuseau horaire ;
+- devise ;
+- formats de date ;
+- paramètres d'impression ;
+- notifications.
+
+---
+
+# 13. Configuration des modules
+
+Activer les modules nécessaires :
+
+- Patients ;
+- Consultations ;
+- Hospitalisations ;
+- Pharmacie ;
+- Laboratoire ;
+- Imagerie médicale ;
+- Comptabilité ;
+- Rapports ;
+- Portail Patient.
+
+Les modules inutilisés peuvent rester désactivés.
+
+---
+
+# 14. Sauvegardes
+
+Configurer :
+
+- fréquence des sauvegardes ;
+- emplacement ;
+- durée de conservation ;
+- restauration.
+
+Il est recommandé d'effectuer des sauvegardes quotidiennes automatiques.
+
+---
+
+# 15. Sécurité
+
+Configurer notamment :
+
+- HTTPS ;
+- certificats SSL ;
+- politique des mots de passe ;
+- authentification à deux facteurs (2FA) ;
+- journalisation ;
+- contrôle des accès.
+
+---
+
+# 16. Mise à jour
+
+Avant chaque mise à jour :
+
+- effectuer une sauvegarde complète ;
+- vérifier la compatibilité ;
+- appliquer les migrations ;
+- redémarrer les services ;
+- vérifier le fonctionnement.
+
+Toutes les mises à jour doivent être réalisées pendant une période de faible activité.
+
+---
+
+# 17. Vérifications après installation
+
+Contrôler :
+
+- accès à l'application ;
+- connexion à la base ;
+- création d'un patient test ;
+- connexion des utilisateurs ;
+- impression PDF ;
+- notifications ;
+- sauvegardes.
+
+---
+
+# 18. Maintenance
+
+Les opérations de maintenance comprennent :
+
+- mises à jour ;
+- nettoyage des journaux ;
+- contrôle des sauvegardes ;
+- optimisation de la base de données ;
+- surveillance des performances.
+
+---
+
+# 19. Dépannage
+
+En cas de dysfonctionnement :
+
+- consulter les journaux système ;
+- vérifier la base de données ;
+- contrôler les variables d'environnement ;
+- redémarrer les services ;
+- contacter le support MORA Shawiri si nécessaire.
+
+---
+
+# 20. Bonnes pratiques
+
+Il est recommandé de :
+
+- maintenir le serveur à jour ;
+- utiliser HTTPS uniquement ;
+- sauvegarder quotidiennement les données ;
+- limiter les accès administrateurs ;
+- tester régulièrement la restauration des sauvegardes ;
+- documenter chaque modification de configuration.
+
+---
+
+# 21. Questions fréquentes
+
+## L'application ne démarre pas.
+
+Vérifier les variables d'environnement, la connexion à la base de données et les journaux système.
+
+---
+
+## Impossible de se connecter.
+
+Contrôler les identifiants, les permissions du compte et l'état des services.
+
+---
+
+## Les sauvegardes ne s'exécutent plus.
+
+Vérifier la tâche planifiée, les droits d'accès au stockage et l'espace disque disponible.
+
+---
+
+## Puis-je installer MORACare Enterprise sur plusieurs serveurs ?
+
+Oui. L'architecture prend en charge les déploiements distribués et la haute disponibilité selon les besoins de l'établissement.
+
+---
+
+# 22. Conclusion
+
+Le Guide Installation & Configuration fournit les informations nécessaires pour déployer, configurer et mettre en service MORACare Enterprise dans des conditions optimales. En suivant les recommandations de ce document, les administrateurs techniques assurent une installation sécurisée, performante et conforme aux bonnes pratiques d'exploitation.
+
+---
+
+# Fin du document
+
+**Référence :** UG-011
+
+**Titre :** Guide Installation & Configuration
+
+**Version :** 1.0

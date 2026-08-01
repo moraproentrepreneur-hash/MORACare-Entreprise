@@ -1,0 +1,292 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Imagerie Médicale
+
+**Référence :** UG-008
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide explique l'utilisation du module **Imagerie Médicale** de MORACare Enterprise.
+
+Il décrit les procédures permettant de gérer les demandes d'examens d'imagerie, la planification, l'acquisition des images, l'interprétation, la rédaction des comptes rendus, l'archivage des examens et leur intégration au dossier médical du patient.
+
+---
+
+# 2. Profil concerné
+
+Ce guide s'adresse aux :
+
+- Radiologues ;
+- Manipulateurs en électroradiologie médicale ;
+- Techniciens en imagerie médicale ;
+- Personnel autorisé du service d'imagerie.
+
+Les fonctionnalités disponibles dépendent des autorisations attribuées par le Responsable d'Établissement.
+
+---
+
+# 3. Connexion
+
+Pour accéder à MORACare Enterprise :
+
+1. Ouvrir la plateforme.
+2. Saisir l'adresse e-mail professionnelle.
+3. Entrer le mot de passe.
+4. Cliquer sur **Connexion**.
+
+Toutes les actions sont enregistrées dans le journal d'audit.
+
+---
+
+# 4. Tableau de bord
+
+Le tableau de bord du service d'imagerie affiche notamment :
+
+- examens programmés ;
+- patients en attente ;
+- examens urgents ;
+- examens réalisés ;
+- comptes rendus à rédiger ;
+- notifications.
+
+---
+
+# 5. Consultation des demandes d'examens
+
+Le personnel peut consulter les demandes selon :
+
+- le patient ;
+- le médecin prescripteur ;
+- le type d'examen ;
+- la date ;
+- le service ;
+- le statut.
+
+Chaque demande possède une référence unique.
+
+---
+
+# 6. Planification d'un examen
+
+Pour programmer un examen :
+
+1. ouvrir la demande ;
+2. vérifier les informations du patient ;
+3. choisir la date et l'heure ;
+4. affecter une salle et un équipement ;
+5. confirmer le rendez-vous.
+
+Le patient est automatiquement ajouté au planning.
+
+---
+
+# 7. Types d'examens pris en charge
+
+Le module permet de gérer notamment :
+
+- Radiographie ;
+- Échographie ;
+- Scanner (CT) ;
+- IRM ;
+- Mammographie ;
+- Densitométrie osseuse ;
+- Fluoroscopie ;
+- Imagerie interventionnelle.
+
+De nouveaux examens peuvent être ajoutés par l'administrateur.
+
+---
+
+# 8. Accueil du patient
+
+Avant l'examen, le personnel doit :
+
+- vérifier l'identité du patient ;
+- confirmer la prescription médicale ;
+- vérifier les contre-indications éventuelles ;
+- préparer le patient selon le protocole.
+
+---
+
+# 9. Acquisition des images
+
+Après la réalisation de l'examen :
+
+- les images sont enregistrées ;
+- elles sont associées au dossier du patient ;
+- les métadonnées sont automatiquement conservées.
+
+Le système peut être connecté à un serveur PACS compatible DICOM.
+
+---
+
+# 10. Archivage des examens
+
+Chaque examen comporte :
+
+- identifiant unique ;
+- date ;
+- type d'examen ;
+- équipement utilisé ;
+- opérateur ;
+- statut.
+
+Les examens restent disponibles dans l'historique du patient.
+
+---
+
+# 11. Rédaction du compte rendu
+
+Le radiologue peut saisir :
+
+- description des images ;
+- observations ;
+- conclusion diagnostique ;
+- recommandations éventuelles.
+
+Le compte rendu peut être signé électroniquement.
+
+---
+
+# 12. Validation
+
+Après validation :
+
+- le compte rendu devient définitif ;
+- le médecin prescripteur est notifié ;
+- le rapport est archivé.
+
+Toutes les validations sont historisées.
+
+---
+
+# 13. Consultation des examens
+
+Les examens peuvent être retrouvés selon :
+
+- le patient ;
+- la référence d'examen ;
+- le médecin ;
+- la date ;
+- le type d'imagerie.
+
+---
+
+# 14. Intégration au dossier patient
+
+Une fois validés, les examens sont automatiquement accessibles dans :
+
+- le dossier médical ;
+- l'historique des consultations ;
+- les hospitalisations ;
+- les suivis médicaux.
+
+Les médecins autorisés peuvent consulter les images et les comptes rendus.
+
+---
+
+# 15. Impression des rapports
+
+Le module permet de générer des rapports PDF contenant :
+
+- informations du patient ;
+- type d'examen ;
+- observations ;
+- conclusion ;
+- signature du radiologue.
+
+Les rapports sont archivés automatiquement.
+
+---
+
+# 16. Notifications
+
+Le service reçoit notamment :
+
+- nouvelles prescriptions ;
+- examens urgents ;
+- examens programmés ;
+- comptes rendus à finaliser ;
+- messages internes.
+
+---
+
+# 17. Sécurité
+
+Le personnel du service d'imagerie doit :
+
+- protéger ses identifiants ;
+- vérifier l'identité du patient avant chaque examen ;
+- respecter la confidentialité des images médicales ;
+- verrouiller sa session en cas d'absence.
+
+Toutes les opérations sont enregistrées dans le journal d'audit.
+
+---
+
+# 18. Bonnes pratiques
+
+Il est recommandé de :
+
+- contrôler la prescription avant l'examen ;
+- respecter les protocoles d'imagerie ;
+- vérifier la qualité des images avant validation ;
+- rédiger les comptes rendus rapidement ;
+- archiver correctement chaque examen.
+
+---
+
+# 19. Questions fréquentes
+
+## Une demande d'examen n'apparaît pas.
+
+Vérifier la prescription médicale, le patient ou le statut de la demande.
+
+---
+
+## Puis-je modifier un compte rendu validé ?
+
+Oui, uniquement si les autorisations le permettent. Toute modification est historisée.
+
+---
+
+## Les médecins peuvent-ils consulter directement les images ?
+
+Oui, selon leurs autorisations et si le système PACS/DICOM est configuré.
+
+---
+
+## Les examens restent-ils accessibles ?
+
+Oui. Tous les examens sont archivés dans le dossier médical du patient.
+
+---
+
+# 20. Conclusion
+
+Le Guide Imagerie Médicale permet aux professionnels du service d'imagerie d'utiliser efficacement MORACare Enterprise. Il couvre l'ensemble du cycle des examens radiologiques : réception des demandes, planification, acquisition des images, rédaction des comptes rendus, validation, archivage et intégration des résultats au dossier médical, tout en garantissant la traçabilité, la sécurité et la confidentialité des données.
+
+---
+
+# Fin du document
+
+**Référence :** UG-008
+
+**Titre :** Guide Imagerie Médicale
+
+**Version :** 1.0

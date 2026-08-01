@@ -1,0 +1,323 @@
+# MORACare Enterprise
+## Guide Utilisateur
+
+---
+
+# Document
+
+**Nom :** Guide Infirmier(ère)
+
+**Référence :** UG-004
+
+**Version :** 1.0
+
+**Statut :** VALIDÉ
+
+**Projet :** MORACare Enterprise
+
+**Éditeur :** MORA Shawiri
+
+---
+
+# 1. Objet du document
+
+Le présent guide explique l'utilisation de MORACare Enterprise par les infirmiers et infirmières.
+
+Il décrit les procédures permettant d'assurer le suivi des patients, l'administration des soins, la surveillance clinique et la traçabilité des actes infirmiers.
+
+---
+
+# 2. Profil concerné
+
+Ce guide s'adresse aux :
+
+- Infirmiers(ères) diplômé(e)s ;
+- Cadres infirmiers ;
+- Infirmiers spécialisés ;
+- Personnel infirmier des services d'hospitalisation, d'urgence, de maternité et de soins externes.
+
+Les fonctionnalités disponibles dépendent des autorisations attribuées par le Responsable d'Établissement.
+
+---
+
+# 3. Connexion
+
+Pour accéder à MORACare Enterprise :
+
+1. Ouvrir la plateforme.
+2. Saisir l'adresse e-mail professionnelle.
+3. Entrer le mot de passe.
+4. Cliquer sur **Connexion**.
+
+Les accès sont strictement personnels et toutes les actions sont journalisées.
+
+---
+
+# 4. Tableau de bord infirmier
+
+Le tableau de bord affiche notamment :
+
+- patients assignés ;
+- soins programmés ;
+- traitements à administrer ;
+- hospitalisations en cours ;
+- patients en observation ;
+- alertes médicales ;
+- notifications internes.
+
+---
+
+# 5. Recherche d'un patient
+
+Le patient peut être retrouvé à partir de :
+
+- son nom ;
+- son prénom ;
+- sa référence patient ;
+- son numéro de chambre ;
+- son numéro d'hospitalisation.
+
+Le dossier est accessible uniquement selon les droits accordés.
+
+---
+
+# 6. Consultation du dossier patient
+
+L'infirmier peut consulter :
+
+- identité du patient ;
+- allergies ;
+- antécédents importants ;
+- prescriptions médicales ;
+- traitements en cours ;
+- constantes précédentes ;
+- hospitalisations ;
+- observations.
+
+Certaines informations sont consultables sans être modifiables.
+
+---
+
+# 7. Admission du patient
+
+Lors d'une admission, l'infirmier peut :
+
+- confirmer l'arrivée du patient ;
+- compléter les informations d'accueil ;
+- enregistrer le poids et la taille ;
+- attribuer une chambre (selon les autorisations) ;
+- préparer le dossier de soins.
+
+---
+
+# 8. Relevé des constantes vitales
+
+Le module **Constantes** permet d'enregistrer :
+
+- température ;
+- tension artérielle ;
+- fréquence cardiaque ;
+- fréquence respiratoire ;
+- saturation en oxygène (SpO₂) ;
+- glycémie ;
+- poids ;
+- taille.
+
+Chaque relevé est horodaté et identifié par son auteur.
+
+---
+
+# 9. Administration des traitements
+
+Depuis le plan de soins, l'infirmier peut :
+
+- consulter les prescriptions ;
+- administrer les médicaments ;
+- enregistrer l'heure d'administration ;
+- signaler un traitement non administré ;
+- ajouter une observation.
+
+Toutes les administrations sont historisées.
+
+---
+
+# 10. Soins infirmiers
+
+Les soins réalisés peuvent être enregistrés :
+
+- pansement ;
+- perfusion ;
+- injection ;
+- prélèvement ;
+- surveillance clinique ;
+- soins d'hygiène ;
+- autres actes infirmiers.
+
+Chaque acte comporte :
+
+- date ;
+- heure ;
+- professionnel responsable ;
+- observations.
+
+---
+
+# 11. Suivi des patients hospitalisés
+
+L'infirmier peut consulter :
+
+- chambre ;
+- lit ;
+- durée d'hospitalisation ;
+- médecin référent ;
+- plan de soins ;
+- traitements en cours.
+
+Le suivi est mis à jour en temps réel.
+
+---
+
+# 12. Observations infirmières
+
+Les observations permettent de documenter :
+
+- évolution clinique ;
+- comportement du patient ;
+- douleur ;
+- incidents ;
+- complications ;
+- remarques utiles pour la continuité des soins.
+
+Les observations sont conservées dans le dossier médical.
+
+---
+
+# 13. Alertes médicales
+
+Le système affiche automatiquement les alertes concernant :
+
+- allergies ;
+- contre-indications ;
+- traitements en retard ;
+- constantes anormales ;
+- examens urgents.
+
+Les alertes doivent être prises en compte immédiatement.
+
+---
+
+# 14. Examens complémentaires
+
+L'infirmier peut :
+
+- consulter les demandes d'examens ;
+- préparer le patient ;
+- enregistrer le prélèvement ;
+- suivre le statut des examens.
+
+Les résultats validés sont accessibles dans le dossier patient.
+
+---
+
+# 15. Gestion des transferts
+
+Lors d'un transfert, il est possible de :
+
+- changer de chambre ;
+- transférer vers un autre service ;
+- enregistrer l'heure du transfert ;
+- ajouter des observations.
+
+Toutes les opérations restent traçables.
+
+---
+
+# 16. Préparation de la sortie
+
+Avant la sortie du patient, l'infirmier peut :
+
+- vérifier les soins réalisés ;
+- confirmer la remise des documents ;
+- enregistrer les observations finales ;
+- clôturer le suivi infirmier.
+
+La sortie est validée selon les procédures de l'établissement.
+
+---
+
+# 17. Notifications
+
+Le personnel infirmier reçoit notamment :
+
+- nouvelles prescriptions ;
+- nouveaux patients ;
+- modifications du plan de soins ;
+- examens disponibles ;
+- messages internes.
+
+---
+
+# 18. Sécurité
+
+L'infirmier doit :
+
+- protéger ses identifiants ;
+- verrouiller sa session en cas d'absence ;
+- respecter la confidentialité des informations médicales ;
+- ne jamais utiliser le compte d'un autre utilisateur.
+
+Toutes les actions sont enregistrées dans le journal d'audit.
+
+---
+
+# 19. Bonnes pratiques
+
+Il est recommandé de :
+
+- enregistrer les constantes immédiatement après leur mesure ;
+- valider les soins dès leur réalisation ;
+- consulter les allergies avant toute administration ;
+- documenter chaque observation importante ;
+- vérifier les prescriptions avant l'administration des traitements.
+
+---
+
+# 20. Questions fréquentes
+
+## Je ne retrouve pas un patient.
+
+Vérifier la référence patient, le service ou contacter la réception.
+
+---
+
+## Puis-je modifier une constante déjà enregistrée ?
+
+Selon les droits attribués, une correction peut être effectuée. Toute modification est historisée.
+
+---
+
+## Comment signaler un traitement non administré ?
+
+Depuis le plan de soins, sélectionner le traitement concerné puis indiquer le motif de non-administration.
+
+---
+
+## Les observations sont-elles visibles par le médecin ?
+
+Oui. Les observations infirmières sont intégrées au dossier médical partagé selon les autorisations.
+
+---
+
+# 21. Conclusion
+
+Le Guide Infirmier(ère) permet d'utiliser efficacement MORACare Enterprise pour assurer le suivi quotidien des patients. Il facilite la gestion des soins, la surveillance clinique, l'administration des traitements et la traçabilité des actes infirmiers tout en garantissant la sécurité, la confidentialité et la continuité des soins.
+
+---
+
+# Fin du document
+
+**Référence :** UG-004
+
+**Titre :** Guide Infirmier(ère)
+
+**Version :** 1.0
