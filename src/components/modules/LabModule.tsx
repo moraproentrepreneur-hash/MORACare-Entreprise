@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FlaskConical, Plus, CheckCircle2, FileText } from 'lucide-react';
+import { FlaskConical, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { LabOrder, Patient } from '@/types';
-import { formatDate } from '@/lib/utils';
 import { useData } from '@/context/DataContext';
 import { PatientSelect } from '@/components/ui/PatientSelect';
 import { DoctorSelect } from '@/components/ui/DoctorSelect';
@@ -20,7 +19,7 @@ export const LabModule: React.FC = () => {
   const [form, setForm] = useState({
     doctor_id: '',
     test_type: '',
-    priority: 'routine' as LabOrder['priority'],
+    priority: 'routine' as LabOrder['priority']
   });
 
   const handleSelectPatient = (p: Patient) => {
@@ -43,7 +42,7 @@ export const LabModule: React.FC = () => {
         patient_id: selectedPatientId,
         doctor_id: form.doctor_id,
         test_type: form.test_type,
-        priority: form.priority,
+        priority: form.priority
       });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Échec de l'enregistrement.");

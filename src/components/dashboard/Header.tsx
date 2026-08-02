@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Bell, Search, ShieldCheck, Moon, Sun, Globe } from 'lucide-react';
+import { Bell, Search, ShieldCheck, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface HeaderProps {

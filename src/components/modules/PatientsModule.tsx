@@ -2,10 +2,9 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Users, Plus, Search, FileText, Heart, Shield, Activity, Phone, Mail, Calendar } from 'lucide-react';
+import { Users, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { Patient } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useData } from '@/context/DataContext';
 
@@ -25,7 +24,7 @@ export const PatientsModule: React.FC = () => {
     email: '',
     blood_group: 'O+',
     allergies: '',
-    chronic_conditions: '',
+    chronic_conditions: ''
   });
 
   const handleCreatePatient = async (e: React.FormEvent) => {
@@ -47,7 +46,7 @@ export const PatientsModule: React.FC = () => {
         email: form.email || undefined,
         blood_group: form.blood_group,
         allergies: splitList(form.allergies),
-        chronic_conditions: splitList(form.chronic_conditions),
+        chronic_conditions: splitList(form.chronic_conditions)
       });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Échec de l'enregistrement.");
@@ -65,7 +64,7 @@ export const PatientsModule: React.FC = () => {
       email: '',
       blood_group: 'O+',
       allergies: '',
-      chronic_conditions: '',
+      chronic_conditions: ''
     });
   };
 

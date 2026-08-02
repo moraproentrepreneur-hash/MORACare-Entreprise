@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Binary, Plus, FileText, Image as ImageIcon } from 'lucide-react';
+import { Binary, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ImagingOrder, Patient } from '@/types';
-import { formatDate } from '@/lib/utils';
 import { useData } from '@/context/DataContext';
 import { PatientSelect } from '@/components/ui/PatientSelect';
 import { DoctorSelect } from '@/components/ui/DoctorSelect';
@@ -21,7 +20,7 @@ export const ImagingModule: React.FC = () => {
     doctor_id: '',
     modality: 'X-Ray' as ImagingOrder['modality'],
     body_part: '',
-    clinical_notes: '',
+    clinical_notes: ''
   });
 
   const handleSelectPatient = (p: Patient) => {
@@ -45,7 +44,7 @@ export const ImagingModule: React.FC = () => {
         doctor_id: form.doctor_id,
         modality: form.modality,
         body_part: form.body_part,
-        clinical_notes: form.clinical_notes || undefined,
+        clinical_notes: form.clinical_notes || undefined
       });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Échec de l'enregistrement.");

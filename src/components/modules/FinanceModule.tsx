@@ -5,19 +5,17 @@ import {
   CreditCard, 
   Plus, 
   Download, 
-  DollarSign, 
   Wallet, 
   FileText, 
   CheckCircle2,
   Lock,
   Unlock,
-  AlertTriangle,
   Receipt,
   Scale
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { Invoice, Patient, CashRegister, CashMovement, CashClosure } from '@/types';
+import { Invoice, Patient, CashMovement } from '@/types';
 import { formatCurrency, formatDate, downloadMedicalPDF } from '@/lib/utils';
 import { useData } from '@/context/DataContext';
 import { PatientSelect } from '@/components/ui/PatientSelect';
@@ -50,18 +48,18 @@ export const FinanceModule: React.FC = () => {
     subtotal: 0,
     tax_amount: 0,
     paid_amount: 0,
-    payment_method: 'Espèces' as CashMovement['payment_method'],
+    payment_method: 'Espèces' as CashMovement['payment_method']
   });
 
   const [regForm, setRegForm] = useState({
     name: 'Caisse Principale',
-    opening_balance: 0,
+    opening_balance: 0
   });
 
   const [closeForm, setCloseForm] = useState({
     register_id: '',
     physical_cash_count: 0,
-    explanation: '',
+    explanation: ''
   });
 
   const handleSelectPatient = (p: Patient) => {
@@ -87,10 +85,10 @@ export const FinanceModule: React.FC = () => {
           {
             description: invoiceForm.description,
             quantity: 1,
-            unit_price: invoiceForm.subtotal,
+            unit_price: invoiceForm.subtotal
           },
         ],
-        tax_amount: invoiceForm.tax_amount,
+        tax_amount: invoiceForm.tax_amount
       });
 
       // BP22B : l'encaissement suit la facture, mais il exige une caisse
@@ -109,7 +107,7 @@ export const FinanceModule: React.FC = () => {
           payment_method: invoiceForm.payment_method,
           amount: invoiceForm.paid_amount,
           reason: `Règlement — ${invoiceForm.description}`,
-          patient_id: selectedPatientId,
+          patient_id: selectedPatientId
         });
       }
     } catch (err) {
@@ -124,7 +122,7 @@ export const FinanceModule: React.FC = () => {
       subtotal: 0,
       tax_amount: 0,
       paid_amount: 0,
-      payment_method: 'Espèces',
+      payment_method: 'Espèces'
     });
   };
 
@@ -135,7 +133,7 @@ export const FinanceModule: React.FC = () => {
     try {
       await openCashRegister({
         name: regForm.name,
-        opening_balance: regForm.opening_balance,
+        opening_balance: regForm.opening_balance
       });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Échec de l'ouverture de caisse.");
@@ -162,7 +160,7 @@ export const FinanceModule: React.FC = () => {
         cash_register_id: targetReg.id,
         theoretical_balance: targetReg.current_balance,
         physical_cash_count: closeForm.physical_cash_count,
-        explanation: closeForm.explanation || undefined,
+        explanation: closeForm.explanation || undefined
       });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Échec de la clôture.');
@@ -405,6 +403,11 @@ export const FinanceModule: React.FC = () => {
       {/* MODAL 1: ADD INVOICE */}
       <Modal isOpen={isAddInvoiceModalOpen} onClose={() => setIsAddInvoiceModalOpen(false)} title="Émission de Facture Soins">
         <form onSubmit={handleCreateInvoice} className="space-y-4 text-slate-900 dark:text-slate-100">
+          {submitError && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+              {submitError}
+            </div>
+          )}
           <div>
             <PatientSelect
               patients={patients}
@@ -460,6 +463,11 @@ export const FinanceModule: React.FC = () => {
       {/* MODAL 2: OPEN REGISTER */}
       <Modal isOpen={isOpenRegModalOpen} onClose={() => setIsOpenRegModalOpen(false)} title="Ouverture de Caisse">
         <form onSubmit={handleOpenRegister} className="space-y-4 text-slate-900 dark:text-slate-100">
+          {submitError && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+              {submitError}
+            </div>
+          )}
           <div>
             <label className="block text-xs font-semibold mb-1">Nom de la Caisse</label>
             <input
@@ -491,6 +499,11 @@ export const FinanceModule: React.FC = () => {
       {/* MODAL 3: CLOSE REGISTER WITH PHYSICAL COUNT */}
       <Modal isOpen={isCloseRegModalOpen} onClose={() => setIsCloseRegModalOpen(false)} title="Clôture de Caisse & Comptage Physique">
         <form onSubmit={handleCloseRegisterSubmit} className="space-y-4 text-slate-900 dark:text-slate-100">
+          {submitError && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+              {submitError}
+            </div>
+          )}
           <div>
             <label className="block text-xs font-semibold mb-1">Comptage Physique Espèces (FC) *</label>
             <input

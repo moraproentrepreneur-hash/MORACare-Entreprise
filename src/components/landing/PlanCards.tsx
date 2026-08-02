@@ -11,10 +11,10 @@ import {
   HardDrive,
   Headphones,
   DatabaseBackup,
-  Archive,
-  AlertCircle,
-} from 'lucide-react';
+  Archive
+  } from 'lucide-react';
 import { listPublicPlans, type PublicPlan } from '@/services/subscription.service';
+import { FALLBACK_PLANS, type FallbackPlan } from './landing-content';
 
 /**
  * Cartes des formules d'abonnement.
@@ -33,10 +33,20 @@ interface PlanCardsProps {
   onSelectPlan: (planName: string) => void;
 }
 
+/**
+ * Forme minimale attendue par une carte.
+ *
+ * `PublicPlan` (base) et `FallbackPlan` (repli documenté) la satisfont toutes
+ * deux : le rendu est donc identique, quelle que soit la source.
+ */
+type DisplayPlan = FallbackPlan | PublicPlan;
+
+const keyOf = (plan: DisplayPlan): string => ('id' in plan ? plan.id : plan.code);
+
 const formatPrice = (amount: number, currency: string): string =>
   amount === 0 ? 'Gratuit' : `${new Intl.NumberFormat('fr-FR').format(amount)} ${currency}`;
 
-const formatPeriod = (plan: PublicPlan): string => {
+const formatPeriod = (plan: DisplayPlan): string => {
   if (plan.billingPeriod === 'month') return 'par mois';
   if (plan.durationDays) return `pour ${plan.durationDays} jours`;
   return 'sans engagement';
@@ -61,8 +71,7 @@ const formatRetention = (days: number | null): string => {
 
 export const PlanCards: React.FC<PlanCardsProps> = ({ onSelectPlan }) => {
   const prefersReducedMotion = useReducedMotion();
-  const [plans, setPlans] = useState<PublicPlan[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [plans, setPlans] = useState<DisplayPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -70,12 +79,14 @@ export const PlanCards: React.FC<PlanCardsProps> = ({ onSelectPlan }) => {
 
     listPublicPlans()
       .then((result) => {
-        if (!cancelled) setPlans(result);
+        // Une réponse vide vaut un échec : mieux vaut le contenu documenté
+        // qu'une section de tarifs déserte.
+        if (!cancelled) setPlans(result.length > 0 ? result : FALLBACK_PLANS.slice());
       })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Chargement des formules impossible.');
-        }
+      .catch(() => {
+        // Base injoignable ou non configurée : la page commerciale continue
+        // d'afficher les offres officielles plutôt qu'un message d'erreur.
+        if (!cancelled) setPlans(FALLBACK_PLANS.slice());
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -99,25 +110,11 @@ export const PlanCards: React.FC<PlanCardsProps> = ({ onSelectPlan }) => {
     );
   }
 
-  if (error || plans.length === 0) {
-    return (
-      <div className="p-6 rounded-2xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-        <div className="text-sm text-amber-800 dark:text-amber-200/90">
-          <p className="font-bold">Nos formules ne sont pas disponibles pour le moment.</p>
-          <p className="mt-1 text-xs">
-            Contactez MORA Shawiri pour obtenir le détail des offres et un devis personnalisé.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
       {plans.map((plan, index) => (
         <motion.article
-          key={plan.id}
+          key={keyOf(plan)}
           initial={prefersReducedMotion ? undefined : { opacity: 0, y: 24 }}
           whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.1 }}

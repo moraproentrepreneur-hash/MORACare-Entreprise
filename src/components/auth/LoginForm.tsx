@@ -20,7 +20,7 @@ interface LoginFormProps {
 export const LoginForm: React.FC<LoginFormProps> = ({ onBackToLanding }) => {
   const { login, isConfigured } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onBackToLanding }) => {
     setError(null);
     setLoading(true);
 
-    const result = await login(email, password);
+    const result = await login(identifier, password);
     if (!result.success) {
       setError(result.error ?? 'Identifiant ou mot de passe incorrect.');
     }
@@ -145,23 +145,31 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onBackToLanding }) => {
 
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Email professionnel
+              <label
+                htmlFor="identifier"
+                className="block text-xs font-semibold text-slate-300 mb-1.5"
+              >
+                Identifiant ou email professionnel
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="identifier"
+                  name="identifier"
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="prenom.nom@etablissement.com"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="jdupont ou prenom.nom@etablissement.com"
                   className="block w-full pl-10 pr-3 py-3 text-sm bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-mora-green focus:border-transparent transition-shadow"
                 />
               </div>
+              <p className="mt-1.5 text-[11px] text-slate-500">
+                Vous pouvez utiliser l&apos;identifiant fourni par votre établissement.
+              </p>
             </div>
 
             <div>

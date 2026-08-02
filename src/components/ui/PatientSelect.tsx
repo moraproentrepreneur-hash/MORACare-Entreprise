@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Patient } from '@/types';
-import { Search, User, Check, Plus, AlertCircle } from 'lucide-react';
+import { Search, Check, Plus } from 'lucide-react';
 
 interface PatientSelectProps {
   patients: Patient[];
@@ -15,7 +15,7 @@ export const PatientSelect: React.FC<PatientSelectProps> = ({
   patients,
   selectedPatientId,
   onSelectPatient,
-  onAddNewPatientClick,
+  onAddNewPatientClick
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');

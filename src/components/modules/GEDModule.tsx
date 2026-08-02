@@ -1,9 +1,7 @@
 'use client';
 
 import React from 'react';
-import { FolderArchive, FileText, Download, ShieldCheck, Search } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-
+import { FolderArchive, ShieldCheck } from 'lucide-react';
 export const GEDModule: React.FC = () => {
   return (
     <div className="space-y-6">

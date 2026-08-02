@@ -1,19 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  UserCheck, 
-  Plus, 
-  Clock, 
-  Calendar, 
-  FileText, 
-  Award, 
-  Briefcase, 
-  CheckCircle2, 
-  DollarSign, 
-  Users, 
-  Search 
-} from 'lucide-react';
+import { UserCheck, Plus, Clock, Calendar, FileText, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { ShiftSchedule } from '@/types';
@@ -46,7 +34,7 @@ export const HRModule: React.FC = () => {
     contract_type: 'CDI' as const,
     phone: '',
     email: '',
-    diploma: 'Doctorat en Médecine',
+    diploma: 'Doctorat en Médecine'
   });
 
   const now = new Date();
@@ -56,7 +44,7 @@ export const HRModule: React.FC = () => {
     date: now.toISOString().split('T')[0],
     shift_type: 'Garde Nuit' as ShiftSchedule['shift_type'],
     start_time: '20:00',
-    end_time: '08:00',
+    end_time: '08:00'
   });
 
   const [payrollForm, setPayrollForm] = useState({
@@ -65,7 +53,7 @@ export const HRModule: React.FC = () => {
     period_year: now.getFullYear(),
     base_salary: 0,
     guard_bonuses: 0,
-    deductions: 0,
+    deductions: 0
   });
 
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -84,7 +72,7 @@ export const HRModule: React.FC = () => {
         contract_type: empForm.contract_type,
         phone: empForm.phone,
         email: empForm.email,
-        diploma: empForm.diploma,
+        diploma: empForm.diploma
       });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Échec de l'enregistrement.");
@@ -100,7 +88,7 @@ export const HRModule: React.FC = () => {
       contract_type: 'CDI',
       phone: '',
       email: '',
-      diploma: 'Doctorat en Médecine',
+      diploma: 'Doctorat en Médecine'
     });
   };
 
@@ -119,7 +107,7 @@ export const HRModule: React.FC = () => {
         shift_date: shiftForm.date,
         shift_type: shiftForm.shift_type,
         start_time: shiftForm.start_time,
-        end_time: shiftForm.end_time,
+        end_time: shiftForm.end_time
       });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Échec de l'enregistrement.");
@@ -146,7 +134,7 @@ export const HRModule: React.FC = () => {
         period_year: payrollForm.period_year,
         base_salary: payrollForm.base_salary,
         guard_bonuses: payrollForm.guard_bonuses,
-        deductions: payrollForm.deductions,
+        deductions: payrollForm.deductions
       });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Échec de l'enregistrement.");

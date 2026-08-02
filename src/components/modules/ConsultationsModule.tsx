@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Stethoscope, Plus, FileText, Download, Activity, CheckCircle2 } from 'lucide-react';
+import { Stethoscope, Plus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Consultation, Patient } from '@/types';
@@ -26,7 +26,7 @@ export const ConsultationsModule: React.FC = () => {
     bp_systolic: 120,
     bp_diastolic: 80,
     diagnosis_summary: '',
-    treatment_plan: '',
+    treatment_plan: ''
   });
 
   const handleSelectPatient = (p: Patient) => {
@@ -53,7 +53,7 @@ export const ConsultationsModule: React.FC = () => {
         blood_pressure_systolic: form.bp_systolic,
         blood_pressure_diastolic: form.bp_diastolic,
         diagnosis_summary: form.diagnosis_summary,
-        treatment_plan: form.treatment_plan,
+        treatment_plan: form.treatment_plan
       });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Échec de l'enregistrement.");
@@ -71,7 +71,7 @@ export const ConsultationsModule: React.FC = () => {
       bp_systolic: 120,
       bp_diastolic: 80,
       diagnosis_summary: '',
-      treatment_plan: '',
+      treatment_plan: ''
     });
   };
 

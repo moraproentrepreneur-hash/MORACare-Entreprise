@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar, Plus, Clock, User, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Calendar, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Patient } from '@/types';
@@ -20,7 +20,7 @@ export const AppointmentsModule: React.FC = () => {
   const [form, setForm] = useState({
     doctor_id: '',
     appointment_date: '',
-    reason: '',
+    reason: ''
   });
 
   const handleSelectPatient = (p: Patient) => {
@@ -43,7 +43,7 @@ export const AppointmentsModule: React.FC = () => {
         patient_id: selectedPatientId,
         doctor_id: form.doctor_id,
         appointment_date: form.appointment_date,
-        reason: form.reason,
+        reason: form.reason
       });
 
       setIsAddModalOpen(false);

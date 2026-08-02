@@ -19,10 +19,16 @@ import {
   ShieldCheck,
   Sun,
   Menu,
-  X,
+  X
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { PlanCards } from './PlanCards';
+import { HeroSection } from './HeroSection';
+import {
+  ScrollProgress,
+  ShimmerButton,
+  TiltCard
+  } from './motion-primitives';
 import {
   ADVANTAGES,
   FAQ_ITEMS,
@@ -34,7 +40,7 @@ import {
   SECURITY_POINTS,
   SOLUTION_SATELLITES,
   STARTING_STEPS,
-  USAGE_PROFILES,
+  USAGE_PROFILES
 } from './landing-content';
 
 /**
@@ -74,7 +80,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
     phone: '',
     establishment_name: '',
     establishment_type: 'clinique',
-    message: '',
+    message: ''
   });
   const [demoStatus, setDemoStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [demoError, setDemoError] = useState<string | null>(null);
@@ -82,25 +88,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
   // Évite l'écart d'hydratation sur l'icône de thème.
   useEffect(() => setMounted(true), []);
 
+  // L'en-tête se densifie une fois la page défilée : repère visuel discret,
+  // sans masquer le contenu au premier écran.
+  const [isScrolled, setIsScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   // LP-001 §7 : « Animations discrètes ». Elles sont désactivées si le système
   // de l'utilisateur demande une réduction des animations (accessibilité).
   const fadeUp: Variants = prefersReducedMotion
     ? { hidden: { opacity: 1 }, visible: { opacity: 1 } }
     : {
         hidden: { opacity: 0, y: 24 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } }
       };
 
   const stagger: Variants = {
     hidden: {},
-    visible: { transition: { staggerChildren: prefersReducedMotion ? 0 : 0.06 } },
+    visible: { transition: { staggerChildren: prefersReducedMotion ? 0 : 0.06 } }
   };
 
   const reveal = {
     initial: 'hidden' as const,
     whileInView: 'visible' as const,
     viewport: { once: true, amount: 0.15 },
-    variants: fadeUp,
+    variants: fadeUp
   };
 
   const openDemo = () => {
@@ -119,7 +135,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
       const response = await fetch('/api/registration-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(demo),
+        body: JSON.stringify(demo)
       });
 
       if (!response.ok) {
@@ -134,7 +150,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
         phone: '',
         establishment_name: '',
         establishment_type: 'clinique',
-        message: '',
+        message: ''
       });
     } catch (err) {
       setDemoStatus('idle');
@@ -149,8 +165,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-mora-green selection:text-white">
+      <ScrollProgress />
+
       {/* ================= NAVBAR — CTA toujours visible (LP-001 §7) ============ */}
-      <header className="sticky top-0 z-50 backdrop-blur-lg bg-white/85 dark:bg-slate-950/85 border-b border-slate-200/80 dark:border-slate-800">
+      <header
+        className={`sticky top-0 z-50 backdrop-blur-lg transition-all duration-300 ${
+          isScrolled
+            ? 'bg-white/90 dark:bg-slate-950/90 border-b border-slate-200/80 dark:border-slate-800 shadow-sm'
+            : 'bg-white/60 dark:bg-slate-950/60 border-b border-transparent'
+        }`}
+      >
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <a href="#top" className="flex items-center gap-2.5 shrink-0">
             <span className="w-9 h-9 rounded-xl bg-gradient-to-tr from-mora-blue to-mora-green flex items-center justify-center">
@@ -166,9 +190,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
               <a
                 key={link.href}
                 href={link.href}
-                className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-mora-blue dark:hover:text-mora-green transition-colors"
+                className="group relative text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-mora-blue dark:hover:text-mora-green transition-colors"
               >
                 {link.label}
+                {/* Soulignement qui se déploie au survol */}
+                <span
+                  aria-hidden
+                  className="absolute -bottom-1 left-0 h-0.5 w-full origin-left scale-x-0 rounded-full bg-mora-green transition-transform duration-300 group-hover:scale-x-100"
+                />
               </a>
             ))}
           </div>
@@ -234,116 +263,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
 
       <main id="top">
         {/* ============== SECTION 1 — HERO ============== */}
-        <section className="relative overflow-hidden">
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,rgba(0,168,89,0.10),transparent_70%)] dark:bg-[radial-gradient(60%_50%_at_50%_0%,rgba(0,168,89,0.16),transparent_70%)]"
-          />
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-20 lg:pt-24 lg:pb-28 grid lg:grid-cols-2 gap-14 items-center">
-            <motion.div initial="hidden" animate="visible" variants={stagger}>
-              <motion.span
-                variants={fadeUp}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-mora-blue/10 dark:bg-mora-green/10 text-mora-blue dark:text-mora-green text-xs font-bold"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                Système d&apos;Information Hospitalier — MORA Shawiri
-              </motion.span>
+        <HeroSection onRequestDemo={openDemo} />
 
-              <motion.h1
-                variants={fadeUp}
-                className="mt-6 text-4xl sm:text-5xl xl:text-6xl font-black leading-[1.08] tracking-tight"
-              >
-                Pilotez votre établissement de santé avec{' '}
-                <span className="text-mora-green">une seule plateforme.</span>
-              </motion.h1>
-
-              <motion.p
-                variants={fadeUp}
-                className="mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl"
-              >
-                MORACare Enterprise centralise les patients, consultations, hospitalisations,
-                pharmacie, laboratoire, imagerie médicale, comptabilité et bien plus encore dans une
-                solution moderne, sécurisée et évolutive.
-              </motion.p>
-
-              <motion.div variants={fadeUp} className="mt-8 flex flex-col sm:flex-row gap-3">
-                <button onClick={openDemo} className={ctaPrimary}>
-                  Réserver une démonstration <ArrowRight className="w-4 h-4" />
-                </button>
-                <a href="#features" className={ctaSecondary}>
-                  Découvrir les fonctionnalités
-                </a>
-              </motion.div>
-            </motion.div>
-
-            {/* Mockup interactif du logiciel — LP-001 §6 section 1, « à droite » */}
-            <motion.div
-              initial={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.96 }}
-              animate={prefersReducedMotion ? undefined : { opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.15 }}
-              className="relative"
-            >
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl shadow-mora-blue/10 overflow-hidden">
-                <div className="h-9 bg-slate-100 dark:bg-slate-800 flex items-center gap-1.5 px-4">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                  <span className="ml-3 text-[10px] font-semibold text-slate-500">
-                    MORACare — Tableau de bord
-                  </span>
-                </div>
-
-                <div className="p-5 space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
-                    {['Patients', 'Consultations', 'Hospitalisations'].map((label, i) => (
-                      <motion.div
-                        key={label}
-                        initial={prefersReducedMotion ? undefined : { opacity: 0, y: 10 }}
-                        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-                        transition={{ delay: 0.35 + i * 0.1 }}
-                        className="p-3 rounded-xl bg-mora-light dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700"
-                      >
-                        <p className="text-[9px] font-semibold uppercase text-slate-500 truncate">
-                          {label}
-                        </p>
-                        <div className="mt-2 h-2 w-10 rounded-full bg-mora-blue/70 dark:bg-mora-green/70" />
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  <div className="space-y-2">
-                    {[80, 62, 71, 45].map((width, i) => (
-                      <motion.div
-                        key={i}
-                        initial={prefersReducedMotion ? undefined : { width: 0 }}
-                        animate={prefersReducedMotion ? undefined : { width: `${width}%` }}
-                        transition={{ duration: 0.7, delay: 0.6 + i * 0.12 }}
-                        className="h-2.5 rounded-full bg-gradient-to-r from-mora-blue to-mora-green"
-                      />
-                    ))}
-                  </div>
-
-                  <div className="pt-2 grid grid-cols-2 gap-3">
-                    {['Laboratoire', 'Facturation'].map((label) => (
-                      <div
-                        key={label}
-                        className="p-3 rounded-xl border border-slate-200 dark:border-slate-700"
-                      >
-                        <p className="text-[10px] font-bold text-slate-700 dark:text-slate-200">
-                          {label}
-                        </p>
-                        <div className="mt-2 flex gap-1">
-                          <span className="h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700" />
-                          <span className="h-1.5 w-4 rounded-full bg-mora-gold" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </section>
 
         {/* ============== SECTION 2 — LES CHIFFRES CLÉS ============== */}
         <section className="bg-mora-light dark:bg-slate-900/60 border-y border-slate-200 dark:border-slate-800">
@@ -353,9 +274,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
             className="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6"
           >
             {KEY_FIGURES.map((figure) => (
-              <motion.div key={figure} variants={fadeUp} className="text-center">
-                <CheckCircle2 className="w-6 h-6 mx-auto text-mora-green" />
-                <p className="mt-2 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <motion.div
+                key={figure}
+                variants={fadeUp}
+                whileHover={prefersReducedMotion ? undefined : { y: -4 }}
+                className="group text-center cursor-default"
+              >
+                <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-mora-green/10 transition-colors group-hover:bg-mora-green/20">
+                  <CheckCircle2 className="w-5 h-5 text-mora-green transition-transform group-hover:scale-110" />
+                </span>
+                <p className="mt-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
                   {figure}
                 </p>
               </motion.div>
@@ -464,20 +392,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
             {MODULE_CARDS.map((module) => {
               const Icon = module.icon;
               return (
-                <motion.article
-                  key={module.title}
-                  variants={fadeUp}
-                  whileHover={prefersReducedMotion ? undefined : { y: -4 }}
-                  className="group p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-mora-green/50 hover:shadow-lg hover:shadow-mora-green/10 transition-all"
-                >
-                  <span className="inline-flex w-10 h-10 rounded-xl bg-mora-blue/10 dark:bg-mora-green/10 items-center justify-center">
-                    <Icon className="w-5 h-5 text-mora-blue dark:text-mora-green" />
-                  </span>
-                  <h3 className="mt-4 text-sm font-bold">{module.title}</h3>
-                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                    {module.description}
-                  </p>
-                </motion.article>
+                <motion.div key={module.title} variants={fadeUp}>
+                  <TiltCard intensity={7} className="h-full">
+                    <article className="group relative h-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 transition-all hover:border-mora-green/50 hover:shadow-xl hover:shadow-mora-green/10 dark:border-slate-800 dark:bg-slate-900">
+                      {/* Halo qui suit l'apparition au survol */}
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-mora-green/10 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+                      />
+                      <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl bg-mora-blue/10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 dark:bg-mora-green/10">
+                        <Icon className="h-5 w-5 text-mora-blue dark:text-mora-green" />
+                      </span>
+                      <h3 className="relative mt-4 text-sm font-bold">{module.title}</h3>
+                      <p className="relative mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                        {module.description}
+                      </p>
+                    </article>
+                  </TiltCard>
+                </motion.div>
               );
             })}
           </motion.div>
@@ -521,21 +453,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
 
           <motion.div {...reveal} variants={stagger} className="mt-12 grid md:grid-cols-3 gap-6">
             {USAGE_PROFILES.map((profile) => (
-              <motion.div
-                key={profile.title}
-                variants={fadeUp}
-                whileHover={prefersReducedMotion ? undefined : { y: -5 }}
-                className="flex flex-col p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-mora-blue/10 transition-all"
-              >
-                <h3 className="text-lg font-black text-mora-blue dark:text-mora-green">
-                  {profile.title}
-                </h3>
-                <p className="mt-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed flex-1">
-                  {profile.description}
-                </p>
-                <button onClick={openDemo} className={`${ctaPrimary} mt-6 w-full`}>
-                  Demander une démonstration
-                </button>
+              <motion.div key={profile.title} variants={fadeUp}>
+                <TiltCard intensity={5} className="h-full">
+                  <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-xl hover:shadow-mora-blue/10 dark:border-slate-800 dark:bg-slate-900">
+                    <span
+                      aria-hidden
+                      className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gradient-to-r from-mora-blue to-mora-green transition-transform duration-500 group-hover:scale-x-100"
+                    />
+                    <h3 className="text-lg font-black text-mora-blue dark:text-mora-green">
+                      {profile.title}
+                    </h3>
+                    <p className="mt-3 flex-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                      {profile.description}
+                    </p>
+                    <ShimmerButton onClick={openDemo} className="mt-6 w-full">
+                      Demander une démonstration
+                    </ShimmerButton>
+                  </div>
+                </TiltCard>
               </motion.div>
             ))}
           </motion.div>
@@ -674,9 +609,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
               Réservez une démonstration personnalisée avec notre équipe et découvrez comment
               MORACare Enterprise peut répondre aux besoins de votre structure.
             </p>
-            <button onClick={openDemo} className={`${ctaPrimary} mt-8 px-8 py-3.5 text-base`}>
-              Réserver une démonstration <ArrowRight className="w-4 h-4" />
-            </button>
+            <ShimmerButton onClick={openDemo} className="mt-8 px-8 py-3.5 text-base">
+              Réserver une démonstration
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </ShimmerButton>
           </motion.div>
         </section>
       </main>

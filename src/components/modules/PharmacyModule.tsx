@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Pill, Plus, AlertTriangle, PackageCheck } from 'lucide-react';
+import { Pill, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -21,7 +21,7 @@ export const PharmacyModule: React.FC = () => {
     stock_quantity: 0,
     unit_price: 0,
     expiry_date: '',
-    reorder_level: 10,
+    reorder_level: 10
   });
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -36,7 +36,7 @@ export const PharmacyModule: React.FC = () => {
         stock_quantity: form.stock_quantity,
         unit_price: form.unit_price,
         expiry_date: form.expiry_date || undefined,
-        reorder_level: form.reorder_level,
+        reorder_level: form.reorder_level
       });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Échec de l'enregistrement.");
@@ -51,7 +51,7 @@ export const PharmacyModule: React.FC = () => {
       stock_quantity: 0,
       unit_price: 0,
       expiry_date: '',
-      reorder_level: 10,
+      reorder_level: 10
     });
   };
 

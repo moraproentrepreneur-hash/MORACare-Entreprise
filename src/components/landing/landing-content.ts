@@ -137,6 +137,182 @@ export const USAGE_PROFILES: readonly UsageProfile[] = [
   },
 ];
 
+/**
+ * Formules d'abonnement — repli hors ligne.
+ *
+ * Les cartes sont normalement alimentées par la table `subscription_plans`.
+ * Si la base est injoignable — configuration absente, incident réseau — une
+ * page commerciale ne doit surtout pas afficher un encart d'erreur à la place
+ * de ses tarifs : elle affiche ces valeurs, strictement identiques à celles du
+ * seed (BP09 §4 + tarification officielle).
+ *
+ * Toute modification de la tarification en base doit être répercutée ici.
+ */
+export interface FallbackPlan {
+  code: string;
+  name: string;
+  description: string;
+  priceAmount: number;
+  priceCurrency: string;
+  billingPeriod: string | null;
+  durationDays: number | null;
+  maxUsers: number | null;
+  maxPatients: number | null;
+  storageMb: number | null;
+  supportLevel: string;
+  backupFrequency: string;
+  retentionDays: number;
+  highlights: string[];
+  limitations: string[];
+  ctaLabel: string;
+  isFeatured: boolean;
+  moduleNames: string[];
+}
+
+const SOINS_BASE = ['Gestion des Patients', 'Rendez-vous', 'Consultations'];
+const SOINS_STANDARD = [...SOINS_BASE, 'Pharmacie', 'Laboratoire', 'Finance & Facturation', 'GED & Archivage'];
+const SOINS_BUSINESS = [
+  ...SOINS_STANDARD,
+  'Hospitalisation',
+  'Imagerie Médicale',
+  'Ressources Humaines',
+  'Rapports & Statistiques',
+];
+const SOINS_COMPLET = [...SOINS_BUSINESS, 'Portail Patient'];
+
+export const FALLBACK_PLANS: readonly FallbackPlan[] = [
+  {
+    code: 'essai',
+    name: 'Essai',
+    description: 'Découverte complète de MORACare.',
+    priceAmount: 0,
+    priceCurrency: 'KMF',
+    billingPeriod: null,
+    durationDays: 3,
+    maxUsers: 5,
+    maxPatients: 50,
+    storageMb: 512,
+    supportLevel: 'Assistance par e-mail',
+    backupFrequency: 'Hebdomadaire',
+    retentionDays: 30,
+    highlights: [
+      'Découverte complète de MORACare',
+      'Tous les modules accessibles',
+      'Activation immédiate, sans validation',
+      'Aucun moyen de paiement requis',
+    ],
+    limitations: ['Durée limitée à 3 jours', '5 utilisateurs maximum', '50 patients maximum', '512 Mo de stockage'],
+    ctaLabel: "Démarrer l'essai",
+    isFeatured: false,
+    moduleNames: SOINS_COMPLET,
+  },
+  {
+    code: 'gratuit',
+    name: 'Gratuit',
+    description: 'Version permanente avec limitations.',
+    priceAmount: 0,
+    priceCurrency: 'KMF',
+    billingPeriod: 'month',
+    durationDays: null,
+    maxUsers: 2,
+    maxPatients: 100,
+    storageMb: 1024,
+    supportLevel: 'Documentation en ligne',
+    backupFrequency: 'Hebdomadaire',
+    retentionDays: 90,
+    highlights: [
+      'Gratuit de façon permanente',
+      'Dossiers patients et rendez-vous',
+      'Consultations et prescriptions',
+      'Mises à jour incluses',
+    ],
+    limitations: [
+      'Activation soumise à validation',
+      '2 utilisateurs maximum',
+      '100 patients maximum',
+      'Modules avancés non inclus',
+    ],
+    ctaLabel: "Demander l'accès",
+    isFeatured: false,
+    moduleNames: SOINS_BASE,
+  },
+  {
+    code: 'standard',
+    name: 'Standard',
+    description: 'Version destinée aux petits établissements.',
+    priceAmount: 5000,
+    priceCurrency: 'KMF',
+    billingPeriod: 'month',
+    durationDays: null,
+    maxUsers: 10,
+    maxPatients: 2000,
+    storageMb: 5120,
+    supportLevel: 'Assistance par e-mail sous 48 h',
+    backupFrequency: 'Quotidienne',
+    retentionDays: 365,
+    highlights: [
+      'Pensé pour les petits établissements',
+      'Pharmacie et laboratoire inclus',
+      'Facturation et encaissements',
+      'Gestion documentaire et archivage',
+    ],
+    limitations: ['10 utilisateurs maximum', '2 000 patients maximum', 'Imagerie et hospitalisation non incluses'],
+    ctaLabel: 'Choisir Standard',
+    isFeatured: false,
+    moduleNames: SOINS_STANDARD,
+  },
+  {
+    code: 'business',
+    name: 'Business',
+    description: 'Version destinée aux établissements en croissance.',
+    priceAmount: 10000,
+    priceCurrency: 'KMF',
+    billingPeriod: 'month',
+    durationDays: null,
+    maxUsers: 30,
+    maxPatients: 10000,
+    storageMb: 20480,
+    supportLevel: 'Assistance prioritaire sous 24 h',
+    backupFrequency: 'Quotidienne',
+    retentionDays: 1095,
+    highlights: [
+      'Pour les établissements en croissance',
+      'Hospitalisation et imagerie médicale',
+      'Ressources humaines et plannings',
+      'Rapports et tableaux de bord',
+    ],
+    limitations: ['30 utilisateurs maximum', '10 000 patients maximum'],
+    ctaLabel: 'Choisir Business',
+    isFeatured: true,
+    moduleNames: SOINS_BUSINESS,
+  },
+  {
+    code: 'vip',
+    name: 'VIP',
+    description: 'Version complète. Toutes les fonctionnalités disponibles.',
+    priceAmount: 15000,
+    priceCurrency: 'KMF',
+    billingPeriod: 'month',
+    durationDays: null,
+    maxUsers: null,
+    maxPatients: null,
+    storageMb: 102400,
+    supportLevel: 'Accompagnement dédié',
+    backupFrequency: 'Quotidienne avec restauration à la demande',
+    retentionDays: 3650,
+    highlights: [
+      'Toutes les fonctionnalités disponibles',
+      'Utilisateurs et patients illimités',
+      'Portail Patient inclus',
+      'Accompagnement dédié',
+    ],
+    limitations: [],
+    ctaLabel: 'Choisir VIP',
+    isFeatured: false,
+    moduleNames: SOINS_COMPLET,
+  },
+];
+
 /** LP-001 §6 — Section 8 : Comment démarrer ? (5 étapes) */
 export const STARTING_STEPS: readonly string[] = [
   'Réserver une démonstration',

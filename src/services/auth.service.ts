@@ -17,25 +17,37 @@ export interface AuthResult {
 const GENERIC_AUTH_ERROR = 'Identifiant ou mot de passe incorrect.';
 
 /**
- * Authentifie un utilisateur par e-mail professionnel et mot de passe
- * (UG01 §3, UG02 §3, UG03 §3).
+ * Authentifie un utilisateur par **e-mail ou nom d'utilisateur** (UG02 §6).
+ *
+ * L'appel passe par `/api/auth/login` : Supabase Auth n'authentifie que par
+ * e-mail, et la résolution identifiant → adresse doit rester côté serveur pour
+ * ne pas exposer les adresses du personnel. Le serveur écrit la session dans
+ * les cookies, que le client Supabase du navigateur relit ensuite.
  */
-export const signIn = async (email: string, password: string): Promise<AuthResult> => {
+export const signIn = async (identifier: string, password: string): Promise<AuthResult> => {
   if (!isSupabaseConfigured()) {
     return { success: false, error: SUPABASE_SETUP_MESSAGE };
   }
 
-  const supabase = createBrowserSupabaseClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email: email.trim().toLowerCase(),
-    password,
-  });
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: identifier.trim(), password }),
+    });
 
-  if (error) {
-    return { success: false, error: GENERIC_AUTH_ERROR };
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      return { success: false, error: payload?.error ?? GENERIC_AUTH_ERROR };
+    }
+
+    return { success: true };
+  } catch {
+    return {
+      success: false,
+      error: 'Le serveur est injoignable. Vérifiez votre connexion et réessayez.',
+    };
   }
-
-  return { success: true };
 };
 
 export const signOut = async (): Promise<void> => {

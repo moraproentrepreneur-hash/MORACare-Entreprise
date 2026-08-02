@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { BedDouble, Plus, CheckCircle2, User } from 'lucide-react';
+import { BedDouble, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Patient } from '@/types';
@@ -21,7 +21,7 @@ export const HospitalizationsModule: React.FC = () => {
     doctor_id: '',
     room_number: '',
     bed_number: '',
-    admission_reason: '',
+    admission_reason: ''
   });
 
   const handleSelectPatient = (p: Patient) => {
@@ -43,7 +43,7 @@ export const HospitalizationsModule: React.FC = () => {
         doctor_id: form.doctor_id,
         room_number: form.room_number,
         bed_number: form.bed_number,
-        admission_reason: form.admission_reason,
+        admission_reason: form.admission_reason
       });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Échec de l'enregistrement.");

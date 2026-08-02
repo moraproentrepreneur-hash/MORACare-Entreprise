@@ -15,6 +15,7 @@
     "db:migrate": "node scripts/apply-migrations.mjs",
     "db:verify": "node scripts/verify-database.mjs",
     "db:validate-functional": "node scripts/validate-functional.mjs",
+    "db:diagnose-public": "node scripts/diagnose-public.mjs",
     "verify": "npm run db:validate && npm run db:check-types && tsc --noEmit && npm run lint && npm test"
   },
   "dependencies": {

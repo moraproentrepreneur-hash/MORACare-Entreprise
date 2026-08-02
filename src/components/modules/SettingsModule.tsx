@@ -4,13 +4,12 @@ import React, { useState } from 'react';
 import {
   Settings,
   Building2,
-  Users,
   ShieldCheck,
   Boxes,
   Lock,
   Database,
   History,
-  CreditCard,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';

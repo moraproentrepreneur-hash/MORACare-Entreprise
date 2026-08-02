@@ -75,6 +75,28 @@
   }
 }
 
+/* Dégradé animé du titre principal (LP-001 §7 : « animations discrètes ») */
+@keyframes gradient-pan {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Respect du réglage système : aucune animation décorative imposée. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Custom Glassmorphism & Scrollbar styling */
 .glass-panel {
   @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm;
