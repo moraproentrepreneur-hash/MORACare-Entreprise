@@ -36,10 +36,24 @@ export const updateSession = async (request: NextRequest): Promise<NextResponse>
   let response = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
 
-  // Sans configuration Supabase, on laisse passer : l'interface affiche une
-  // bannière explicite plutôt qu'une redirection incompréhensible.
+  /**
+   * Configuration absente : on refuse l'accès aux routes privées.
+   *
+   * Une version antérieure laissait passer, au motif que l'interface afficherait
+   * une bannière explicative. C'était une erreur : un déploiement mal configuré
+   * rendait alors `/dashboard`, `/admin` et tous les écrans internes atteignables
+   * sans session. Aucune donnée n'en sortait — faute de base — mais l'application
+   * ne doit pas s'ouvrir parce qu'elle est cassée.
+   *
+   * Le visiteur est renvoyé vers la page de connexion, qui explique la cause.
+   */
   if (!isSupabaseConfigured()) {
-    return response;
+    if (isPublicPath(pathname)) return response;
+
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.search = '';
+    return NextResponse.redirect(url);
   }
 
   const supabase = createServerClient<AppDatabase>(SUPABASE_URL, SUPABASE_ANON_KEY, {
