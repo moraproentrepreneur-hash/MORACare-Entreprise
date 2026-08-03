@@ -2,43 +2,27 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import {
-  Check,
-  X,
-  Sparkles,
-  Users,
-  HeartPulse,
-  HardDrive,
-  Headphones,
-  DatabaseBackup,
-  Archive
-  } from 'lucide-react';
+import { Check, Sparkles, Users, Layers, Clock, ShieldCheck } from 'lucide-react';
 import { listPublicPlans, type PublicPlan } from '@/services/subscription.service';
 import { FALLBACK_PLANS, type FallbackPlan } from './landing-content';
 
 /**
  * Cartes des formules d'abonnement.
  *
- * Entièrement pilotées par la base : nom, tarif, période de facturation,
- * modules inclus, quotas, avantages, limitations et libellé du bouton
- * proviennent tous de `subscription_plans`. Modifier une offre ne demande
- * aucun redéploiement.
+ * Volontairement courtes : elles n'affichent que les limites commerciales —
+ * durée, utilisateurs, enregistrements par module. La liste des modules a été
+ * retirée car tous les modules sont désormais inclus dans chaque formule ;
+ * leur activation relève des Paramètres de l'établissement.
  *
- * Note de conformité : LP-001 §7 indiquait « Ne pas afficher de prix ». Les
- * tarifs officiels ayant été arrêtés par l'éditeur, ils sont désormais
- * affichés — cet écart avec LP-001 §7 est signalé dans le rapport de phase.
+ * Le contenu vient de la base : modifier une offre ne demande aucun
+ * redéploiement. En cas d'indisponibilité, les valeurs officielles prennent
+ * le relais — une page commerciale ne doit jamais rester sans tarifs.
  */
 
 interface PlanCardsProps {
   onSelectPlan: (planName: string) => void;
 }
 
-/**
- * Forme minimale attendue par une carte.
- *
- * `PublicPlan` (base) et `FallbackPlan` (repli documenté) la satisfont toutes
- * deux : le rendu est donc identique, quelle que soit la source.
- */
 type DisplayPlan = FallbackPlan | PublicPlan;
 
 const keyOf = (plan: DisplayPlan): string => ('id' in plan ? plan.id : plan.code);
@@ -52,21 +36,34 @@ const formatPeriod = (plan: DisplayPlan): string => {
   return 'sans engagement';
 };
 
-const formatQuota = (value: number | null, suffix: string): string =>
-  value === null ? `${suffix} illimités` : `${new Intl.NumberFormat('fr-FR').format(value)} ${suffix}`;
+/** Limites commerciales affichées : durée, validation, utilisateurs, volume. */
+const commercialLimits = (plan: DisplayPlan): { icon: React.ElementType; text: string }[] => {
+  const lines: { icon: React.ElementType; text: string }[] = [];
 
-const formatStorage = (mb: number | null): string => {
-  if (mb === null) return 'Stockage illimité';
-  return mb >= 1024 ? `${Math.round(mb / 1024)} Go de stockage` : `${mb} Mo de stockage`;
-};
-
-const formatRetention = (days: number | null): string => {
-  if (days === null) return 'Conservation non définie';
-  if (days >= 365) {
-    const years = Math.round(days / 365);
-    return `Conservation ${years} an${years > 1 ? 's' : ''}`;
+  if (plan.durationDays) {
+    lines.push({ icon: Clock, text: `Durée ${plan.durationDays} jours` });
   }
-  return `Conservation ${days} jours`;
+  if (plan.requiresApproval) {
+    lines.push({ icon: ShieldCheck, text: 'Validation obligatoire' });
+  }
+
+  lines.push({
+    icon: Users,
+    text:
+      plan.maxUsers === null
+        ? 'Utilisateurs illimités'
+        : `${plan.maxUsers} utilisateur${plan.maxUsers > 1 ? 's' : ''}`,
+  });
+
+  lines.push({
+    icon: Layers,
+    text:
+      plan.maxRecordsPerModule === null
+        ? 'Enregistrements illimités'
+        : `${plan.maxRecordsPerModule} enregistrements par module`,
+  });
+
+  return lines;
 };
 
 export const PlanCards: React.FC<PlanCardsProps> = ({ onSelectPlan }) => {
@@ -79,13 +76,9 @@ export const PlanCards: React.FC<PlanCardsProps> = ({ onSelectPlan }) => {
 
     listPublicPlans()
       .then((result) => {
-        // Une réponse vide vaut un échec : mieux vaut le contenu documenté
-        // qu'une section de tarifs déserte.
         if (!cancelled) setPlans(result.length > 0 ? result : FALLBACK_PLANS.slice());
       })
       .catch(() => {
-        // Base injoignable ou non configurée : la page commerciale continue
-        // d'afficher les offres officielles plutôt qu'un message d'erreur.
         if (!cancelled) setPlans(FALLBACK_PLANS.slice());
       })
       .finally(() => {
@@ -99,135 +92,69 @@ export const PlanCards: React.FC<PlanCardsProps> = ({ onSelectPlan }) => {
 
   if (isLoading) {
     return (
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-[30rem] rounded-3xl bg-slate-100 dark:bg-slate-900 animate-pulse"
-          />
+          <div key={i} className="h-72 animate-pulse rounded-3xl bg-slate-900" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {plans.map((plan, index) => (
         <motion.article
           key={keyOf(plan)}
-          initial={prefersReducedMotion ? undefined : { opacity: 0, y: 24 }}
+          initial={prefersReducedMotion ? undefined : { opacity: 0, y: 20 }}
           whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.1 }}
-          transition={{ duration: 0.45, delay: index * 0.07 }}
-          whileHover={prefersReducedMotion ? undefined : { y: -6 }}
-          className={`relative flex flex-col rounded-3xl border p-6 transition-shadow ${
+          transition={{ duration: 0.4, delay: index * 0.06 }}
+          whileHover={prefersReducedMotion ? undefined : { y: -5 }}
+          className={`relative flex flex-col rounded-3xl border p-5 transition-shadow ${
             plan.isFeatured
-              ? 'border-mora-green bg-white dark:bg-slate-900 shadow-xl shadow-mora-green/15 ring-1 ring-mora-green/30'
-              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-lg'
+              ? 'border-mora-green bg-slate-900 shadow-xl shadow-mora-green/15 ring-1 ring-mora-green/30'
+              : 'border-slate-800 bg-slate-900 hover:shadow-lg'
           }`}
         >
           {plan.isFeatured && (
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-mora-green text-white text-[10px] font-black uppercase tracking-wider shadow-md">
-              <Sparkles className="w-3 h-3" /> Recommandé
+            <span className="absolute -top-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-mora-green px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-md">
+              <Sparkles className="h-3 w-3" /> Recommandé
             </span>
           )}
 
-          {/* Nom, prix et période de facturation */}
-          <header>
-            <h3 className="text-lg font-black">{plan.name}</h3>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 min-h-[2.5rem] leading-relaxed">
-              {plan.description}
-            </p>
+          <h3 className="text-base font-black text-white">{plan.name}</h3>
 
-            <div className="mt-4">
-              <span className="text-3xl font-black tracking-tight text-mora-blue dark:text-white">
-                {formatPrice(plan.priceAmount, plan.priceCurrency)}
-              </span>
-              <span className="block mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                {formatPeriod(plan)}
-              </span>
-            </div>
-          </header>
+          <div className="mt-3">
+            <span className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+              {formatPrice(plan.priceAmount, plan.priceCurrency)}
+            </span>
+            <span className="mt-0.5 block text-[11px] font-semibold text-slate-400">
+              {formatPeriod(plan)}
+            </span>
+          </div>
 
-          {/* Quotas et services — exploités automatiquement par le système */}
-          <ul className="mt-5 space-y-2 border-y border-slate-100 dark:border-slate-800 py-4">
-            {[
-              { icon: Users, text: formatQuota(plan.maxUsers, 'utilisateurs') },
-              { icon: HeartPulse, text: formatQuota(plan.maxPatients, 'patients') },
-              { icon: HardDrive, text: formatStorage(plan.storageMb) },
-              { icon: Headphones, text: plan.supportLevel ?? 'Support non défini' },
-              { icon: DatabaseBackup, text: `Sauvegarde ${(plan.backupFrequency ?? '—').toLowerCase()}` },
-              { icon: Archive, text: formatRetention(plan.retentionDays) },
-            ].map((row) => {
-              const Icon = row.icon;
+          <ul className="mt-5 flex-1 space-y-2.5 border-t border-slate-800 pt-4">
+            {commercialLimits(plan).map((line) => {
+              const Icon = line.icon;
               return (
-                <li key={row.text} className="flex items-start gap-2 text-[11px]">
-                  <Icon className="w-3.5 h-3.5 text-mora-blue dark:text-mora-green shrink-0 mt-0.5" />
-                  <span className="text-slate-600 dark:text-slate-300">{row.text}</span>
+                <li key={line.text} className="flex items-start gap-2 text-xs">
+                  <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mora-green" />
+                  <span className="text-slate-300">{line.text}</span>
                 </li>
               );
             })}
+            <li className="flex items-start gap-2 text-xs">
+              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mora-green" />
+              <span className="text-slate-300">Tous les modules inclus</span>
+            </li>
           </ul>
-
-          {/* Avantages */}
-          {plan.highlights.length > 0 && (
-            <div className="mt-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Avantages
-              </p>
-              <ul className="mt-2 space-y-1.5">
-                {plan.highlights.map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-[11px]">
-                    <Check className="w-3.5 h-3.5 text-mora-green shrink-0 mt-0.5" />
-                    <span className="text-slate-700 dark:text-slate-200">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Modules inclus */}
-          {plan.moduleNames.length > 0 && (
-            <div className="mt-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Modules inclus ({plan.moduleNames.length})
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {plan.moduleNames.map((name) => (
-                  <span
-                    key={name}
-                    className="px-2 py-0.5 rounded-md bg-mora-light dark:bg-slate-800 text-[9px] font-semibold text-slate-600 dark:text-slate-300"
-                  >
-                    {name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Limitations */}
-          {plan.limitations.length > 0 && (
-            <div className="mt-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Limitations
-              </p>
-              <ul className="mt-2 space-y-1.5">
-                {plan.limitations.map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-[11px]">
-                    <X className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span className="text-slate-500 dark:text-slate-400">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
 
           <button
             onClick={() => onSelectPlan(plan.name)}
-            className={`mt-6 w-full py-2.5 rounded-xl text-sm font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+            className={`mt-5 w-full rounded-xl py-2.5 text-sm font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
               plan.isFeatured
                 ? 'bg-mora-green text-white shadow-lg shadow-mora-green/25 hover:bg-mora-green/90 focus-visible:ring-mora-green'
-                : 'border border-mora-blue/25 dark:border-white/20 text-mora-blue dark:text-white hover:bg-mora-blue/5 dark:hover:bg-white/10 focus-visible:ring-mora-blue'
+                : 'border border-white/20 text-white hover:bg-white/10 focus-visible:ring-mora-blue'
             }`}
           >
             {plan.ctaLabel ?? 'Demander une démonstration'}

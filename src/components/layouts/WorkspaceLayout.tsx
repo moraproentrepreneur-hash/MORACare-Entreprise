@@ -23,6 +23,9 @@ interface WorkspaceLayoutProps {
  *
  * Les espaces restent distincts : chacun lui passe son propre périmètre de
  * référentiel et son propre libellé, et aucun n'a connaissance de l'autre.
+ *
+ * Sous 1024 px, le menu latéral devient un tiroir : conserver une colonne de
+ * 256 px sur un téléphone ne laisserait pas assez de place au contenu.
  */
 export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
   workspace,
@@ -37,12 +40,29 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
   const pathname = usePathname();
   const router = useRouter();
 
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+
   React.useEffect(() => {
     // Filet côté client ; la protection qui compte est le middleware serveur.
     if (!authLoading && !isAuthenticated) {
       router.replace('/login');
     }
   }, [authLoading, isAuthenticated, router]);
+
+  // Le tiroir se referme à chaque changement de page : le laisser ouvert
+  // masquerait l'écran que l'on vient d'ouvrir.
+  React.useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
+  React.useEffect(() => {
+    if (!isMenuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isMenuOpen]);
 
   const title = React.useMemo(() => {
     const custom = extraItems?.find((item) => pathname === item.href);
@@ -68,23 +88,42 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
   if (!isAuthenticated) return null;
 
   return (
-    // `dark` est appliqué ici, et non sur <html> : les espaces authentifiés
-    // restent sombres quel que soit le thème choisi par le visiteur sur la
-    // vitrine, et les variantes `dark:` des composants métier se résolvent.
-    <div className="dark flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
-      <Sidebar workspace={workspace} spaceLabel={spaceLabel} extraItems={extraItems} />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header title={title} />
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100">
+      {/* Colonne fixe à partir de 1024 px */}
+      <div className="hidden lg:flex">
+        <Sidebar workspace={workspace} spaceLabel={spaceLabel} extraItems={extraItems} />
+      </div>
+
+      {/* Tiroir mobile */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
+            onClick={() => setIsMenuOpen(false)}
+          />
+          <div className="absolute inset-y-0 left-0 w-64 max-w-[85vw] shadow-2xl">
+            <Sidebar
+              workspace={workspace}
+              spaceLabel={spaceLabel}
+              extraItems={extraItems}
+              onNavigate={() => setIsMenuOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <Header title={title} onOpenMenu={() => setIsMenuOpen(true)} />
+        <main className="flex-1 space-y-6 overflow-y-auto p-3 sm:p-4 lg:p-6">
           {accessError && (
-            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3 text-red-400 text-xs">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-400">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
               <span>{accessError}</span>
             </div>
           )}
           {dataError && (
-            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3 text-amber-300 text-xs">
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-300">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
               <span>{dataError}</span>
             </div>
           )}

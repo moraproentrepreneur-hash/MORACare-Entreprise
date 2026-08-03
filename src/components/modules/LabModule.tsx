@@ -56,9 +56,9 @@ export const LabModule: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <FlaskConical className="w-5 h-5 text-mora-green" /> Module Laboratoire & Bio-Analyses
           </h2>
           <p className="text-xs text-slate-400 mt-1">Prescription d'analyses, suivi des prélèvements et résultats biologiques.</p>
@@ -82,7 +82,7 @@ export const LabModule: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
+            <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-bold">
                 <tr>
                   <th className="p-4">Réf. Analyse</th>
@@ -133,7 +133,7 @@ export const LabModule: React.FC = () => {
             onChange={(doctorId) => setForm({ ...form, doctor_id: doctorId })}
             label="Médecin prescripteur"
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Type d'Analyse / Examen</label>
               <input

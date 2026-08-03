@@ -18,6 +18,16 @@ import type { UserRole } from '@/types';
 /** Routes accessibles sans authentification. */
 const PUBLIC_PATHS = ['/', '/login'];
 
+/**
+ * Les Route Handlers ne relèvent pas de la navigation.
+ *
+ * Une redirection y est toujours une erreur : le client attend une réponse
+ * JSON, il reçoit une page. Chaque handler relit lui-même le rôle de l'appelant
+ * en base et refuse par un code HTTP explicite — c'est le bon endroit pour
+ * décider, puisqu'il connaît l'opération demandée.
+ */
+const isApiPath = (pathname: string): boolean => pathname.startsWith('/api/');
+
 /** Préfixes d'URL de chaque espace. */
 const ADMIN_PREFIX = '/admin';
 const PORTAL_PREFIX = '/portail';
@@ -30,7 +40,7 @@ const homeForRole = (role: UserRole): string => {
 };
 
 const isPublicPath = (pathname: string): boolean =>
-  PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/api/');
+  PUBLIC_PATHS.includes(pathname) || isApiPath(pathname);
 
 export const updateSession = async (request: NextRequest): Promise<NextResponse> => {
   let response = NextResponse.next({ request });
@@ -85,6 +95,19 @@ export const updateSession = async (request: NextRequest): Promise<NextResponse>
   if (!user) {
     // Route privée sans session : retour à la connexion.
     return isPublicPath(pathname) ? response : redirectTo('/login');
+  }
+
+  /**
+   * Appel d'API par un utilisateur connecté : la session vient d'être
+   * rafraîchie, il n'y a plus rien à arbitrer ici.
+   *
+   * Sans cette sortie, les règles de séparation des espaces s'appliquaient aussi
+   * aux Route Handlers : `/api/users` n'étant pas sous `/admin`, un Super Admin
+   * qui créait un compte était redirigé vers `/admin`, et son POST se terminait
+   * en 405. La séparation des espaces vaut pour les pages, pas pour les API.
+   */
+  if (isApiPath(pathname)) {
+    return response;
   }
 
   const { data: profile } = await supabase

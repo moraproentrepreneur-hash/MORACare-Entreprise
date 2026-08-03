@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut, Activity } from 'lucide-react';
+import { LogOut, Activity, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { getModuleRoute } from '@/lib/navigation';
@@ -14,9 +14,16 @@ interface SidebarProps {
   spaceLabel: string;
   /** Entrées supplémentaires propres à l'espace (sous-sections). */
   extraItems?: readonly { label: string; href: string; icon: React.ElementType }[];
+  /** Ferme le tiroir sur mobile — sans effet sur grand écran. */
+  onNavigate?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ workspace, spaceLabel, extraItems }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  workspace,
+  spaceLabel,
+  extraItems,
+  onNavigate,
+}) => {
   const { user, logout } = useAuth();
   const { visibleModules, isLoading } = usePermissions();
   const pathname = usePathname();
@@ -36,32 +43,45 @@ export const Sidebar: React.FC<SidebarProps> = ({ workspace, spaceLabel, extraIt
     pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`));
 
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-screen shrink-0">
-      <div className="p-6 border-b border-slate-800 flex items-center space-x-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-mora-blue to-mora-green flex items-center justify-center shadow-lg shadow-mora-blue/20">
-          <Activity className="w-5 h-5 text-white" />
+    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-slate-800 bg-slate-900">
+      <div className="flex items-center justify-between gap-2 border-b border-slate-800 p-5 sm:p-6">
+        <div className="flex min-w-0 items-center space-x-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-mora-blue to-mora-green shadow-lg shadow-mora-blue/20">
+            <Activity className="h-5 w-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <span className="block truncate text-xl font-black tracking-tight text-white">
+              MORA<span className="text-mora-green">Care</span>
+            </span>
+            <span className="block truncate text-[9px] font-medium uppercase tracking-wider text-slate-400">
+              {spaceLabel}
+            </span>
+          </div>
         </div>
-        <div>
-          <span className="text-xl font-black tracking-tight text-white">
-            MORA<span className="text-mora-green">Care</span>
-          </span>
-          <span className="block text-[9px] text-slate-400 font-medium tracking-wider uppercase">
-            {spaceLabel}
-          </span>
-        </div>
+
+        {onNavigate && (
+          <button
+            type="button"
+            onClick={onNavigate}
+            aria-label="Fermer le menu"
+            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white lg:hidden"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {isLoading && (
           <div className="space-y-2 px-1">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-9 rounded-xl bg-slate-800/60 animate-pulse" />
+              <div key={i} className="h-9 animate-pulse rounded-xl bg-slate-800/60" />
             ))}
           </div>
         )}
 
         {!isLoading && menu.length === 0 && (
-          <p className="px-3 py-4 text-[11px] text-slate-500 leading-relaxed">
+          <p className="px-3 py-4 text-[11px] leading-relaxed text-slate-500">
             Aucun module accessible. Votre rôle ne dispose d&apos;aucune autorisation, ou tous les
             modules sont désactivés pour cet établissement.
           </p>
@@ -75,41 +95,44 @@ export const Sidebar: React.FC<SidebarProps> = ({ workspace, spaceLabel, extraIt
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onNavigate}
                 aria-current={active ? 'page' : undefined}
-                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                className={`flex w-full items-center space-x-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all ${
                   active
                     ? 'bg-mora-blue text-white shadow-md shadow-mora-blue/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-400'}`} />
-                <span>{item.label}</span>
+                <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-white' : 'text-slate-400'}`} />
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
       </nav>
 
-      <div className="p-4 border-t border-slate-800 bg-slate-950/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-mora-green font-bold text-xs shrink-0">
+      <div className="border-t border-slate-800 bg-slate-950/50 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center space-x-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-xs font-bold text-mora-green">
               {user?.first_name?.[0] ?? 'U'}
             </div>
-            <div className="truncate">
-              <p className="text-xs font-bold text-white truncate">
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-white">
                 {user?.first_name} {user?.last_name}
               </p>
-              <p className="text-[10px] text-slate-400 capitalize truncate font-mono">
+              <p className="truncate font-mono text-[10px] capitalize text-slate-400">
                 {user?.role}
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => void logout()}
             title="Se déconnecter"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            aria-label="Se déconnecter"
+            className="shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="h-4 w-4" />
           </button>
         </div>
       </div>

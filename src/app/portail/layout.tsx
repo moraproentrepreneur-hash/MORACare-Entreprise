@@ -24,8 +24,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   if (!isAuthenticated) return null;
 
   return (
-    <div className="dark min-h-screen bg-slate-950 text-slate-100">
-      <header className="h-16 border-b border-slate-800 bg-slate-900/60 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-slate-800 bg-slate-900/60 px-4 backdrop-blur-md sm:px-6">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-mora-blue to-mora-green flex items-center justify-center">
             <Activity className="w-5 h-5 text-white" />
@@ -54,7 +54,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-6 space-y-6">{children}</main>
+      <main className="mx-auto max-w-5xl space-y-6 p-3 sm:p-4 lg:p-6">{children}</main>
     </div>
   );
 }

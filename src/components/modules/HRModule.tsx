@@ -147,16 +147,16 @@ export const HRModule: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-mora-green" /> ERP Ressources Humaines & Gardes (BP-023A/B/C)
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-mora-green" /> ERP Ressources Humaines & Gardes
           </h2>
           <p className="text-xs text-slate-400 mt-1">
             Dossiers du personnel, diplômes, plannings des gardes/astreintes et génération des bulletins de paie.
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Button variant="outline" onClick={() => setIsAddShiftModalOpen(true)} className="gap-1.5 text-xs">
             <Calendar className="w-3.5 h-3.5" /> Planifier une Garde
           </Button>
@@ -167,30 +167,30 @@ export const HRModule: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-2 border-b border-slate-800 pb-2">
+      <div className="flex space-x-2 overflow-x-auto border-b border-slate-800 pb-2">
         <button
           onClick={() => setActiveTab('employees')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex shrink-0 whitespace-nowrap items-center gap-2 transition-all ${
             activeTab === 'employees' ? 'bg-mora-blue text-white' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Users className="w-4 h-4" /> Dossiers du Personnel (BP-023A)
+          <Users className="w-4 h-4" /> Dossiers du Personnel
         </button>
         <button
           onClick={() => setActiveTab('shifts')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex shrink-0 whitespace-nowrap items-center gap-2 transition-all ${
             activeTab === 'shifts' ? 'bg-mora-blue text-white' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Clock className="w-4 h-4" /> Gardes & Plannings (BP-023B)
+          <Clock className="w-4 h-4" /> Gardes & Plannings
         </button>
         <button
           onClick={() => setActiveTab('payroll')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex shrink-0 whitespace-nowrap items-center gap-2 transition-all ${
             activeTab === 'payroll' ? 'bg-mora-blue text-white' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <FileText className="w-4 h-4" /> Paie & Bulletins (BP-023C)
+          <FileText className="w-4 h-4" /> Paie & Bulletins
         </button>
       </div>
 
@@ -210,7 +210,7 @@ export const HRModule: React.FC = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
+              <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
                 <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-bold">
                   <tr>
                     <th className="p-4">Réf. Employé</th>
@@ -249,13 +249,13 @@ export const HRModule: React.FC = () => {
       {activeTab === 'shifts' && (
         <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
           <div className="p-4 border-b border-slate-800 flex justify-between items-center">
-            <span className="font-bold text-white text-sm">Planning des Gardes Médicales & Astreintes (BP-023B)</span>
+            <span className="font-bold text-white text-sm">Planning des Gardes Médicales & Astreintes</span>
             <Button size="sm" variant="secondary" onClick={() => setIsAddShiftModalOpen(true)}>
               <Plus className="w-3.5 h-3.5 mr-1" /> Ajouter Garde
             </Button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
+            <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-bold">
                 <tr>
                   <th className="p-4">Employé</th>
@@ -291,13 +291,13 @@ export const HRModule: React.FC = () => {
       {activeTab === 'payroll' && (
         <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
           <div className="p-4 border-b border-slate-800 flex justify-between items-center">
-            <span className="font-bold text-white text-sm">Gestion des Bulletins de Paie (BP-023C)</span>
+            <span className="font-bold text-white text-sm">Gestion des Bulletins de Paie</span>
             <Button size="sm" variant="secondary" onClick={() => setIsAddPayrollModalOpen(true)}>
               <Plus className="w-3.5 h-3.5 mr-1" /> Éditer Bulletin
             </Button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
+            <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-bold">
                 <tr>
                   <th className="p-4">Réf. Paie</th>
@@ -352,7 +352,7 @@ export const HRModule: React.FC = () => {
               className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Département *</label>
               <input
@@ -374,7 +374,7 @@ export const HRModule: React.FC = () => {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Salaire de Base (FC) *</label>
               <input
@@ -432,7 +432,7 @@ export const HRModule: React.FC = () => {
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Date</label>
               <input
@@ -488,7 +488,7 @@ export const HRModule: React.FC = () => {
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Mois</label>
               <input
@@ -518,7 +518,7 @@ export const HRModule: React.FC = () => {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Salaire Base (FC)</label>
               <input

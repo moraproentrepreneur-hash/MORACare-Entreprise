@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
-import { useTheme } from 'next-themes';
 import {
   Activity,
   ArrowRight,
@@ -15,24 +14,23 @@ import {
   FolderOpen,
   Layers,
   MessageCircle,
-  Moon,
   ShieldCheck,
-  Sun,
   Menu,
+  Phone,
+  Mail,
+  Globe,
   X
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { PlanCards } from './PlanCards';
 import { HeroSection } from './HeroSection';
-import {
-  ScrollProgress,
-  ShimmerButton,
-  TiltCard
-  } from './motion-primitives';
+import { ContactModal } from './ContactModal';
+import { LegalModal } from './LegalModal';
+import { ScrollProgress, ShimmerButton, TiltCard } from './motion-primitives';
+import { CONTACT_INFO, SOCIAL_LINKS, type LegalDocumentKey } from './legal-content';
 import {
   ADVANTAGES,
   FAQ_ITEMS,
-  FOOTER_LINKS,
   KEY_FIGURES,
   MODULE_CARDS,
   PROBLEM_CONSEQUENCES,
@@ -47,9 +45,9 @@ import {
  * Landing Page officielle — LP-001.
  *
  * Structure en 12 sections, dans l'ordre et avec les titres littéraux du
- * document. Charte LP-001 §5 : fond blanc, fond alterné #F5F7FA, bleu #003366,
- * vert #00A859, accent #FFD700, police Inter. Le thème clair est le défaut ;
- * une bascule sombre est proposée.
+ * document. Palette LP-001 §5 (bleu #003366, vert #00A859, accent #FFD700) et
+ * police Inter, appliquées sur le fond sombre retenu par l'éditeur : MORACare
+ * fonctionne exclusivement en mode sombre.
  */
 
 interface LandingPageProps {
@@ -67,11 +65,11 @@ const NAV_LINKS = [
 ];
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
-  const { resolvedTheme, setTheme } = useTheme();
   const prefersReducedMotion = useReducedMotion();
-  const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDemoOpen, setIsDemoOpen] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [legalDoc, setLegalDoc] = useState<LegalDocumentKey | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const [demo, setDemo] = useState({
@@ -84,9 +82,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
   });
   const [demoStatus, setDemoStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [demoError, setDemoError] = useState<string | null>(null);
-
-  // Évite l'écart d'hydratation sur l'icône de thème.
-  useEffect(() => setMounted(true), []);
 
   // L'en-tête se densifie une fois la page défilée : repère visuel discret,
   // sans masquer le contenu au premier écran.
@@ -123,6 +118,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
     setDemoStatus('idle');
     setDemoError(null);
     setIsDemoOpen(true);
+    setIsMenuOpen(false);
+  };
+
+  /** Sujet prérempli selon le lien du pied de page ayant ouvert la fenêtre. */
+  const [contactSubject, setContactSubject] = useState('');
+  const openContact = (subject: string) => {
+    setContactSubject(subject);
+    setIsContactOpen(true);
     setIsMenuOpen(false);
   };
 
@@ -204,20 +207,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-              aria-label="Changer de thème"
-              className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              {mounted && resolvedTheme === 'dark' ? (
-                <Sun className="w-4 h-4" />
-              ) : (
-                <Moon className="w-4 h-4" />
-              )}
-            </button>
-
-            <button
               onClick={onGoToLogin}
-              className="hidden sm:inline-flex px-4 py-2 rounded-lg text-sm font-semibold text-mora-blue dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="hidden sm:inline-flex px-4 py-2 rounded-lg text-sm font-semibold text-slate-200 hover:bg-slate-800 transition-colors"
             >
               Connexion
             </button>
@@ -618,52 +609,149 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
       </main>
 
       {/* ============== SECTION 12 — FOOTER ============== */}
-      <footer className="bg-slate-900 dark:bg-slate-950 text-slate-300 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 grid gap-10 md:grid-cols-3">
-          <div>
+      <footer className="border-t border-slate-800 bg-slate-950 text-slate-300">
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-2 lg:grid-cols-4">
+          {/* Présentation de MORA Shawiri */}
+          <div className="lg:col-span-2">
             <div className="flex items-center gap-2.5">
-              <span className="w-9 h-9 rounded-xl bg-gradient-to-tr from-mora-blue to-mora-green flex items-center justify-center">
-                <Activity className="w-5 h-5 text-white" />
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-mora-blue to-mora-green">
+                <Activity className="h-5 w-5 text-white" />
               </span>
               <span className="text-lg font-black text-white">
                 MORA<span className="text-mora-green">Care</span>
               </span>
             </div>
-            <p className="mt-4 text-xs leading-relaxed text-slate-400 max-w-xs">
+            <p className="mt-4 max-w-md text-xs leading-relaxed text-slate-400">
               MORACare Enterprise est un Système d&apos;Information Hospitalier développé par
               <strong className="text-slate-200"> MORA Shawiri</strong>. Il centralise les activités
               médicales, administratives et financières des établissements de santé dans une
               plateforme unique, sécurisée et évolutive.
             </p>
+
+            {/* Réseaux sociaux */}
+            <div className="mt-6">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white">Nous suivre</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {SOCIAL_LINKS.map((social) => (
+                  <a
+                    key={social.label}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={social.label}
+                    title={social.label}
+                    className="group flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-slate-400 transition-all hover:-translate-y-0.5 hover:bg-mora-green hover:text-white"
+                  >
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]">
+                      <path d={social.path} />
+                    </svg>
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
 
+          {/* Liens utiles — LP-001 §6 section 12 */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-white">Liens utiles</h3>
-            <ul className="mt-4 space-y-2">
-              {FOOTER_LINKS.map((link) => (
-                <li key={link}>
-                  <span className="text-xs text-slate-400 hover:text-mora-green transition-colors cursor-pointer">
-                    {link}
-                  </span>
-                </li>
-              ))}
+            <ul className="mt-4 space-y-2.5">
+              <li>
+                <a href="#features" className="text-xs text-slate-400 transition-colors hover:text-mora-green">
+                  Fonctionnalités
+                </a>
+              </li>
+              <li>
+                <a href="#faq" className="text-xs text-slate-400 transition-colors hover:text-mora-green">
+                  Documentation
+                </a>
+              </li>
+              <li>
+                <button
+                  onClick={() => openContact('Demande de support')}
+                  className="text-left text-xs text-slate-400 transition-colors hover:text-mora-green"
+                >
+                  Support
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => openContact('Prise de contact')}
+                  className="text-left text-xs text-slate-400 transition-colors hover:text-mora-green"
+                >
+                  Contact
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => setLegalDoc('privacy')}
+                  className="text-left text-xs text-slate-400 transition-colors hover:text-mora-green"
+                >
+                  Politique de confidentialité
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => setLegalDoc('terms')}
+                  className="text-left text-xs text-slate-400 transition-colors hover:text-mora-green"
+                >
+                  Conditions générales
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => setLegalDoc('legal')}
+                  className="text-left text-xs text-slate-400 transition-colors hover:text-mora-green"
+                >
+                  Mentions légales
+                </button>
+              </li>
             </ul>
           </div>
 
+          {/* Coordonnées */}
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white">Nous suivre</h3>
-            <div className="mt-4 flex gap-2">
-              {['in', 'f', 'X'].map((label) => (
-                <span
-                  key={label}
-                  aria-hidden
-                  className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-mora-green/20 flex items-center justify-center text-xs font-bold text-slate-300 transition-colors cursor-pointer"
+            <h3 className="text-xs font-bold uppercase tracking-wider text-white">Contact</h3>
+            <ul className="mt-4 space-y-3">
+              <li>
+                <a
+                  href={`https://wa.me/${CONTACT_INFO.whatsappNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-start gap-2.5 text-xs text-slate-400 transition-colors hover:text-mora-green"
                 >
-                  {label}
-                </span>
-              ))}
-            </div>
-            <button onClick={onGoToLogin} className="mt-6 text-xs font-semibold text-mora-green hover:underline">
+                  <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mora-green" />
+                  <span>
+                    {CONTACT_INFO.phone}
+                    <span className="block text-[10px] text-slate-500">Téléphone / WhatsApp</span>
+                  </span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href={`mailto:${CONTACT_INFO.email}`}
+                  className="group flex items-start gap-2.5 text-xs text-slate-400 transition-colors hover:text-mora-green"
+                >
+                  <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mora-green" />
+                  <span className="break-all">{CONTACT_INFO.email}</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href={CONTACT_INFO.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-start gap-2.5 text-xs text-slate-400 transition-colors hover:text-mora-green"
+                >
+                  <Globe className="mt-0.5 h-3.5 w-3.5 shrink-0 text-mora-green" />
+                  <span className="break-all">services.morashawiri.com</span>
+                </a>
+              </li>
+            </ul>
+
+            <button
+              onClick={onGoToLogin}
+              className="mt-6 text-xs font-semibold text-mora-green hover:underline"
+            >
               Accès à la plateforme →
             </button>
           </div>
@@ -673,6 +761,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
           © {new Date().getFullYear()} MORA Shawiri — MORACare Enterprise. Tous droits réservés.
         </div>
       </footer>
+
 
       {/* ============== FORMULAIRE DE DÉMONSTRATION ============== */}
       <Modal
@@ -804,6 +893,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
           </form>
         )}
       </Modal>
+
+      {/* ============== CONTACT / SUPPORT ============== */}
+      <ContactModal
+        isOpen={isContactOpen}
+        onClose={() => setIsContactOpen(false)}
+        defaultSubject={contactSubject}
+      />
+
+      {/* ============== DOCUMENTS LÉGAUX ============== */}
+      <LegalModal documentKey={legalDoc} onClose={() => setLegalDoc(null)} />
     </div>
   );
 };

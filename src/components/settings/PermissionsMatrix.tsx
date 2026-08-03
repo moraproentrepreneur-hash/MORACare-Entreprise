@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useAccess } from '@/context/AccessContext';
 import { listAllRolePermissions, updateRolePermission } from '@/services/access.service';
 import { recordAudit } from '@/services/audit.service';
+import { ROLE_LABELS } from '@/lib/roles';
 import type { UserRole } from '@/types';
 
 /**
@@ -15,19 +16,6 @@ import type { UserRole } from '@/types';
  * Super Admin peut les modifier — la politique RLS `role_permissions_write` le
  * garantit côté serveur, quelle que soit l'interface.
  */
-
-const ROLE_LABELS: Record<UserRole, string> = {
-  super_admin: 'Super Admin',
-  establishment_admin: "Responsable d'établissement",
-  doctor: 'Médecin',
-  nurse: 'Infirmier(ère)',
-  receptionist: 'Réceptionniste',
-  pharmacist: 'Pharmacien',
-  lab_tech: 'Laboratoire',
-  radiologist: 'Imagerie',
-  accountant: 'Comptable',
-  patient: 'Patient',
-};
 
 const ACTIONS = [
   { key: 'canView', label: 'Voir' },
@@ -104,13 +92,13 @@ export const PermissionsMatrix: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
+      <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
         <h3 className="text-base font-bold text-white flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-mora-green" /> Matrice des permissions
         </h3>
         <p className="text-xs text-slate-400 mt-1">
-          Contrôle d&apos;accès granulaire par rôle et par module (BP-026A). Les droits sont stockés
-          en base, jamais dans le code.
+          Contrôle d&apos;accès granulaire par rôle et par module. Les droits sont stockés en base,
+          jamais dans le code.
         </p>
 
         {!canEdit && (
@@ -144,7 +132,7 @@ export const PermissionsMatrix: React.FC = () => {
 
       <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
+          <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
             <thead className="bg-slate-950 text-slate-400 uppercase font-bold">
               <tr>
                 <th className="p-3">Module</th>

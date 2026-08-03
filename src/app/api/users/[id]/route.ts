@@ -166,3 +166,97 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   return NextResponse.json({ success: true });
 }
+
+/**
+ * Suppression définitive d'un compte (UG01 §9).
+ *
+ * Réservée à MORA Shawiri. La suppression porte sur le compte d'authentification ;
+ * le profil suit par cascade. Elle échoue volontairement si le compte a produit
+ * des données métier : un dossier signé par un praticien ne doit pas perdre son
+ * auteur. La désactivation reste alors la bonne réponse, et c'est ce que dit le
+ * message d'erreur.
+ */
+export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+  const targetId = params.id;
+  const supabase = createServerSupabaseClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Authentification requise.' }, { status: 401 });
+  }
+
+  const { data: caller } = await supabase
+    .from('profiles')
+    .select('role, is_active')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  if (!caller || caller.is_active === false || caller.role !== 'super_admin') {
+    return NextResponse.json(
+      { error: 'Seul MORA Shawiri peut supprimer un compte.' },
+      { status: 403 },
+    );
+  }
+
+  if (targetId === user.id) {
+    return NextResponse.json(
+      { error: 'Vous ne pouvez pas supprimer votre propre compte.' },
+      { status: 400 },
+    );
+  }
+
+  let admin;
+  try {
+    admin = createAdminSupabaseClient();
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Configuration serveur incomplète.' },
+      { status: 500 },
+    );
+  }
+
+  const { data: target } = await admin
+    .from('profiles')
+    .select('id, role, email, establishment_id')
+    .eq('id', targetId)
+    .maybeSingle();
+
+  if (!target) {
+    return NextResponse.json({ error: 'Utilisateur introuvable.' }, { status: 404 });
+  }
+
+  if (target.role === 'super_admin') {
+    return NextResponse.json(
+      { error: 'Un compte Super Admin ne peut pas être supprimé depuis cette console.' },
+      { status: 403 },
+    );
+  }
+
+  // Journalisé AVANT la suppression : après, la trace de qui a été supprimé
+  // n'existerait plus nulle part.
+  await admin.from('audit_logs').insert({
+    establishment_id: target.establishment_id,
+    user_id: user.id,
+    action: 'user_deleted',
+    entity_name: 'profiles',
+    entity_id: targetId,
+    old_values: { email: target.email, role: target.role },
+  });
+
+  const { error } = await admin.auth.admin.deleteUser(targetId);
+
+  if (error) {
+    return NextResponse.json(
+      {
+        error:
+          "Ce compte ne peut pas être supprimé : il est rattaché à des données médicales ou comptables. Désactivez-le pour lui retirer tout accès sans détruire l'historique.",
+      },
+      { status: 409 },
+    );
+  }
+
+  return NextResponse.json({ success: true });
+}

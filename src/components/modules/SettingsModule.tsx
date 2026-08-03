@@ -64,8 +64,8 @@ export const SettingsModule: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+      <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
+        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
           <Settings className="w-5 h-5 text-mora-green" />
           {isSuperAdmin ? 'Paramètres globaux de la plateforme' : 'Paramètres de l’établissement'}
         </h2>
@@ -108,13 +108,13 @@ export const SettingsModule: React.FC = () => {
       {activeTab === 'audit' && <AuditLogPanel />}
 
       {activeTab === 'backups' && (
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+        <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             <Database className="w-4 h-4 text-mora-green" /> Sauvegardes & Restauration
           </h3>
           <p className="text-xs text-slate-400">
-            TD07 et UG01 §15 prévoient la vérification des sauvegardes, la consultation de leur
-            historique et le lancement d&apos;une restauration.
+            Vérification des sauvegardes, consultation de leur historique et lancement d&apos;une
+            restauration.
           </p>
           <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400">
             <p className="font-bold text-amber-400 mb-1">Écran non fonctionnel à ce stade</p>

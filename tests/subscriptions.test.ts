@@ -108,17 +108,46 @@ describe('Abonnements et licences', () => {
       expect(rows.rows[0].missing).toBe(0);
     });
 
-    it('la progression commerciale est croissante en modules', async () => {
-      const rows = await db.query<{ code: string; n: number }>(
-        `SELECT p.code, count(pm.module_id)::int AS n
+    it('toutes les formules donnent accès à tous les modules', async () => {
+      // Le modèle commercial ne se différencie plus par la composition en
+      // modules : ceux-ci sont tous inclus et s'activent depuis les Paramètres
+      // de l'établissement. Une formule qui en priverait serait une régression.
+      const rows = await db.query<{ code: string; missing: number }>(
+        `SELECT p.code,
+                count(*) FILTER (
+                  WHERE NOT EXISTS (
+                    SELECT 1 FROM public.plan_modules pm
+                    WHERE pm.plan_id = p.id AND pm.module_id = m.id
+                  )
+                )::int AS missing
          FROM public.subscription_plans p
-         LEFT JOIN public.plan_modules pm ON pm.plan_id = p.id
-         GROUP BY p.code, p.display_order ORDER BY p.display_order`,
+         CROSS JOIN public.modules m
+         WHERE m.workspace = 'establishment'
+         GROUP BY p.code`,
       );
-      const byCode = Object.fromEntries(rows.rows.map((r) => [r.code, r.n]));
-      expect(byCode.gratuit).toBeLessThan(byCode.standard);
-      expect(byCode.standard).toBeLessThan(byCode.business);
-      expect(byCode.business).toBeLessThanOrEqual(byCode.vip);
+      expect(rows.rows.filter((row) => row.missing > 0)).toEqual([]);
+    });
+
+    it('la progression commerciale est croissante en limites', async () => {
+      // `NULL` vaut « illimité » : il est ramené à une borne haute pour être
+      // comparable, sans quoi VIP passerait pour la formule la plus restrictive.
+      const rows = await db.query<{ code: string; users: number; records: number }>(
+        `SELECT code,
+                COALESCE(max_users, 1000000) AS users,
+                COALESCE(max_records_per_module, 1000000) AS records
+         FROM public.subscription_plans ORDER BY display_order`,
+      );
+      const byCode = Object.fromEntries(
+        rows.rows.map((r) => [r.code, { users: Number(r.users), records: Number(r.records) }]),
+      );
+
+      expect(byCode.gratuit.users).toBeLessThan(byCode.standard.users);
+      expect(byCode.standard.users).toBeLessThan(byCode.business.users);
+      expect(byCode.business.users).toBeLessThan(byCode.vip.users);
+
+      expect(byCode.gratuit.records).toBeLessThan(byCode.standard.records);
+      expect(byCode.standard.records).toBeLessThan(byCode.business.records);
+      expect(byCode.business.records).toBeLessThan(byCode.vip.records);
     });
   });
 

@@ -5,9 +5,9 @@ import { FolderArchive, ShieldCheck } from 'lucide-react';
 export const GEDModule: React.FC = () => {
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <FolderArchive className="w-5 h-5 text-mora-green" /> Gestion Documentaire, GED & Archivage
           </h2>
           <p className="text-xs text-slate-400 mt-1">Archivage automatique des ordonnances, comptes-rendus, factures et documents PDF.</p>

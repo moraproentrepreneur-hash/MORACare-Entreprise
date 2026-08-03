@@ -558,6 +558,59 @@ export type Database = {
           },
         ]
       }
+      contact_requests: {
+        Row: {
+          business_reference: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          message: string
+          phone: string | null
+          processed_at: string | null
+          processed_by: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          business_reference: string
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          message: string
+          phone?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          business_reference?: string
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          message?: string
+          phone?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_requests_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           base_salary: number
@@ -2419,6 +2472,7 @@ export type Database = {
           is_featured: boolean
           limitations: string[] | null
           max_patients: number | null
+          max_records_per_module: number | null
           max_users: number | null
           name: string
           price_amount: number
@@ -2446,6 +2500,7 @@ export type Database = {
           is_featured?: boolean
           limitations?: string[] | null
           max_patients?: number | null
+          max_records_per_module?: number | null
           max_users?: number | null
           name: string
           price_amount?: number
@@ -2473,6 +2528,7 @@ export type Database = {
           is_featured?: boolean
           limitations?: string[] | null
           max_patients?: number | null
+          max_records_per_module?: number | null
           max_users?: number | null
           name?: string
           price_amount?: number

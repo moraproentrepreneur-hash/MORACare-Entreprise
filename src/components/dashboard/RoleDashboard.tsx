@@ -312,7 +312,7 @@ export const RoleDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
+      <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
         <h2 className="text-xl font-bold text-white">
           Bonjour {user?.first_name}
         </h2>

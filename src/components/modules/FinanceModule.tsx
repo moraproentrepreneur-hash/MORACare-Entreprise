@@ -182,7 +182,7 @@ export const FinanceModule: React.FC = () => {
         `Montant Total Réglé: ${formatCurrency(inv.paid_amount)}`,
         `Statut du règlement: ${inv.status.toUpperCase()}`,
         '--------------------------------------------------',
-        'Reçu comptable conforme BP-022A/B généré via MORACare SaaS.',
+        'Reçu comptable généré via MORACare.',
       ]
     );
   };
@@ -190,16 +190,16 @@ export const FinanceModule: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-mora-green" /> ERP Finance, Facturation & Caisses (BP-022A/B/C)
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-mora-green" /> ERP Finance, Facturation & Caisses
           </h2>
           <p className="text-xs text-slate-400 mt-1">
             Grilles tarifaires, encaissements multi-modes, gestion des caisses avec comptage physique et livre comptable.
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Button variant="outline" onClick={() => setIsOpenRegModalOpen(true)} className="gap-1.5 text-xs">
             <Unlock className="w-3.5 h-3.5" /> Ouvrir une Caisse
           </Button>
@@ -210,26 +210,26 @@ export const FinanceModule: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-2 border-b border-slate-800 pb-2">
+      <div className="flex space-x-2 overflow-x-auto border-b border-slate-800 pb-2">
         <button
           onClick={() => setActiveTab('invoices')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex shrink-0 whitespace-nowrap items-center gap-2 transition-all ${
             activeTab === 'invoices' ? 'bg-mora-blue text-white' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <FileText className="w-4 h-4" /> Factures & Prestations (BP-022A)
+          <FileText className="w-4 h-4" /> Factures & Prestations
         </button>
         <button
           onClick={() => setActiveTab('cash_movements')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex shrink-0 whitespace-nowrap items-center gap-2 transition-all ${
             activeTab === 'cash_movements' ? 'bg-mora-blue text-white' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Receipt className="w-4 h-4" /> Encaissements & Reçus (BP-022B)
+          <Receipt className="w-4 h-4" /> Encaissements & Reçus
         </button>
         <button
           onClick={() => setActiveTab('cash_registers')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex shrink-0 whitespace-nowrap items-center gap-2 transition-all ${
             activeTab === 'cash_registers' ? 'bg-mora-blue text-white' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -237,11 +237,11 @@ export const FinanceModule: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('treasury')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex shrink-0 whitespace-nowrap items-center gap-2 transition-all ${
             activeTab === 'treasury' ? 'bg-mora-blue text-white' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Scale className="w-4 h-4" /> Livre Comptable (BP-022C)
+          <Scale className="w-4 h-4" /> Livre Comptable
         </button>
       </div>
 
@@ -261,7 +261,7 @@ export const FinanceModule: React.FC = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
+              <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
                 <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-bold">
                   <tr>
                     <th className="p-4">Réf. Facture</th>
@@ -304,10 +304,10 @@ export const FinanceModule: React.FC = () => {
       {activeTab === 'cash_movements' && (
         <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
           <div className="p-4 border-b border-slate-800 font-bold text-white text-sm">
-            Journal des Encaissements & Décaissements (BP-022B)
+            Journal des Encaissements & Décaissements
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
+            <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-bold">
                 <tr>
                   <th className="p-4">Réf. Mouvement</th>
@@ -356,7 +356,7 @@ export const FinanceModule: React.FC = () => {
             ) : (
               cashRegisters.map((reg) => (
                 <div key={reg.id} className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-mono text-mora-green text-xs font-bold">{reg.business_reference}</span>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${reg.status === 'open' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
                       {reg.status}
@@ -390,12 +390,12 @@ export const FinanceModule: React.FC = () => {
 
       {/* TAB 4: TREASURY & INALTERABLE JOURNAL */}
       {activeTab === 'treasury' && (
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-          <h3 className="text-base font-bold text-white">Livre de Caisse Inaltérable & Traçabilité (BP-022C)</h3>
+        <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+          <h3 className="text-base font-bold text-white">Livre de Caisse Inaltérable & Traçabilité</h3>
           <p className="text-xs text-slate-400">Toutes les opérations d'ouverture, d'encaissement et de clôture sont contrepassées et historisées.</p>
           <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs text-slate-300">
             <p className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-mora-green" /> Contrôle d'écarts de caisse quotidien activé.</p>
-            <p className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-mora-green" /> Historique audit sans aucune possibilité de suppression physique (BR-118/BR-130).</p>
+            <p className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-mora-green" /> Historique audit sans aucune possibilité de suppression physique.</p>
           </div>
         </div>
       )}
@@ -415,7 +415,7 @@ export const FinanceModule: React.FC = () => {
               onSelectPatient={handleSelectPatient}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Montant Actes (FC) *</label>
               <input

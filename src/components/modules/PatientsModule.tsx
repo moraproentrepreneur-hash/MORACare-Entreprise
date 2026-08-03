@@ -77,9 +77,9 @@ export const PatientsModule: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-2xl bg-slate-900 border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <Users className="w-5 h-5 text-mora-green" /> Gestion des Dossiers Patients
           </h2>
           <p className="text-xs text-slate-400 mt-1">
@@ -118,7 +118,7 @@ export const PatientsModule: React.FC = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
+            <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-bold">
                 <tr>
                   <th className="p-4">Réf. Patient</th>
@@ -167,7 +167,7 @@ export const PatientsModule: React.FC = () => {
               {submitError}
             </div>
           )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Prénom</label>
               <input
@@ -192,7 +192,7 @@ export const PatientsModule: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <label className="block text-xs font-semibold mb-1">Sexe</label>
               <select
@@ -229,7 +229,7 @@ export const PatientsModule: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Téléphone</label>
               <input

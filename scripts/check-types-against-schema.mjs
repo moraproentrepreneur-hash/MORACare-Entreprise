@@ -40,52 +40,20 @@ DO $r$ BEGIN CREATE ROLE authenticated; EXCEPTION WHEN duplicate_object THEN NUL
 DO $r$ BEGIN CREATE ROLE anon; EXCEPTION WHEN duplicate_object THEN NULL; END $r$;
 `;
 
-/** Table TypeScript -> nom du type Row, extrait du bloc `Tables:` du schéma. */
-const parseTableToRowType = (source) => {
-  const map = new Map();
-  const re = /^\s{6}(\w+):\s*\{\s*\n\s*Row:\s*(\w+);/gm;
+/**
+ * Tables couvertes par un alias `export type XxxRow = Row<'table'>`.
+ *
+ * `database.ts` ne redéclare plus les colonnes : il dérive du fichier généré,
+ * qui fait foi. Le contrôle porte donc sur la couverture — chaque table du
+ * schéma a-t-elle son alias — plutôt que sur les colonnes une à une, que le
+ * générateur garantit déjà.
+ */
+const parseAliasedTables = (source) => {
+  const set = new Set();
+  const re = /export type \w+ = Row<'(\w+)'>/g;
   let m;
-  while ((m = re.exec(source)) !== null) map.set(m[1], m[2]);
-  return map;
-};
-
-/** Colonnes déclarées par un alias `export type XxxRow = [AuditColumns &] { … }`. */
-const parseRowColumns = (source, typeName) => {
-  const start = source.indexOf(`export type ${typeName} =`);
-  if (start === -1) return null;
-
-  const braceStart = source.indexOf('{', start);
-  if (braceStart === -1) return null;
-
-  let depth = 0;
-  let end = braceStart;
-  for (let i = braceStart; i < source.length; i += 1) {
-    if (source[i] === '{') depth += 1;
-    else if (source[i] === '}') {
-      depth -= 1;
-      if (depth === 0) {
-        end = i;
-        break;
-      }
-    }
-  }
-
-  const body = source.slice(braceStart + 1, end);
-  const columns = new Set();
-  for (const line of body.split('\n')) {
-    const match = line.match(/^\s*(\w+)\??:/);
-    if (match) columns.add(match[1]);
-  }
-
-  // Les colonnes d'audit sont héritées par intersection.
-  const header = source.slice(start, braceStart);
-  if (header.includes('AuditColumns')) {
-    ['created_at', 'updated_at', 'created_by', 'updated_by', 'deleted_at'].forEach((c) =>
-      columns.add(c),
-    );
-  }
-
-  return columns;
+  while ((m = re.exec(source)) !== null) set.add(m[1]);
+  return set;
 };
 
 const main = async () => {
@@ -112,51 +80,32 @@ const main = async () => {
   }
 
   const source = fs.readFileSync(TYPES_FILE, 'utf8');
-  const tableToType = parseTableToRowType(source);
+  const aliased = parseAliasedTables(source);
 
   let problems = 0;
-  console.log(`Tables déclarées dans database.ts : ${tableToType.size}`);
-  console.log(`Tables présentes en base          : ${dbColumns.size}\n`);
+  console.log(`Tables aliasées dans database.ts : ${aliased.size}`);
+  console.log(`Tables présentes en base         : ${dbColumns.size}\n`);
 
-  for (const [table, typeName] of tableToType) {
-    const actual = dbColumns.get(table);
-    if (!actual) {
-      console.log(`  ✖ ${table} : déclarée en TypeScript, absente de la base`);
+  for (const table of aliased) {
+    if (!dbColumns.has(table)) {
+      console.log(`  ✖ ${table} : aliasée en TypeScript, absente de la base`);
       problems += 1;
-      continue;
-    }
-
-    const declared = parseRowColumns(source, typeName);
-    if (!declared) {
-      console.log(`  ✖ ${table} : type ${typeName} introuvable`);
-      problems += 1;
-      continue;
-    }
-
-    const phantom = [...declared].filter((c) => !actual.has(c));
-    const missing = [...actual].filter((c) => !declared.has(c));
-
-    if (phantom.length || missing.length) {
-      problems += 1;
-      console.log(`  ✖ ${table}`);
-      if (phantom.length) console.log(`      typées mais absentes en base : ${phantom.join(', ')}`);
-      if (missing.length) console.log(`      en base mais non typées      : ${missing.join(', ')}`);
     }
   }
 
-  const untyped = [...dbColumns.keys()].filter((t) => !tableToType.has(t));
-  if (untyped.length) {
-    console.log(`\n  ⚠ Tables en base sans type TypeScript : ${untyped.join(', ')}`);
+  const missing = [...dbColumns.keys()].filter((t) => !aliased.has(t));
+  if (missing.length > 0) {
+    console.log(`  ⚠ Tables sans alias TypeScript : ${missing.join(', ')}`);
   }
 
   console.log('');
   if (problems === 0) {
-    console.log('Types et schéma cohérents.');
+    console.log('Alias et schéma cohérents. Les colonnes sont garanties par database.generated.ts.');
     await db.close();
     return;
   }
 
-  console.log(`${problems} incohérence(s) détectée(s).`);
+  console.log();
   process.exit(1);
 };
 

@@ -4,7 +4,6 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { AccessProvider } from '@/context/AccessContext';
 import { DataProvider } from '@/context/DataContext';
-import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 /**
  * Police Inter, imposée par LP-001 §5 pour les titres et le texte.
@@ -48,17 +47,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${inter.variable} scroll-smooth`} suppressHydrationWarning>
-      <body className="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen antialiased font-sans">
-        <ThemeProvider>
-          <AuthProvider>
-            {/* Les droits sont chargés avant les données : une interface ne doit
-                jamais afficher un module sans savoir s'il est autorisé. */}
-            <AccessProvider>
-              <DataProvider>{children}</DataProvider>
-            </AccessProvider>
-          </AuthProvider>
-        </ThemeProvider>
+    // MORACare fonctionne exclusivement en mode sombre : la classe `dark` est
+    // posée une fois pour toutes sur <html>. Aucune bascule n'est proposée.
+    <html lang="fr" className={`dark ${inter.variable} scroll-smooth`}>
+      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased font-sans">
+        <AuthProvider>
+          {/* Les droits sont chargés avant les données : une interface ne doit
+              jamais afficher un module sans savoir s'il est autorisé. */}
+          <AccessProvider>
+            <DataProvider>{children}</DataProvider>
+          </AccessProvider>
+        </AuthProvider>
       </body>
     </html>
   );

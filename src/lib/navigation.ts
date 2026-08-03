@@ -11,6 +11,9 @@ import {
   FolderArchive,
   Settings,
   Shield,
+  ShieldCheck,
+  Inbox,
+  MessagesSquare,
   UserPlus,
   LayoutDashboard,
   BarChart3,
@@ -71,6 +74,9 @@ export const ROUTES = {
 export const ADMIN_SECTIONS: readonly { label: string; href: string; icon: LucideIcon }[] = [
   { label: 'Supervision SaaS', href: '/admin', icon: Shield },
   { label: 'Établissements Clients', href: '/admin/etablissements', icon: Users },
+  { label: 'Gestion des Admins', href: '/admin/admins', icon: ShieldCheck },
+  { label: 'Gestion des Demandes', href: '/admin/demandes', icon: Inbox },
+  { label: 'Prises de contact', href: '/admin/contacts', icon: MessagesSquare },
   { label: 'Abonnements & Licences', href: '/admin/abonnements', icon: CreditCard },
   { label: 'Paramètres Globaux', href: '/admin/parametres', icon: Settings },
 ];

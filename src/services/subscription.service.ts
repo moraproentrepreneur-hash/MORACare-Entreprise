@@ -21,6 +21,8 @@ export interface SubscriptionPlan {
   durationDays: number | null;
   maxUsers: number | null;
   maxPatients: number | null;
+  /** Enregistrements maximum par module. `null` = illimité. */
+  maxRecordsPerModule: number | null;
   storageMb: number | null;
   isAutomatic: boolean;
   requiresApproval: boolean;
@@ -80,6 +82,7 @@ const toPlan = (row: SubscriptionPlanRow): SubscriptionPlan => ({
   durationDays: row.duration_days,
   maxUsers: row.max_users,
   maxPatients: row.max_patients,
+  maxRecordsPerModule: row.max_records_per_module,
   storageMb: row.storage_mb,
   isAutomatic: row.is_automatic,
   requiresApproval: row.requires_approval,
@@ -102,44 +105,24 @@ const toPlan = (row: SubscriptionPlanRow): SubscriptionPlan => ({
  *
  * Lisibles sans authentification (politique `plans_read_public`) : ce sont des
  * informations commerciales publiques, et LP-001 §1 réserve la vitrine aux
- * visiteurs. Chaque formule est accompagnée du nom des modules qu'elle inclut.
+ * visiteurs.
+ *
+ * La composition en modules n'est plus lue : toutes les formules donnent accès
+ * à tous les modules, dont l'activation relève des Paramètres de
+ * l'établissement. Seules les limites commerciales distinguent les offres.
  */
-export interface PublicPlan extends SubscriptionPlan {
-  moduleNames: string[];
-}
+export type PublicPlan = SubscriptionPlan;
 
 export const listPublicPlans = async (): Promise<PublicPlan[]> => {
-  const client = getClient();
+  const { data, error } = await getClient()
+    .from('subscription_plans')
+    .select('*')
+    .eq('is_active', true)
+    .order('display_order');
 
-  const [plansRes, linksRes, modulesRes] = await Promise.all([
-    client.from('subscription_plans').select('*').eq('is_active', true).order('display_order'),
-    client.from('plan_modules').select('plan_id, module_id'),
-    client.from('modules').select('id, name, workspace'),
-  ]);
+  failIf(error, 'Chargement des formules');
 
-  failIf(plansRes.error, 'Chargement des formules');
-  failIf(linksRes.error, 'Chargement de la composition des formules');
-  failIf(modulesRes.error, 'Chargement des modules');
-
-  const moduleNameById = new Map(
-    (modulesRes.data ?? [])
-      // Les modules d'administration ne sont pas des arguments de vente.
-      .filter((m) => m.workspace !== 'platform')
-      .map((m) => [m.id, m.name]),
-  );
-
-  return (plansRes.data ?? []).map((row) => {
-    const plan = toPlan(row as SubscriptionPlanRow);
-    const moduleNames = (linksRes.data ?? [])
-      .filter((link) => link.plan_id === plan.id)
-      .flatMap((link) => {
-        const name = moduleNameById.get(link.module_id);
-        return name ? [name] : [];
-      })
-      .sort();
-
-    return { ...plan, moduleNames };
-  });
+  return (data ?? []).map((row) => toPlan(row as SubscriptionPlanRow));
 };
 
 export const listPlans = async (): Promise<SubscriptionPlan[]> => {

@@ -25,9 +25,9 @@ import type { Establishment } from '@/types';
 /**
  * Administration des abonnements et licences SaaS (BP09, BP30).
  *
- * Réservé au Super Admin (BR-295). Les cinq formules affichées sont celles de
- * BP09 §4 — aucune offre n'est inventée, aucun tarif n'est affiché puisque la
- * documentation n'en fixe aucun.
+ * Réservé au Super Admin (BR-295). Les cinq formules affichées sont lues en
+ * base, tarifs et limites compris : cet écran ne redéfinit rien, il montre ce
+ * qui est réellement vendu.
  */
 
 const SUB_LABELS: Record<string, string> = {
@@ -134,14 +134,13 @@ export const SaasSubscriptions: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+      <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-mora-green" /> Abonnements & Licences
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Formules définies par BP-009 §4. Aucun tarif n&apos;est enregistré : la documentation
-            officielle n&apos;en fixe aucun.
+            Formules, abonnements et licences des établissements clients.
           </p>
         </div>
         <Button variant="secondary" onClick={() => setIsCreateOpen(true)} className="gap-2 shrink-0">
@@ -155,18 +154,33 @@ export const SaasSubscriptions: React.FC = () => {
         </div>
       )}
 
-      {/* Formules officielles (BP09 §4) */}
+      {/* Formules commercialisées — tarifs et limites lus en base. */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {plans.map((plan) => (
           <div key={plan.id} className="p-4 rounded-2xl bg-slate-900 border border-slate-800">
             <p className="text-sm font-black text-white">{plan.name}</p>
-            <p className="text-[11px] text-slate-400 mt-1 min-h-[2.5rem]">{plan.description}</p>
+            <p className="mt-1 text-base font-bold text-mora-green">
+              {plan.priceAmount === 0
+                ? 'Gratuit'
+                : `${new Intl.NumberFormat('fr-FR').format(plan.priceAmount)} ${plan.priceCurrency}`}
+              {plan.billingPeriod === 'month' && (
+                <span className="text-[10px] font-semibold text-slate-500"> / mois</span>
+              )}
+            </p>
             <div className="mt-3 space-y-1 text-[10px] text-slate-500">
               <p>
                 Durée :{' '}
                 <span className="text-slate-300">
                   {plan.durationDays ? `${plan.durationDays} jours` : 'Permanente'}
                 </span>
+              </p>
+              <p>
+                Utilisateurs :{' '}
+                <span className="text-slate-300">{plan.maxUsers ?? 'Illimités'}</span>
+              </p>
+              <p>
+                Enregistrements / module :{' '}
+                <span className="text-slate-300">{plan.maxRecordsPerModule ?? 'Illimités'}</span>
               </p>
               {plan.isAutomatic && <p className="text-emerald-400">Création automatique</p>}
               {plan.requiresApproval && <p className="text-amber-400">Validation Super Admin</p>}
@@ -182,7 +196,7 @@ export const SaasSubscriptions: React.FC = () => {
           Abonnements des établissements clients
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
+          <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
             <thead className="bg-slate-950 text-slate-400 uppercase font-bold">
               <tr>
                 <th className="p-3">Référence</th>
@@ -273,7 +287,7 @@ export const SaasSubscriptions: React.FC = () => {
           <KeyRound className="w-4 h-4 text-mora-green" /> Licences
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
+          <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
             <thead className="bg-slate-950 text-slate-400 uppercase font-bold">
               <tr>
                 <th className="p-3">Numéro</th>
@@ -336,8 +350,8 @@ export const SaasSubscriptions: React.FC = () => {
           </table>
         </div>
         <p className="px-4 py-3 text-[11px] text-slate-500 border-t border-slate-800">
-          BR-290 : la suspension d&apos;une licence n&apos;entraîne jamais la suppression des
-          données de l&apos;établissement.
+          La suspension d&apos;une licence n&apos;entraîne jamais la suppression des données de
+          l&apos;établissement.
         </p>
       </div>
 
@@ -366,7 +380,7 @@ export const SaasSubscriptions: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold mb-1">Formule (BP-009 §4)</label>
+            <label className="block text-xs font-semibold mb-1">Formule</label>
             <select
               required
               value={form.planId}

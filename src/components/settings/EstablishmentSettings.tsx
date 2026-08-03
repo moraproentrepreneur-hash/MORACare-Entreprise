@@ -93,7 +93,7 @@ export const EstablishmentSettings: React.FC = () => {
 
   if (!user?.establishment_id) {
     return (
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-400">
+      <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-400">
         Votre compte n&apos;est rattaché à aucun établissement. Cet écran concerne la configuration
         d&apos;un établissement client.
       </div>
@@ -119,8 +119,8 @@ export const EstablishmentSettings: React.FC = () => {
 
   return (
     <form onSubmit={handleSave} className="space-y-4">
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
-        <div className="flex items-center justify-between gap-4">
+      <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             <Building2 className="w-4 h-4 text-mora-green" /> Informations générales
           </h3>

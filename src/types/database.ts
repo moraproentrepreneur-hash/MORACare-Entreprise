@@ -106,3 +106,13 @@ export type LicenseEventRow = Row<'license_events'>;
 export type EstablishmentModuleRow = Row<'establishment_modules'>;
 export type RolePermissionRow = Row<'role_permissions'>;
 export type RegistrationRequestRow = Row<'registration_requests'>;
+export type ContactRequestRow = Row<'contact_requests'>;
+
+/** Statuts de traitement communs aux demandes et aux prises de contact. */
+export type RequestStatus =
+  | 'pending'
+  | 'in_progress'
+  | 'contacted'
+  | 'accepted'
+  | 'rejected'
+  | 'closed';

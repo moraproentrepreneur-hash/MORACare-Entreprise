@@ -101,9 +101,8 @@ export const SuperAdminDashboard: React.FC = () => {
       <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800">
         <h3 className="text-sm font-bold text-white mb-2">Statistiques générales</h3>
         <p className="text-xs text-slate-400">
-          La supervision détaillée — stockage, performances, traitements en attente (UG01 §11) — et
-          les journaux d&apos;administration (UG01 §12) seront ajoutés avec le module Abonnements &
-          Licences, différé jusqu&apos;à l&apos;arbitrage du référentiel des modules.
+          La supervision détaillée — stockage, performances, traitements en attente — et les
+          journaux d&apos;administration seront ajoutés ultérieurement.
         </p>
       </div>
     </div>

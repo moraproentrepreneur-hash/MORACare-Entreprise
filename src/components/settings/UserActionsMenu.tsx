@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { listEstablishments } from '@/services/establishment.service';
+import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/lib/roles';
 import type { Establishment, UserAccount, UserRole } from '@/types';
 
 /**
@@ -18,18 +19,6 @@ import type { Establishment, UserAccount, UserRole } from '@/types';
  * Les règles de délégation (BP06 §11) sont appliquées côté serveur : cette
  * interface se contente de masquer ce qui est inutile.
  */
-
-const ROLE_LABELS: Record<Exclude<UserRole, 'super_admin'>, string> = {
-  establishment_admin: "Responsable d'établissement",
-  doctor: 'Médecin',
-  nurse: 'Infirmier(ère)',
-  receptionist: 'Réceptionniste',
-  pharmacist: 'Pharmacien',
-  lab_tech: 'Laboratoire',
-  radiologist: 'Imagerie',
-  accountant: 'Comptable',
-  patient: 'Patient',
-};
 
 type Action = 'password' | 'role' | 'transfer' | null;
 
@@ -177,7 +166,7 @@ export const UserActionsMenu: React.FC<{ account: UserAccount }> = ({ account })
                   onChange={(e) => setRole(e.target.value as UserRole)}
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
                 >
-                  {(Object.keys(ROLE_LABELS) as Array<keyof typeof ROLE_LABELS>).map((key) => (
+                  {ASSIGNABLE_ROLES.map((key) => (
                     <option key={key} value={key}>
                       {ROLE_LABELS[key]}
                     </option>

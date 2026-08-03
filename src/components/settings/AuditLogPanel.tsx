@@ -34,7 +34,7 @@ export const AuditLogPanel: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
+      <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
         <h3 className="text-base font-bold text-white flex items-center gap-2">
           <History className="w-4 h-4 text-mora-green" /> Journal d&apos;audit
         </h3>
@@ -51,7 +51,7 @@ export const AuditLogPanel: React.FC = () => {
 
       <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
+          <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
             <thead className="bg-slate-950 text-slate-400 uppercase font-bold">
               <tr>
                 <th className="p-3">Date</th>

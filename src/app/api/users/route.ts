@@ -21,6 +21,11 @@ const createUserSchema = z.object({
   email: z.string().trim().email('Adresse e-mail invalide.'),
   phone: z.string().trim().optional(),
   department: z.string().trim().optional(),
+  /**
+   * Établissement d'affectation. N'est lu que si l'appelant est Super Admin :
+   * un responsable ne peut créer un compte que dans le sien.
+   */
+  establishment_id: z.string().uuid("L'établissement sélectionné est invalide.").optional(),
   role: z.enum([
     'establishment_admin',
     'doctor',
@@ -57,18 +62,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Compte inactif ou introuvable.' }, { status: 403 });
   }
 
-  const canManageUsers = caller.role === 'super_admin' || caller.role === 'establishment_admin';
+  const isSuperAdmin = caller.role === 'super_admin';
+  const canManageUsers = isSuperAdmin || caller.role === 'establishment_admin';
   if (!canManageUsers) {
     return NextResponse.json(
       { error: "Votre rôle ne permet pas de créer des comptes utilisateurs." },
       { status: 403 },
-    );
-  }
-
-  if (!caller.establishment_id) {
-    return NextResponse.json(
-      { error: "Votre compte n'est rattaché à aucun établissement." },
-      { status: 400 },
     );
   }
 
@@ -82,6 +81,22 @@ export async function POST(request: Request) {
 
   const input = parsed.data;
 
+  // Le Super Admin désigne l'établissement — c'est ainsi qu'il crée les
+  // administrateurs de ses clients. Tout autre rôle est confiné au sien : la
+  // valeur envoyée par le client est ignorée, jamais arbitrée.
+  const establishmentId = isSuperAdmin ? input.establishment_id : caller.establishment_id;
+
+  if (!establishmentId) {
+    return NextResponse.json(
+      {
+        error: isSuperAdmin
+          ? "Sélectionnez l'établissement auquel rattacher ce compte."
+          : "Votre compte n'est rattaché à aucun établissement.",
+      },
+      { status: 400 },
+    );
+  }
+
   let admin;
   try {
     admin = createAdminSupabaseClient();
@@ -92,9 +107,9 @@ export async function POST(request: Request) {
     );
   }
 
-  // Le nouvel utilisateur est forcé dans l'établissement de l'appelant : un
-  // administrateur ne peut pas créer de compte dans un autre établissement.
-  const { error } = await admin.auth.admin.createUser({
+  // Le profil applicatif est créé par le trigger `handle_new_auth_user` à
+  // partir de ces métadonnées : rien n'est inséré à la main dans `profiles`.
+  const { data: created, error } = await admin.auth.admin.createUser({
     email: input.email,
     password: input.password,
     email_confirm: true,
@@ -104,7 +119,7 @@ export async function POST(request: Request) {
       last_name: input.last_name,
       phone: input.phone ?? '',
       role: input.role,
-      establishment_id: caller.establishment_id,
+      establishment_id: establishmentId,
     },
   });
 
@@ -116,5 +131,19 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ success: true }, { status: 201 });
+  // Le service n'est renseigné qu'après coup : le trigger ne le reçoit pas.
+  if (input.department && created.user) {
+    await admin.from('profiles').update({ department: input.department }).eq('id', created.user.id);
+  }
+
+  await admin.from('audit_logs').insert({
+    establishment_id: establishmentId,
+    user_id: user.id,
+    action: 'user_created',
+    entity_name: 'profiles',
+    entity_id: created.user?.id ?? null,
+    new_values: { email: input.email, role: input.role, establishment_id: establishmentId },
+  });
+
+  return NextResponse.json({ success: true, id: created.user?.id ?? null }, { status: 201 });
 }

@@ -15,57 +15,50 @@ import { Lock, ShieldCheck, Info } from 'lucide-react';
 interface Guarantee {
   label: string;
   detail: string;
-  source: string;
 }
 
 const GUARANTEES: readonly Guarantee[] = [
   {
     label: 'Isolation des établissements',
     detail:
-      "Chaque table métier porte une politique RLS filtrant sur establishment_id. Le filtrage est appliqué par PostgreSQL, jamais par l'interface.",
-    source: 'TD02 §14, TD06 §8',
+      "Chaque table métier porte une politique de sécurité filtrant sur l'établissement. Le filtrage est appliqué par la base de données, jamais par l'interface.",
   },
   {
     label: 'Authentification côté serveur',
     detail:
-      "La session est revalidée à chaque requête par le middleware, et les routes privées redirigent avant tout rendu.",
-    source: 'TD06 §7, BP06 §14',
+      'La session est revalidée à chaque requête par le serveur, et les pages privées redirigent avant tout affichage.',
   },
   {
     label: "Journal d'audit inaltérable",
     detail:
-      "La table audit_logs ne dispose d'aucune politique UPDATE ni DELETE : aucune modification n'est possible, y compris par le Super Admin.",
-    source: 'BP26B',
+      "Le journal d'audit n'autorise ni modification ni suppression : aucune altération n'est possible, y compris par le Super Admin.",
   },
   {
     label: 'Références métier non modifiables',
     detail:
-      "Un trigger refuse toute modification d'une référence métier après création, et les séquences garantissent leur unicité.",
-    source: 'TD02 §8',
+      "Une référence métier ne peut plus être modifiée après sa création, et son unicité est garantie par la base.",
   },
   {
     label: 'Séparation du Super Administrateur',
     detail:
-      "Le Super Admin n'a aucune permission sur les modules de soins, et le middleware lui interdit les URL cliniques.",
-    source: 'BP06 §10 bis, UG01 §1',
+      "Le Super Admin n'a aucune permission sur les modules de soins, et les pages cliniques lui sont interdites.",
   },
   {
     label: 'Suppression logique',
     detail:
-      "Les données critiques ne sont jamais supprimées physiquement : la colonne deleted_at conserve l'enregistrement.",
-    source: 'TD02 §10, §12',
+      "Les données critiques ne sont jamais supprimées physiquement : l'enregistrement est conservé et marqué comme supprimé.",
   },
 ];
 
 export const SecurityPanel: React.FC = () => (
   <div className="space-y-4">
-    <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
+    <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
       <h3 className="text-base font-bold text-white flex items-center gap-2">
         <Lock className="w-4 h-4 text-mora-green" /> Garanties de sécurité effectives
       </h3>
       <p className="text-xs text-slate-400 mt-1">
-        Chaque garantie ci-dessous correspond à un mécanisme réellement présent dans le code ou la
-        base, avec sa référence documentaire.
+        Chaque garantie ci-dessous correspond à un mécanisme réellement en place dans
+        l&apos;application et dans la base de données.
       </p>
     </div>
 
@@ -77,9 +70,6 @@ export const SecurityPanel: React.FC = () => (
             <div className="min-w-0">
               <p className="text-sm font-bold text-white">{item.label}</p>
               <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{item.detail}</p>
-              <span className="inline-block mt-2 px-1.5 py-0.5 rounded bg-slate-800 text-[9px] font-mono text-slate-400">
-                {item.source}
-              </span>
             </div>
           </div>
         </div>
@@ -89,7 +79,7 @@ export const SecurityPanel: React.FC = () => (
     <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
       <Info className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
       <div className="text-xs text-amber-200/90 space-y-1">
-        <p className="font-bold text-amber-300">Exigences TD06 non encore implémentées</p>
+        <p className="font-bold text-amber-300">Protections non encore activées</p>
         <p>
           L&apos;authentification à deux facteurs, la durée d&apos;expiration de session
           configurable, le chiffrement applicatif des données sensibles et la politique de rétention

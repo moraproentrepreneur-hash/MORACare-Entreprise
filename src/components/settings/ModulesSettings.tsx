@@ -57,7 +57,7 @@ export const ModulesSettings: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
+      <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
         <h3 className="text-base font-bold text-white mb-2">Modules de l&apos;établissement</h3>
         <p className="text-xs text-slate-400">
           Un module désactivé disparaît du menu, du tableau de bord et des statistiques, et son URL
@@ -68,10 +68,8 @@ export const ModulesSettings: React.FC = () => {
           <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2 text-[11px] text-amber-200/90">
             <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
             <span>
-              La composition du plan <strong>{subscription.planName}</strong> n&apos;est pas définie
-              dans la documentation officielle (BP09 §4 ne détaille que les plans Essai et VIP).
-              Aucune restriction de plan n&apos;est donc appliquée. Définissez sa composition depuis
-              la console SaaS.
+              La formule <strong>{subscription.planName}</strong> n&apos;applique aucune restriction
+              de modules : tous les modules sont disponibles et s&apos;activent depuis cet écran.
             </span>
           </div>
         )}

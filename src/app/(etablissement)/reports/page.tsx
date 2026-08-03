@@ -29,9 +29,8 @@ function Reports() {
         <div className="text-xs text-amber-200/90 space-y-1">
           <p className="font-bold text-amber-300">Module en cours de développement</p>
           <p>
-            BP-024A (Rapports, États & Impressions) et BP-024B (Tableaux de Bord, KPI & Business
-            Intelligence) définissent des rapports d&apos;activité, des exports et des indicateurs
-            filtrables par période. Ils restent à implémenter.
+            Les rapports d&apos;activité, les exports et les indicateurs filtrables par période
+            restent à implémenter.
           </p>
         </div>
       </div>

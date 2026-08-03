@@ -101,8 +101,15 @@ export const updateEstablishment = async (
   failIf(error, "Mise à jour de l'établissement");
 };
 
-export const createEstablishment = async (input: EstablishmentInput): Promise<void> => {
-  const { error } = await getClient()
+/**
+ * Crée un établissement et renvoie son identifiant.
+ *
+ * L'identifiant est indispensable à l'appelant : la création se poursuit
+ * immédiatement par celle de l'administrateur de l'établissement, sans quoi
+ * personne ne pourrait s'y connecter.
+ */
+export const createEstablishment = async (input: EstablishmentInput): Promise<Establishment> => {
+  const { data, error } = await getClient()
     .from('establishments')
     .insert({
       name: input.name,
@@ -116,9 +123,30 @@ export const createEstablishment = async (input: EstablishmentInput): Promise<vo
       max_users: input.max_users ?? 50,
       subscription_status: 'trial',
       is_active: true,
-    });
+    })
+    .select('*')
+    .single();
 
   failIf(error, "Création de l'établissement");
+
+  const row = data as NonNullable<typeof data>;
+  return {
+    id: row.id,
+    business_reference: row.business_reference,
+    name: row.name,
+    type: row.type,
+    email: row.email,
+    phone: row.phone,
+    address: row.address ?? undefined,
+    city: row.city ?? undefined,
+    country: row.country ?? '',
+    subscription_status: row.subscription_status,
+    subscription_plan: row.subscription_plan ?? '',
+    max_users: row.max_users ?? 0,
+    is_active: row.is_active ?? true,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
 };
 
 /**

@@ -10,6 +10,9 @@ import { formatDate } from '@/lib/utils';
  *
  * Consultation seule : BP30 BR-295 réserve l'administration des abonnements et
  * des licences aux administrateurs de MORA Shawiri.
+ *
+ * Aucune référence documentaire interne n'apparaît à l'écran : ces repères
+ * servent au développement, pas à l'utilisateur.
  */
 
 const SUBSCRIPTION_LABELS: Record<string, string> = {
@@ -39,11 +42,11 @@ export const SubscriptionPanel: React.FC = () => {
 
   if (!subscription && !license) {
     return (
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+      <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
         <h3 className="text-base font-bold text-white">Abonnement & Licence</h3>
         <p className="text-xs text-slate-400">
-          Aucun abonnement n&apos;est enregistré pour cet établissement. BP09 BR-001 impose
-          qu&apos;un établissement dispose d&apos;une formule : contactez MORA Shawiri.
+          Aucun abonnement n&apos;est enregistré pour cet établissement. Chaque établissement doit
+          disposer d&apos;une formule : contactez MORA Shawiri.
         </p>
       </div>
     );
@@ -56,7 +59,7 @@ export const SubscriptionPanel: React.FC = () => {
   return (
     <div className="space-y-4">
       {subscription && (
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-mora-green" /> Abonnement
@@ -94,37 +97,23 @@ export const SubscriptionPanel: React.FC = () => {
                 {daysLeft > 0
                   ? `Votre abonnement expire dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}.`
                   : 'Votre abonnement est arrivé à échéance.'}{' '}
-                Contactez MORA Shawiri pour le renouveler — aucune donnée n&apos;est supprimée
-                (BP09 BR-005).
+                Contactez MORA Shawiri pour le renouveler — aucune donnée n&apos;est supprimée.
               </span>
             </div>
           )}
 
-          <div>
-            <p className="text-xs text-slate-400 mb-2">Modules inclus dans la formule</p>
-            {subscription.planModuleCodes === null ? (
-              <p className="text-[11px] text-amber-400">
-                Composition non définie par la documentation officielle : aucune restriction
-                n&apos;est appliquée.
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {subscription.planModuleCodes.map((code) => (
-                  <span
-                    key={code}
-                    className="px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-300"
-                  >
-                    {code}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Toutes les formules donnent accès à tous les modules : lister leurs
+              codes n'apporterait rien. Seule l'activation, gérée dans l'onglet
+              Modules, distingue un établissement d'un autre. */}
+          <p className="text-[11px] text-slate-400">
+            Tous les modules sont inclus dans votre formule. Leur activation se règle depuis
+            l&apos;onglet <span className="text-slate-200 font-semibold">Modules</span>.
+          </p>
         </div>
       )}
 
       {license && (
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
+        <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <KeyRound className="w-4 h-4 text-mora-green" /> Licence

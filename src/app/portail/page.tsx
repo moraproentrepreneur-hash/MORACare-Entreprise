@@ -36,9 +36,9 @@ export default function PortalHomePage() {
           <p className="font-bold text-amber-300">Module Portail Patient en cours de développement</p>
           <p>
             L&apos;espace est accessible et sécurisé, mais la consultation du dossier, la prise de
-            rendez-vous en ligne et le téléchargement des documents (UG10 §5 à §12) restent à
-            implémenter. Ils nécessitent des politiques d&apos;accès dédiées, permettant au patient
-            de voir ses seules données.
+            rendez-vous en ligne et le téléchargement des documents restent à implémenter. Ils
+            nécessitent des politiques d&apos;accès dédiées, permettant au patient de voir ses
+            seules données.
           </p>
         </div>
       </div>

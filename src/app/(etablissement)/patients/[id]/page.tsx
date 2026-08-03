@@ -121,13 +121,13 @@ function PatientRecord() {
       </Link>
 
       {/* Identité */}
-      <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
+      <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="font-mono text-xs text-mora-green font-bold">
               {patient.business_reference}
             </p>
-            <h2 className="text-2xl font-black text-white mt-1">
+            <h2 className="text-xl sm:text-2xl font-black text-white mt-1 break-words">
               {patient.first_name} {patient.last_name}
             </h2>
             <p className="text-xs text-slate-400 mt-1">
