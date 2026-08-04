@@ -108,6 +108,25 @@ export type RolePermissionRow = Row<'role_permissions'>;
 export type RegistrationRequestRow = Row<'registration_requests'>;
 export type ContactRequestRow = Row<'contact_requests'>;
 
+// Sécurité et cycle de vie des comptes
+export type SecuritySettingsRow = Row<'security_settings'>;
+export type LoginAttemptRow = Row<'login_attempts'>;
+export type VerificationCodeRow = Row<'verification_codes'>;
+export type PasswordResetRequestRow = Row<'password_reset_requests'>;
+export type MessageOutboxRow = Row<'message_outbox'>;
+export type PaymentMethodRow = Row<'payment_methods'>;
+export type PlanDurationRow = Row<'plan_durations'>;
+
+/** Motif d'un code de vérification à six chiffres. */
+export type VerificationPurpose =
+  | 'account_activation'
+  | 'trial_activation'
+  | 'password_reset'
+  | 'two_factor';
+
+/** Date de démarrage souhaitée pour un abonnement. */
+export type StartOption = 'immediate' | 'next_month' | 'custom';
+
 /** Statuts de traitement communs aux demandes et aux prises de contact. */
 export type RequestStatus =
   | 'pending'

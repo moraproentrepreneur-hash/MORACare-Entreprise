@@ -20,10 +20,14 @@ import { FALLBACK_PLANS, type FallbackPlan } from './landing-content';
  */
 
 interface PlanCardsProps {
-  onSelectPlan: (planName: string) => void;
+  /**
+   * Reçoit la formule entière, pas son seul nom : le formulaire qui s'ouvre
+   * doit connaître son tarif et ses limites sans avoir à les rechercher.
+   */
+  onSelectPlan: (plan: DisplayPlan) => void;
 }
 
-type DisplayPlan = FallbackPlan | PublicPlan;
+export type DisplayPlan = FallbackPlan | PublicPlan;
 
 const keyOf = (plan: DisplayPlan): string => ('id' in plan ? plan.id : plan.code);
 
@@ -150,7 +154,7 @@ export const PlanCards: React.FC<PlanCardsProps> = ({ onSelectPlan }) => {
           </ul>
 
           <button
-            onClick={() => onSelectPlan(plan.name)}
+            onClick={() => onSelectPlan(plan)}
             className={`mt-5 w-full rounded-xl py-2.5 text-sm font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
               plan.isFeatured
                 ? 'bg-mora-green text-white shadow-lg shadow-mora-green/25 hover:bg-mora-green/90 focus-visible:ring-mora-green'

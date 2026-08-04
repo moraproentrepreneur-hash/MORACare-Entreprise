@@ -2,8 +2,21 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Lock, Mail, ArrowLeft, ShieldAlert, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import {
+  Activity,
+  Lock,
+  Mail,
+  ArrowLeft,
+  ShieldAlert,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  CheckCircle2,
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
+import { requestPasswordReset } from '@/services/auth.service';
 
 interface LoginFormProps {
   onBackToLanding: () => void;
@@ -12,10 +25,14 @@ interface LoginFormProps {
 /**
  * Écran de connexion (BP10, UG01 §3, UG02 §3, UG03 §3).
  *
- * Connexion par e-mail professionnel et mot de passe. Aucun identifiant n'est
+ * Connexion par identifiant ou e-mail professionnel. Aucun identifiant n'est
  * affiché ni suggéré : CLAUDE.md § Authentification interdit toute divulgation,
  * et le message d'erreur reste volontairement générique pour ne pas permettre
  * d'énumérer les comptes existants.
+ *
+ * Après plusieurs échecs, le serveur verrouille le compte. Le nombre de
+ * tentatives restantes est annoncé : le taire ferait passer un verrouillage
+ * imminent pour une simple faute de frappe.
  */
 export const LoginForm: React.FC<LoginFormProps> = ({ onBackToLanding }) => {
   const { login, isConfigured } = useAuth();
@@ -25,6 +42,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onBackToLanding }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isResetOpen, setIsResetOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +52,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onBackToLanding }) => {
     const result = await login(identifier, password);
     if (!result.success) {
       setError(result.error ?? 'Identifiant ou mot de passe incorrect.');
+      // Le champ est vidé après un échec : le mot de passe suivant sera saisi
+      // en entier plutôt que corrigé à l'aveugle.
+      setPassword('');
     }
     setLoading(false);
   };
@@ -207,6 +228,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onBackToLanding }) => {
             >
               {loading ? 'Connexion en cours…' : 'Se connecter'}
             </button>
+
+            <button
+              type="button"
+              onClick={() => setIsResetOpen(true)}
+              className="mx-auto block text-xs font-semibold text-mora-green transition-colors hover:underline"
+            >
+              Mot de passe oublié ?
+            </button>
           </form>
 
           <p className="mt-8 text-center text-[11px] text-slate-500 leading-relaxed">
@@ -216,6 +245,122 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onBackToLanding }) => {
           </p>
         </motion.div>
       </main>
+
+      <PasswordResetModal
+        isOpen={isResetOpen}
+        onClose={() => setIsResetOpen(false)}
+        defaultIdentifier={identifier}
+      />
     </div>
+  );
+};
+
+/**
+ * Demande de réinitialisation.
+ *
+ * La confirmation est la même que l'identifiant existe ou non : le serveur ne
+ * le dit pas, et l'interface ne doit pas laisser deviner ce qu'il tait. Un
+ * formulaire public qui répondrait « compte inconnu » servirait à recenser le
+ * personnel d'un établissement.
+ */
+const PasswordResetModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  defaultIdentifier: string;
+}> = ({ isOpen, onClose, defaultIdentifier }) => {
+  const [identifier, setIdentifier] = useState('');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState('');
+
+  // Le champ reprend ce qui a déjà été saisi à la connexion, tant que le
+  // visiteur n'a rien tapé ici.
+  React.useEffect(() => {
+    if (isOpen && status === 'idle') {
+      setIdentifier((current) => current || defaultIdentifier);
+    }
+  }, [isOpen, defaultIdentifier, status]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('sending');
+    setError(null);
+    try {
+      setConfirmation(await requestPasswordReset(identifier));
+      setStatus('sent');
+    } catch (err) {
+      setStatus('idle');
+      setError(err instanceof Error ? err.message : "La demande n'a pas pu être enregistrée.");
+    }
+  };
+
+  const handleClose = () => {
+    onClose();
+    setTimeout(() => {
+      setStatus('idle');
+      setError(null);
+      setIdentifier('');
+    }, 250);
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Mot de passe oublié"
+      description="Votre demande sera transmise à un administrateur, qui vous communiquera un nouveau mot de passe."
+    >
+      {status === 'sent' ? (
+        <div className="space-y-5 py-4 text-center">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-mora-green">
+            <CheckCircle2 className="h-9 w-9" />
+          </span>
+          <p className="text-sm leading-relaxed text-slate-300">{confirmation}</p>
+          <Button variant="secondary" onClick={handleClose} className="w-full py-2.5 font-bold">
+            Fermer
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="reset-id" className="mb-1.5 block text-xs font-semibold text-slate-300">
+              Identifiant ou e-mail
+            </label>
+            <input
+              id="reset-id"
+              type="text"
+              required
+              autoCapitalize="none"
+              spellCheck={false}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="jdupont ou prenom.nom@etablissement.com"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-mora-green"
+            />
+          </div>
+
+          <p className="rounded-xl bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-500">
+            Aucun lien de réinitialisation n&apos;est envoyé par e-mail. Un administrateur vérifie
+            la demande, puis vous remet un mot de passe temporaire que vous remplacerez à la
+            connexion.
+          </p>
+
+          <Button
+            type="submit"
+            variant="secondary"
+            isLoading={status === 'sending'}
+            className="w-full py-3 font-bold"
+          >
+            Envoyer ma demande
+          </Button>
+        </form>
+      )}
+    </Modal>
   );
 };

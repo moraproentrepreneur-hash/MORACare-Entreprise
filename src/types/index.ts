@@ -38,6 +38,10 @@ export interface UserProfile {
   avatar_url?: string;
   specialty?: string;
   license_number?: string;
+  /** Mot de passe temporaire : à remplacer avant tout accès. */
+  must_change_password: boolean;
+  /** Le compte attend la saisie du code de vérification envoyé par e-mail. */
+  activation_required: boolean;
   created_at: string;
   updated_at: string;
 }

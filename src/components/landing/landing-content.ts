@@ -237,6 +237,63 @@ export const FALLBACK_PLANS: readonly FallbackPlan[] = [
   },
 ];
 
+/**
+ * Grille tarifaire dégressive — repli hors ligne.
+ *
+ * Copie exacte de la table `plan_durations`. Comme pour les formules, une page
+ * commerciale ne doit pas afficher un tarif vide si la base est injoignable.
+ * Toute modification de la grille en base doit être répercutée ici.
+ */
+export interface FallbackDuration {
+  planCode: string;
+  months: number;
+  monthlyPrice: number;
+  totalPrice: number;
+  monthlySavings: number;
+  totalSavings: number;
+}
+
+const duration = (
+  planCode: string,
+  months: number,
+  monthlyPrice: number,
+  totalPrice: number,
+  reference: number,
+): FallbackDuration => ({
+  planCode,
+  months,
+  monthlyPrice,
+  totalPrice,
+  monthlySavings: Math.max(0, reference - monthlyPrice),
+  totalSavings: Math.max(0, reference * months - totalPrice),
+});
+
+export const FALLBACK_PLAN_DURATIONS: readonly FallbackDuration[] = [
+  duration('standard', 1, 5000, 5000, 5000),
+  duration('standard', 2, 4000, 8000, 5000),
+  duration('standard', 3, 3000, 9000, 5000),
+  duration('business', 1, 10000, 10000, 10000),
+  duration('business', 2, 9000, 18000, 10000),
+  duration('business', 3, 8000, 24000, 10000),
+  duration('vip', 1, 15000, 15000, 15000),
+  duration('vip', 2, 14000, 28000, 15000),
+  duration('vip', 3, 13000, 39000, 15000),
+];
+
+/** Modes de paiement — repli hors ligne, identique à `payment_methods`. */
+export const FALLBACK_PAYMENT_METHODS: readonly {
+  code: string;
+  label: string;
+  description: string | null;
+  requiresReference: boolean;
+}[] = [
+  { code: 'especes', label: 'Espèces', description: null, requiresReference: false },
+  { code: 'cheque', label: 'Chèque', description: null, requiresReference: true },
+  { code: 'mvola', label: 'Mvola', description: null, requiresReference: true },
+  { code: 'holo', label: 'Holo', description: null, requiresReference: true },
+  { code: 'wakati', label: 'Wakati', description: null, requiresReference: true },
+];
+
 /** LP-001 §6 — Section 8 : Comment démarrer ? (5 étapes) */
 export const STARTING_STEPS: readonly string[] = [
   'Réserver une démonstration',

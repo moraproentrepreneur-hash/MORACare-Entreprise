@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/lib/roles';
-import { createPlatformUser } from '@/services/platform-admin.service';
+import { createPlatformUser, type IssuedCredentials } from '@/services/platform-admin.service';
 import type { Establishment, UserRole } from '@/types';
 
 /**
@@ -16,6 +16,11 @@ import type { Establishment, UserRole } from '@/types';
  *
  * Quand l'établissement est imposé (cas de la création), il n'est pas
  * modifiable : il est affiché, pas resélectionnable.
+ *
+ * Aucun mot de passe n'est saisi ici. Le serveur en produit un, conforme à la
+ * politique et imprévisible, qu'il renvoie une seule fois pour être copié ou
+ * envoyé. Laisser un administrateur pressé en choisir un aboutissait à des
+ * secrets faibles, et connus de lui.
  */
 
 export interface AdminAccountFormProps {
@@ -24,7 +29,8 @@ export interface AdminAccountFormProps {
   lockedEstablishment?: Establishment;
   /** Rôle proposé par défaut. */
   defaultRole?: UserRole;
-  onCreated: () => void | Promise<void>;
+  /** Reçoit les identifiants générés, à présenter à l'administrateur. */
+  onCreated: (credentials: IssuedCredentials & { fullName: string; establishmentName: string }) => void | Promise<void>;
   onCancel?: () => void;
   submitLabel?: string;
 }
@@ -57,7 +63,6 @@ export const AdminAccountForm: React.FC<AdminAccountFormProps> = ({
     email: '',
     phone: '',
     username: '',
-    password: '',
     role: defaultRole as UserRole,
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -76,17 +81,27 @@ export const AdminAccountForm: React.FC<AdminAccountFormProps> = ({
 
     setIsSaving(true);
     try {
-      await createPlatformUser({
+      // Aucun mot de passe transmis : le serveur le génère.
+      const credentials = await createPlatformUser({
         establishment_id: form.establishment_id,
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
         phone: form.phone || undefined,
         username: username || undefined,
-        password: form.password,
         role: form.role,
       });
-      await onCreated();
+
+      const establishmentName =
+        lockedEstablishment?.name ??
+        establishments.find((est) => est.id === form.establishment_id)?.name ??
+        'MORACare';
+
+      await onCreated({
+        ...credentials,
+        fullName: `${form.first_name} ${form.last_name}`.trim(),
+        establishmentName,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Création impossible.');
     } finally {
@@ -227,20 +242,14 @@ export const AdminAccountForm: React.FC<AdminAccountFormProps> = ({
         </div>
       </div>
 
-      <div>
-        <label htmlFor="adm-password" className="mb-1 block text-xs font-semibold text-slate-300">
-          Mot de passe *
-        </label>
-        <input
-          id="adm-password"
-          type="password"
-          required
-          minLength={12}
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-          className={FIELD}
-        />
-        <p className="mt-1 text-[11px] text-slate-500">12 caractères minimum.</p>
+      <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+        <p className="text-xs font-semibold text-slate-300">Mot de passe</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+          Généré automatiquement à la création, puis affiché une seule fois pour être copié ou
+          envoyé par e-mail. Son titulaire devra le remplacer dès sa première connexion.
+          {form.role === 'establishment_admin' &&
+            " Un code de vérification à six chiffres lui sera également envoyé : sans lui, le compte reste inactif."}
+        </p>
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row-reverse">

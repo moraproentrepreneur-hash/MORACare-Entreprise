@@ -3,6 +3,7 @@
 import React from 'react';
 import { Activity, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { AccountGate } from '@/components/auth/AccountGate';
 
 /**
  * PortalLayout (TD04 §10) — espace Patient (BP29, UG10).
@@ -24,6 +25,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   if (!isAuthenticated) return null;
 
   return (
+    // Le patient est soumis aux mêmes obligations que le personnel : adresse
+    // confirmée et mot de passe personnel avant tout accès à son dossier.
+    <AccountGate>
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-slate-800 bg-slate-900/60 px-4 backdrop-blur-md sm:px-6">
         <div className="flex items-center gap-3">
@@ -56,5 +60,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
       <main className="mx-auto max-w-5xl space-y-6 p-3 sm:p-4 lg:p-6">{children}</main>
     </div>
+    </AccountGate>
   );
 }

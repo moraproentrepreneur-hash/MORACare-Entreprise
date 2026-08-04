@@ -1,6 +1,6 @@
 import { failIf, getClient } from './base.service';
 import type { EstablishmentType } from '@/types';
-import type { RequestStatus } from '@/types/database';
+import type { RequestStatus, StartOption } from '@/types/database';
 
 /**
  * Demandes de démonstration et prises de contact.
@@ -60,7 +60,36 @@ export interface RegistrationRequest {
   message: string;
   status: RequestStatus;
   createdAt: string;
+  /** Offre retenue par le visiteur. `null` pour une demande générique. */
+  planName: string | null;
+  planCode: string | null;
+  durationMonths: number | null;
+  monthlyPrice: number | null;
+  totalPrice: number | null;
+  savingsAmount: number | null;
+  currency: string;
+  paymentMethod: string | null;
+  startOption: StartOption | null;
+  startDate: string | null;
 }
+
+/** Libellés des modes de paiement et des dates de démarrage. */
+export const PAYMENT_LABELS: Record<string, string> = {
+  especes: 'Espèces',
+  cheque: 'Chèque',
+  mvola: 'Mvola',
+  holo: 'Holo',
+  wakati: 'Wakati',
+};
+
+export const START_LABELS: Record<StartOption, string> = {
+  immediate: 'Dès validation',
+  next_month: 'Début du mois prochain',
+  custom: 'Date choisie',
+};
+
+const asStartOption = (value: string | null): StartOption | null =>
+  value === 'immediate' || value === 'next_month' || value === 'custom' ? value : null;
 
 export const listRegistrationRequests = async (): Promise<RegistrationRequest[]> => {
   const { data, error } = await getClient()
@@ -81,6 +110,16 @@ export const listRegistrationRequests = async (): Promise<RegistrationRequest[]>
     message: row.message ?? '',
     status: asStatus(row.status),
     createdAt: row.created_at,
+    planName: row.plan_name,
+    planCode: row.plan_code,
+    durationMonths: row.duration_months,
+    monthlyPrice: row.monthly_price === null ? null : Number(row.monthly_price),
+    totalPrice: row.total_price === null ? null : Number(row.total_price),
+    savingsAmount: row.savings_amount === null ? null : Number(row.savings_amount),
+    currency: row.price_currency,
+    paymentMethod: row.payment_method,
+    startOption: asStartOption(row.start_option),
+    startDate: row.start_date,
   }));
 };
 
@@ -145,4 +184,58 @@ export const setContactRequestStatus = async (
     .eq('id', contactId);
 
   failIf(error, 'Mise à jour de la prise de contact');
+};
+
+// ---------------------------------------------------------------------------
+// Demandes de réinitialisation de mot de passe
+// ---------------------------------------------------------------------------
+
+export interface PasswordResetRequest {
+  id: string;
+  reference: string;
+  /** Compte reconnu, ou `null` si l'identifiant saisi n'existe pas. */
+  profileId: string | null;
+  identifier: string;
+  fullName: string;
+  email: string;
+  establishmentName: string;
+  status: RequestStatus;
+  createdAt: string;
+}
+
+export const listPasswordResetRequests = async (): Promise<PasswordResetRequest[]> => {
+  const { data, error } = await getClient()
+    .from('password_reset_requests')
+    .select('*, establishment:establishments(name)')
+    .order('created_at', { ascending: false });
+
+  failIf(error, 'Chargement des demandes de réinitialisation');
+
+  return (data ?? []).map((row) => {
+    const joined = row as unknown as { establishment?: { name: string } | null };
+    return {
+      id: row.id,
+      reference: row.business_reference,
+      profileId: row.profile_id,
+      identifier: row.identifier,
+      fullName: row.full_name ?? '—',
+      email: row.email ?? '—',
+      establishmentName: joined.establishment?.name ?? '—',
+      status: asStatus(row.status),
+      createdAt: row.created_at,
+    };
+  });
+};
+
+export const setPasswordResetStatus = async (
+  requestId: string,
+  status: RequestStatus,
+  processedBy: string,
+): Promise<void> => {
+  const { error } = await getClient()
+    .from('password_reset_requests')
+    .update({ status, processed_by: processedBy, processed_at: new Date().toISOString() })
+    .eq('id', requestId);
+
+  failIf(error, 'Mise à jour de la demande');
 };

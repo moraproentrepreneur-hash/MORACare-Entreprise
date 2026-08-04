@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { loadSecuritySettings } from '@/lib/security/settings.server';
+import { describePasswordError } from '@/lib/password-policy';
 import type { ProfileRow } from '@/types/database';
 
 /**
@@ -30,10 +32,15 @@ const ROLES = [
 const patchSchema = z
   .object({
     role: z.enum(ROLES).optional(),
-    password: z.string().min(12, 'Le mot de passe doit contenir au moins 12 caractères.').optional(),
+    /** Contrôlé contre la politique en vigueur, relue en base plus bas. */
+    password: z.string().optional(),
     establishment_id: z.string().uuid().nullable().optional(),
     is_active: z.boolean().optional(),
     department: z.string().trim().max(100).optional(),
+    /** Lève ou repose l'obligation de changer le mot de passe. */
+    must_change_password: z.boolean().optional(),
+    /** Déverrouille un compte bloqué par les tentatives échouées. */
+    unlock: z.boolean().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'Aucune modification demandée.' });
 
@@ -130,6 +137,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   // 1. Mot de passe — via l'API d'administration Supabase Auth.
   if (input.password) {
+    // La politique est relue en base : la contrainte du schéma Zod ne vaudrait
+    // que pour cette route, alors que la règle est celle de la plateforme.
+    const settings = await loadSecuritySettings(admin, target.establishment_id);
+    const policyError = describePasswordError(input.password, settings.password);
+    if (policyError) {
+      return NextResponse.json({ error: policyError }, { status: 400 });
+    }
+
     const { error } = await admin.auth.admin.updateUserById(targetId, {
       password: input.password,
     });
@@ -144,6 +159,23 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (input.is_active !== undefined) profileUpdate.is_active = input.is_active;
   if (input.department !== undefined) profileUpdate.department = input.department;
   if (input.establishment_id !== undefined) profileUpdate.establishment_id = input.establishment_id;
+  if (input.must_change_password !== undefined) {
+    profileUpdate.must_change_password = input.must_change_password;
+  }
+
+  // Un mot de passe posé par un administrateur est temporaire par nature : son
+  // titulaire doit le remplacer, sinon l'administrateur connaîtrait durablement
+  // le mot de passe d'un compte soignant.
+  if (input.password && input.must_change_password === undefined) {
+    profileUpdate.must_change_password = true;
+    profileUpdate.password_changed_at = null;
+  }
+
+  // Déverrouillage explicite, ou levée implicite après réinitialisation.
+  if (input.unlock || input.password || input.is_active === true) {
+    profileUpdate.failed_login_attempts = 0;
+    profileUpdate.locked_until = null;
+  }
 
   if (Object.keys(profileUpdate).length > 0) {
     const { error } = await admin.from('profiles').update(profileUpdate).eq('id', targetId);

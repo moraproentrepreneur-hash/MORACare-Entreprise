@@ -21,6 +21,7 @@ export type NotificationSource =
   | 'system'
   | 'registration'
   | 'contact'
+  | 'password_reset'
   | 'subscription'
   | 'license';
 
@@ -100,7 +101,7 @@ export const markAllNotificationsRead = async (userId: string): Promise<void> =>
 const loadPlatformAlerts = async (): Promise<AppNotification[]> => {
   const client = getClient();
 
-  const [requests, contacts, subscriptions, licenses] = await Promise.all([
+  const [requests, contacts, resets, subscriptions, licenses] = await Promise.all([
     client
       .from('registration_requests')
       .select('id, business_reference, establishment_name, created_at')
@@ -110,6 +111,12 @@ const loadPlatformAlerts = async (): Promise<AppNotification[]> => {
     client
       .from('contact_requests')
       .select('id, business_reference, full_name, subject, created_at')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(10),
+    client
+      .from('password_reset_requests')
+      .select('id, business_reference, identifier, full_name, created_at')
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(10),
@@ -133,6 +140,7 @@ const loadPlatformAlerts = async (): Promise<AppNotification[]> => {
 
   failIf(requests.error, 'Chargement des demandes');
   failIf(contacts.error, 'Chargement des prises de contact');
+  failIf(resets.error, 'Chargement des demandes de réinitialisation');
   failIf(subscriptions.error, 'Chargement des abonnements');
   failIf(licenses.error, 'Chargement des licences');
 
@@ -160,6 +168,19 @@ const loadPlatformAlerts = async (): Promise<AppNotification[]> => {
       severity: 'info',
       createdAt: row.created_at,
       href: '/admin/contacts',
+      isRead: false,
+    });
+  }
+
+  for (const row of resets.data ?? []) {
+    alerts.push({
+      id: `password_reset:${row.id}`,
+      title: 'Demande de réinitialisation',
+      message: `${row.full_name ?? row.identifier} — référence ${row.business_reference}`,
+      source: 'password_reset',
+      severity: 'warning',
+      createdAt: row.created_at,
+      href: '/admin/reinitialisations',
       isRead: false,
     });
   }

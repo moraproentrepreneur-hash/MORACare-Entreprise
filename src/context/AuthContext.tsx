@@ -18,6 +18,14 @@ interface AuthContextType {
   isConfigured: boolean;
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
+  /**
+   * Relit le profil.
+   *
+   * Nécessaire après une activation ou un changement de mot de passe : ces
+   * opérations modifient des colonnes de `profiles` sans toucher à la session,
+   * donc sans déclencher `onAuthStateChange`.
+   */
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isConfigured: isSupabaseConfigured(),
         login,
         logout,
+        refreshProfile,
       }}
     >
       {children}

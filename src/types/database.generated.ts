@@ -1,4 +1,10 @@
-﻿export type Json =
+﻿/**
+ * Types PostgreSQL générés depuis le schéma réel — NE PAS ÉDITER À LA MAIN.
+ *
+ * Régénération après toute migration :
+ *   GET https://api.supabase.com/v1/projects/{ref}/types/typescript?included_schemas=public
+ */
+export type Json =
   | string
   | number
   | boolean
@@ -1421,6 +1427,107 @@ export type Database = {
           },
         ]
       }
+      login_attempts: {
+        Row: {
+          created_at: string
+          failure_reason: string | null
+          id: string
+          identifier: string
+          ip_address: string | null
+          profile_id: string | null
+          succeeded: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          identifier: string
+          ip_address?: string | null
+          profile_id?: string | null
+          succeeded: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          identifier?: string
+          ip_address?: string | null
+          profile_id?: string | null
+          succeeded?: boolean
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "login_attempts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_outbox: {
+        Row: {
+          attempts: number
+          body: string
+          business_reference: string
+          channel: string
+          created_at: string
+          error: string | null
+          id: string
+          provider: string | null
+          provider_message_id: string | null
+          recipient: string
+          related_id: string | null
+          related_type: string | null
+          sent_at: string | null
+          status: string
+          subject: string | null
+          template: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          body: string
+          business_reference: string
+          channel?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          provider?: string | null
+          provider_message_id?: string | null
+          recipient: string
+          related_id?: string | null
+          related_type?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          template: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          body?: string
+          business_reference?: string
+          channel?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          provider?: string | null
+          provider_message_id?: string | null
+          recipient?: string
+          related_id?: string | null
+          related_type?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          template?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       modules: {
         Row: {
           blueprint_reference: string | null
@@ -1492,6 +1599,79 @@ export type Database = {
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      password_reset_requests: {
+        Row: {
+          business_reference: string
+          created_at: string
+          email: string | null
+          establishment_id: string | null
+          full_name: string | null
+          id: string
+          identifier: string
+          ip_address: string | null
+          note: string | null
+          processed_at: string | null
+          processed_by: string | null
+          profile_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_reference: string
+          created_at?: string
+          email?: string | null
+          establishment_id?: string | null
+          full_name?: string | null
+          id?: string
+          identifier: string
+          ip_address?: string | null
+          note?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          profile_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_reference?: string
+          created_at?: string
+          email?: string | null
+          establishment_id?: string | null
+          full_name?: string | null
+          id?: string
+          identifier?: string
+          ip_address?: string | null
+          note?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          profile_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "password_reset_requests_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "password_reset_requests_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "password_reset_requests_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1594,6 +1774,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_methods: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          label: string
+          requires_reference: boolean
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          label: string
+          requires_reference?: boolean
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          label?: string
+          requires_reference?: boolean
+          updated_at?: string
+        }
+        Relationships: []
       }
       payments: {
         Row: {
@@ -1830,6 +2046,44 @@ export type Database = {
           },
         ]
       }
+      plan_durations: {
+        Row: {
+          created_at: string
+          id: string
+          monthly_price: number
+          months: number
+          plan_id: string
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          monthly_price: number
+          months: number
+          plan_id: string
+          total_price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          monthly_price?: number
+          months?: number
+          plan_id?: string
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_durations_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_modules: {
         Row: {
           module_id: string
@@ -1956,6 +2210,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          activation_required: boolean
           avatar_url: string | null
           business_reference: string
           created_at: string
@@ -1963,12 +2218,18 @@ export type Database = {
           deleted_at: string | null
           department: string | null
           email: string
+          email_verified_at: string | null
           establishment_id: string | null
+          failed_login_attempts: number
           first_name: string
           id: string
           is_active: boolean | null
+          last_login_at: string | null
           last_name: string
           license_number: string | null
+          locked_until: string | null
+          must_change_password: boolean
+          password_changed_at: string | null
           phone: string | null
           role: Database["public"]["Enums"]["user_role_type"]
           specialty: string | null
@@ -1977,6 +2238,7 @@ export type Database = {
           username: string
         }
         Insert: {
+          activation_required?: boolean
           avatar_url?: string | null
           business_reference: string
           created_at?: string
@@ -1984,12 +2246,18 @@ export type Database = {
           deleted_at?: string | null
           department?: string | null
           email: string
+          email_verified_at?: string | null
           establishment_id?: string | null
+          failed_login_attempts?: number
           first_name: string
           id: string
           is_active?: boolean | null
+          last_login_at?: string | null
           last_name: string
           license_number?: string | null
+          locked_until?: string | null
+          must_change_password?: boolean
+          password_changed_at?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role_type"]
           specialty?: string | null
@@ -1998,6 +2266,7 @@ export type Database = {
           username: string
         }
         Update: {
+          activation_required?: boolean
           avatar_url?: string | null
           business_reference?: string
           created_at?: string
@@ -2005,12 +2274,18 @@ export type Database = {
           deleted_at?: string | null
           department?: string | null
           email?: string
+          email_verified_at?: string | null
           establishment_id?: string | null
+          failed_login_attempts?: number
           first_name?: string
           id?: string
           is_active?: boolean | null
+          last_login_at?: string | null
           last_name?: string
           license_number?: string | null
+          locked_until?: string | null
+          must_change_password?: boolean
+          password_changed_at?: string | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role_type"]
           specialty?: string | null
@@ -2182,6 +2457,7 @@ export type Database = {
         Row: {
           business_reference: string
           created_at: string
+          duration_months: number | null
           email: string
           establishment_name: string
           establishment_type:
@@ -2190,16 +2466,26 @@ export type Database = {
           full_name: string
           id: string
           message: string | null
+          monthly_price: number | null
+          payment_method: string | null
           phone: string | null
+          plan_code: string | null
+          plan_name: string | null
+          price_currency: string
           processed_at: string | null
           processed_by: string | null
           requested_plan_id: string | null
+          savings_amount: number | null
+          start_date: string | null
+          start_option: string | null
           status: string
+          total_price: number | null
           updated_at: string
         }
         Insert: {
           business_reference: string
           created_at?: string
+          duration_months?: number | null
           email: string
           establishment_name: string
           establishment_type?:
@@ -2208,16 +2494,26 @@ export type Database = {
           full_name: string
           id?: string
           message?: string | null
+          monthly_price?: number | null
+          payment_method?: string | null
           phone?: string | null
+          plan_code?: string | null
+          plan_name?: string | null
+          price_currency?: string
           processed_at?: string | null
           processed_by?: string | null
           requested_plan_id?: string | null
+          savings_amount?: number | null
+          start_date?: string | null
+          start_option?: string | null
           status?: string
+          total_price?: number | null
           updated_at?: string
         }
         Update: {
           business_reference?: string
           created_at?: string
+          duration_months?: number | null
           email?: string
           establishment_name?: string
           establishment_type?:
@@ -2226,11 +2522,20 @@ export type Database = {
           full_name?: string
           id?: string
           message?: string | null
+          monthly_price?: number | null
+          payment_method?: string | null
           phone?: string | null
+          plan_code?: string | null
+          plan_name?: string | null
+          price_currency?: string
           processed_at?: string | null
           processed_by?: string | null
           requested_plan_id?: string | null
+          savings_amount?: number | null
+          start_date?: string | null
+          start_option?: string | null
           status?: string
+          total_price?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -2290,6 +2595,84 @@ export type Database = {
             columns: ["module_id"]
             isOneToOne: false
             referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_settings: {
+        Row: {
+          audit_retention_days: number
+          created_at: string
+          establishment_id: string | null
+          id: string
+          lockout_minutes: number
+          max_login_attempts: number
+          password_expiry_days: number | null
+          password_min_length: number
+          password_require_digit: boolean
+          password_require_lowercase: boolean
+          password_require_special: boolean
+          password_require_uppercase: boolean
+          session_idle_minutes: number
+          session_max_minutes: number
+          two_factor_enabled: boolean
+          two_factor_method: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          audit_retention_days?: number
+          created_at?: string
+          establishment_id?: string | null
+          id?: string
+          lockout_minutes?: number
+          max_login_attempts?: number
+          password_expiry_days?: number | null
+          password_min_length?: number
+          password_require_digit?: boolean
+          password_require_lowercase?: boolean
+          password_require_special?: boolean
+          password_require_uppercase?: boolean
+          session_idle_minutes?: number
+          session_max_minutes?: number
+          two_factor_enabled?: boolean
+          two_factor_method?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          audit_retention_days?: number
+          created_at?: string
+          establishment_id?: string | null
+          id?: string
+          lockout_minutes?: number
+          max_login_attempts?: number
+          password_expiry_days?: number | null
+          password_min_length?: number
+          password_require_digit?: boolean
+          password_require_lowercase?: boolean
+          password_require_special?: boolean
+          password_require_uppercase?: boolean
+          session_idle_minutes?: number
+          session_max_minutes?: number
+          two_factor_enabled?: boolean
+          two_factor_method?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_settings_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2661,6 +3044,47 @@ export type Database = {
           },
         ]
       }
+      verification_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          profile_id: string
+          purpose: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          profile_id: string
+          purpose: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          profile_id?: string
+          purpose?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_codes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2669,6 +3093,7 @@ export type Database = {
       current_establishment_id: { Args: never; Returns: string }
       is_establishment_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      purge_expired_audit_logs: { Args: never; Returns: number }
       seed_role_permission: {
         Args: {
           p_create: boolean

@@ -1,20 +1,23 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { KeyRound, Plus, ShieldCheck, Trash2, UserCog } from 'lucide-react';
+import { KeyRound, Plus, RefreshCw, ShieldCheck, Trash2, UserCog } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { formatDate } from '@/lib/utils';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/lib/roles';
+import { describePolicy } from '@/lib/password-policy';
 import { listEstablishments } from '@/services/establishment.service';
 import {
   deletePlatformUser,
   listPlatformUsers,
+  regeneratePassword,
   updatePlatformUser,
   type PlatformUser,
 } from '@/services/platform-admin.service';
 import type { Establishment, UserRole } from '@/types';
 import { AdminAccountForm } from './AdminAccountForm';
+import { CredentialsReveal, type Credentials } from './CredentialsReveal';
 import { SearchField, SortableHeader, compareValues, nextSort } from './request-ui';
 
 /**
@@ -30,7 +33,9 @@ import { SearchField, SortableHeader, compareValues, nextSort } from './request-
  */
 
 type SortColumn = 'fullName' | 'establishmentName' | 'role' | 'createdAt';
-type PendingAction = { user: PlatformUser; kind: 'password' | 'delete' | 'edit' } | null;
+type PendingAction =
+  | { user: PlatformUser; kind: 'password' | 'delete' | 'edit' | 'generate' }
+  | null;
 
 export const AdminAccountsPanel: React.FC = () => {
   const [users, setUsers] = useState<PlatformUser[]>([]);
@@ -43,6 +48,8 @@ export const AdminAccountsPanel: React.FC = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [pending, setPending] = useState<PendingAction>(null);
   const [newPassword, setNewPassword] = useState('');
+  /** Identifiants fraîchement émis, affichés une seule fois. */
+  const [issued, setIssued] = useState<Credentials | null>(null);
   const [editRole, setEditRole] = useState<UserRole>('establishment_admin');
   const [editEstablishment, setEditEstablishment] = useState('');
 
@@ -93,6 +100,30 @@ export const AdminAccountsPanel: React.FC = () => {
     setEditRole(user.role);
     setEditEstablishment(user.establishmentId ?? '');
     setPending({ user, kind: 'edit' });
+  };
+
+  /** Génère un mot de passe temporaire et le présente à l'administrateur. */
+  const handleGenerate = async (target: PlatformUser) => {
+    setBusyId(target.id);
+    setError(null);
+    setNotice(null);
+    try {
+      const credentials = await regeneratePassword(target.id);
+      setPending(null);
+      setIssued({
+        username: credentials.username,
+        password: credentials.password,
+        email: credentials.email,
+        fullName: target.fullName,
+        establishmentName: target.establishmentName,
+        emailSent: credentials.emailSent,
+      });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Génération impossible.');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const visible = useMemo(() => {
@@ -262,6 +293,7 @@ export const AdminAccountsPanel: React.FC = () => {
                 user={user}
                 busy={busyId === user.id}
                 onEdit={() => openEdit(user)}
+                onGenerate={() => setPending({ user, kind: 'generate' })}
                 onPassword={() => setPending({ user, kind: 'password' })}
                 onToggle={() =>
                   void run(
@@ -356,6 +388,7 @@ export const AdminAccountsPanel: React.FC = () => {
                         user={user}
                         busy={busyId === user.id}
                         onEdit={() => openEdit(user)}
+                        onGenerate={() => setPending({ user, kind: 'generate' })}
                         onPassword={() => setPending({ user, kind: 'password' })}
                         onToggle={() =>
                           void run(
@@ -386,12 +419,70 @@ export const AdminAccountsPanel: React.FC = () => {
         <AdminAccountForm
           establishments={establishments}
           onCancel={() => setIsCreateOpen(false)}
-          onCreated={async () => {
+          onCreated={async (credentials) => {
             setIsCreateOpen(false);
+            setIssued({
+              username: credentials.username,
+              password: credentials.password,
+              email: credentials.email,
+              fullName: credentials.fullName,
+              establishmentName: credentials.establishmentName,
+              emailSent: credentials.emailSent,
+            });
             setNotice('Le compte a été créé.');
             await load();
           }}
         />
+      </Modal>
+
+      {/* Identifiants générés — affichés une seule fois */}
+      <Modal
+        isOpen={issued !== null}
+        onClose={() => setIssued(null)}
+        title="Identifiants du compte"
+        description="À transmettre à son titulaire par un canal sûr."
+      >
+        {issued && <CredentialsReveal credentials={issued} onClose={() => setIssued(null)} />}
+      </Modal>
+
+      {/* Génération d'un mot de passe temporaire */}
+      <Modal
+        isOpen={pending?.kind === 'generate'}
+        onClose={() => setPending(null)}
+        title="Générer un mot de passe"
+        description={pending?.user.fullName}
+      >
+        {pending?.kind === 'generate' && (
+          <div className="space-y-4">
+            <p className="text-xs leading-relaxed text-slate-400">
+              Un mot de passe temporaire va être produit par le serveur et remplacera immédiatement
+              l&apos;actuel. Son titulaire devra en choisir un nouveau dès sa prochaine connexion,
+              et tout verrouillage en cours sera levé.
+            </p>
+            <p className="rounded-xl bg-slate-950 p-3 text-[11px] text-slate-500">
+              Il sera affiché une seule fois, puis envoyé à{' '}
+              <span className="text-slate-300">{pending.user.email}</span>.
+            </p>
+
+            <div className="flex flex-col gap-2 sm:flex-row-reverse">
+              <Button
+                variant="secondary"
+                isLoading={busyId === pending.user.id}
+                className="w-full py-2.5 font-bold sm:w-auto sm:px-8"
+                onClick={() => void handleGenerate(pending.user)}
+              >
+                Générer
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setPending(null)}
+                className="w-full py-2.5 sm:w-auto sm:px-6"
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Modification du rôle et de l'établissement */}
@@ -469,7 +560,7 @@ export const AdminAccountsPanel: React.FC = () => {
       <Modal
         isOpen={pending?.kind === 'password'}
         onClose={() => setPending(null)}
-        title="Réinitialiser le mot de passe"
+        title="Définir un mot de passe"
         description={pending?.user.fullName}
       >
         {pending?.kind === 'password' && (
@@ -480,31 +571,37 @@ export const AdminAccountsPanel: React.FC = () => {
               </label>
               <input
                 id="new-pwd"
-                type="password"
-                minLength={12}
+                type="text"
+                autoComplete="off"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1 focus:ring-mora-blue"
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-slate-100 outline-none focus:ring-1 focus:ring-mora-blue"
               />
               <p className="mt-1 text-[11px] text-slate-500">
-                12 caractères minimum. Communiquez-le à son titulaire par un canal sûr.
+                {describePolicy()} Communiquez-le à son titulaire par un canal sûr : il devra le
+                remplacer à sa prochaine connexion.
               </p>
             </div>
 
+            <p className="rounded-xl bg-slate-950 p-3 text-[11px] text-slate-500">
+              Préférez « Générer un mot de passe » : le serveur en produit un imprévisible et
+              conforme, sans qu&apos;il transite par votre clavier.
+            </p>
+
             <Button
               variant="secondary"
-              disabled={newPassword.length < 12}
+              disabled={newPassword.length < 8}
               isLoading={busyId === pending.user.id}
               className="w-full py-2.5 font-bold"
               onClick={() =>
                 void run(
                   pending.user.id,
                   () => updatePlatformUser(pending.user.id, { password: newPassword }),
-                  'Le mot de passe a été réinitialisé.',
+                  'Le mot de passe a été défini.',
                 )
               }
             >
-              Réinitialiser
+              Enregistrer
             </Button>
           </div>
         )}
@@ -560,10 +657,11 @@ const ActionButtons: React.FC<{
   user: PlatformUser;
   busy: boolean;
   onEdit: () => void;
+  onGenerate: () => void;
   onPassword: () => void;
   onToggle: () => void;
   onDelete: () => void;
-}> = ({ user, busy, onEdit, onPassword, onToggle, onDelete }) => {
+}> = ({ user, busy, onEdit, onGenerate, onPassword, onToggle, onDelete }) => {
   const base =
     'inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors disabled:opacity-50';
 
@@ -580,10 +678,18 @@ const ActionButtons: React.FC<{
       <button
         type="button"
         disabled={busy}
+        onClick={onGenerate}
+        className={`${base} bg-mora-green/15 text-mora-green hover:bg-mora-green/25`}
+      >
+        <RefreshCw className="h-3.5 w-3.5" /> Générer un mot de passe
+      </button>
+      <button
+        type="button"
+        disabled={busy}
         onClick={onPassword}
         className={`${base} bg-slate-800 text-slate-200 hover:bg-slate-700`}
       >
-        <KeyRound className="h-3.5 w-3.5" /> Mot de passe
+        <KeyRound className="h-3.5 w-3.5" /> Définir
       </button>
       <button
         type="button"

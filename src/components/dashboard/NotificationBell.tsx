@@ -40,6 +40,7 @@ const SOURCE_ICONS: Record<NotificationSource, React.ElementType> = {
   system: Info,
   registration: Inbox,
   contact: MessagesSquare,
+  password_reset: KeyRound,
   subscription: CreditCard,
   license: KeyRound,
 };

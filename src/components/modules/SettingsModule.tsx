@@ -19,6 +19,7 @@ import { AuditLogPanel } from '@/components/settings/AuditLogPanel';
 import { EstablishmentSettings } from '@/components/settings/EstablishmentSettings';
 import { SubscriptionPanel } from '@/components/settings/SubscriptionPanel';
 import { SecurityPanel } from '@/components/settings/SecurityPanel';
+import { BackupsPanel } from '@/components/settings/BackupsPanel';
 
 /**
  * Module Paramètres — poste de commande de l'application (BP28A).
@@ -107,26 +108,7 @@ export const SettingsModule: React.FC = () => {
       {activeTab === 'security' && <SecurityPanel />}
       {activeTab === 'audit' && <AuditLogPanel />}
 
-      {activeTab === 'backups' && (
-        <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Database className="w-4 h-4 text-mora-green" /> Sauvegardes & Restauration
-          </h3>
-          <p className="text-xs text-slate-400">
-            Vérification des sauvegardes, consultation de leur historique et lancement d&apos;une
-            restauration.
-          </p>
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400">
-            <p className="font-bold text-amber-400 mb-1">Écran non fonctionnel à ce stade</p>
-            <p>
-              Les sauvegardes relèvent de l&apos;infrastructure Supabase et d&apos;une politique de
-              rétention qui n&apos;est pas encore définie. Aucun état n&apos;est affiché ici tant
-              que la plateforme ne peut pas le mesurer réellement : annoncer une sauvegarde
-              inexistante serait plus grave que de ne rien annoncer.
-            </p>
-          </div>
-        </div>
-      )}
+      {activeTab === 'backups' && <BackupsPanel />}
     </div>
   );
 };

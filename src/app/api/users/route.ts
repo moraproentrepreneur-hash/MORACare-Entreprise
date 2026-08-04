@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { loadSecuritySettings } from '@/lib/security/settings.server';
+import { describePasswordError, generatePassword } from '@/lib/password-policy';
+import { issueVerificationCode, CODE_VALIDITY_MINUTES } from '@/lib/security/verification.server';
+import { dispatchMessage } from '@/lib/messaging/outbox.server';
+import { activationCodeMessage, temporaryPasswordMessage } from '@/lib/messaging/templates';
 
 /**
  * Création d'un compte utilisateur d'établissement (UG02 §5-6).
@@ -12,6 +17,13 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin';
  * BP06 §14 et TD06 §7 exigent que le contrôle d'accès soit vérifié côté
  * serveur. Le rôle de l'appelant est donc relu en base ici, sans faire
  * confiance à quoi que ce soit d'envoyé par le client.
+ *
+ * Le mot de passe est **généré par le serveur** si l'appelant n'en fournit pas.
+ * Il est alors temporaire : son titulaire devra le remplacer avant tout accès,
+ * et le compte attend en outre la saisie du code de vérification envoyé par
+ * courriel. Ce mot de passe est renvoyé **une seule fois**, dans la réponse à
+ * cette requête ; il n'est stocké nulle part en clair et ne peut plus être
+ * relu ensuite.
  */
 
 const createUserSchema = z.object({
@@ -37,7 +49,14 @@ const createUserSchema = z.object({
     'accountant',
     'patient',
   ]),
-  password: z.string().min(12, 'Le mot de passe doit contenir au moins 12 caractères.'),
+  /** Absent : le serveur génère un mot de passe temporaire conforme. */
+  password: z.string().optional(),
+  /**
+   * Exiger la saisie du code de vérification avant tout accès. Vrai par défaut
+   * pour un responsable d'établissement : c'est lui qui ouvre l'accès à la
+   * structure, son adresse doit être confirmée.
+   */
+  require_activation: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -107,14 +126,33 @@ export async function POST(request: Request) {
     );
   }
 
+  const settings = await loadSecuritySettings(admin, establishmentId);
+
+  // Mot de passe fourni : il doit respecter la politique comme n'importe quel
+  // autre. Mot de passe absent : le serveur en produit un, forcément conforme.
+  const isGenerated = !input.password;
+  const password = input.password ?? generatePassword(settings.password);
+
+  if (input.password) {
+    const policyError = describePasswordError(input.password, settings.password);
+    if (policyError) {
+      return NextResponse.json({ error: policyError }, { status: 400 });
+    }
+  }
+
+  // Un responsable d'établissement confirme son adresse avant d'accéder aux
+  // données : c'est lui qui ouvre ensuite l'accès à toute la structure.
+  const requireActivation = input.require_activation ?? input.role === 'establishment_admin';
+  const username = input.username || input.email.split('@')[0];
+
   // Le profil applicatif est créé par le trigger `handle_new_auth_user` à
   // partir de ces métadonnées : rien n'est inséré à la main dans `profiles`.
   const { data: created, error } = await admin.auth.admin.createUser({
     email: input.email,
-    password: input.password,
+    password,
     email_confirm: true,
     user_metadata: {
-      username: input.username || input.email.split('@')[0],
+      username,
       first_name: input.first_name,
       last_name: input.last_name,
       phone: input.phone ?? '',
@@ -131,9 +169,68 @@ export async function POST(request: Request) {
     );
   }
 
-  // Le service n'est renseigné qu'après coup : le trigger ne le reçoit pas.
-  if (input.department && created.user) {
-    await admin.from('profiles').update({ department: input.department }).eq('id', created.user.id);
+  const newUserId = created.user?.id ?? null;
+
+  if (newUserId) {
+    // Ces colonnes ne passent pas par le trigger : elles sont posées ici.
+    await admin
+      .from('profiles')
+      .update({
+        department: input.department ?? null,
+        must_change_password: true,
+        password_changed_at: null,
+        activation_required: requireActivation,
+      })
+      .eq('id', newUserId);
+  }
+
+  const { data: establishment } = await admin
+    .from('establishments')
+    .select('name')
+    .eq('id', establishmentId)
+    .maybeSingle();
+
+  const establishmentName = establishment?.name ?? 'MORACare';
+
+  // Remise des identifiants. L'envoi peut échouer sans compromettre la création :
+  // le mot de passe est aussi rendu à l'écran, où l'administrateur le copie.
+  const credentials = temporaryPasswordMessage({
+    firstName: input.first_name,
+    username,
+    password,
+    establishmentName,
+  });
+
+  const credentialsDelivery = await dispatchMessage(admin, {
+    recipient: input.email,
+    subject: credentials.subject,
+    body: credentials.body,
+    template: credentials.template,
+    relatedType: 'profiles',
+    relatedId: newUserId ?? undefined,
+  });
+
+  // Code d'activation, si le compte doit être confirmé avant tout accès.
+  let activationDelivered = false;
+  if (requireActivation && newUserId) {
+    const { code } = await issueVerificationCode(admin, newUserId, 'account_activation');
+    const message = activationCodeMessage({
+      firstName: input.first_name,
+      establishmentName,
+      code,
+      validMinutes: CODE_VALIDITY_MINUTES,
+    });
+
+    const delivery = await dispatchMessage(admin, {
+      recipient: input.email,
+      subject: message.subject,
+      body: message.body,
+      template: message.template,
+      relatedType: 'profiles',
+      relatedId: newUserId,
+    });
+
+    activationDelivered = delivery.delivered;
   }
 
   await admin.from('audit_logs').insert({
@@ -141,9 +238,28 @@ export async function POST(request: Request) {
     user_id: user.id,
     action: 'user_created',
     entity_name: 'profiles',
-    entity_id: created.user?.id ?? null,
-    new_values: { email: input.email, role: input.role, establishment_id: establishmentId },
+    entity_id: newUserId,
+    new_values: {
+      email: input.email,
+      role: input.role,
+      establishment_id: establishmentId,
+      password_generated: isGenerated,
+      activation_required: requireActivation,
+    },
   });
 
-  return NextResponse.json({ success: true, id: created.user?.id ?? null }, { status: 201 });
+  return NextResponse.json(
+    {
+      success: true,
+      id: newUserId,
+      username,
+      /* Unique occasion de lire ce mot de passe : il n'est stocké qu'en haché. */
+      password,
+      passwordGenerated: isGenerated,
+      requireActivation,
+      credentialsEmailSent: credentialsDelivery.delivered,
+      activationEmailSent: activationDelivered,
+    },
+    { status: 201 },
+  );
 }

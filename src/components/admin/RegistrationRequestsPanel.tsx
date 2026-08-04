@@ -7,6 +7,8 @@ import { formatDate } from '@/lib/utils';
 import {
   listRegistrationRequests,
   setRegistrationRequestStatus,
+  PAYMENT_LABELS,
+  START_LABELS,
   type RegistrationRequest,
 } from '@/services/saas-requests.service';
 import type { RequestStatus } from '@/types/database';
@@ -39,6 +41,82 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 type SortColumn = 'reference' | 'establishmentName' | 'fullName' | 'createdAt' | 'status';
+
+const formatAmount = (amount: number, currency: string): string =>
+  `${new Intl.NumberFormat('fr-FR').format(amount)} ${currency}`;
+
+/**
+ * Détail commercial de la demande.
+ *
+ * Ce que le visiteur a vu dans son récapitulatif doit être retrouvé ici à
+ * l'identique : c'est sur cette base que la relation commerciale s'engage.
+ */
+const OfferSummary: React.FC<{ request: RegistrationRequest; compact?: boolean }> = ({
+  request,
+  compact,
+}) => {
+  if (!request.planName) {
+    return <span className="text-[11px] text-slate-500">Demande de démonstration</span>;
+  }
+
+  const rows: { label: string; value: string; tone?: string }[] = [
+    { label: 'Offre', value: request.planName },
+  ];
+
+  if (request.durationMonths) {
+    rows.push({ label: 'Durée', value: `${request.durationMonths} mois` });
+  }
+  if (request.monthlyPrice !== null) {
+    rows.push({
+      label: 'Prix mensuel',
+      value:
+        request.monthlyPrice === 0
+          ? 'Gratuit'
+          : formatAmount(request.monthlyPrice, request.currency),
+    });
+  }
+  if (request.savingsAmount !== null && request.savingsAmount > 0) {
+    rows.push({
+      label: 'Économie totale',
+      value: formatAmount(request.savingsAmount, request.currency),
+      tone: 'text-mora-green',
+    });
+  }
+  if (request.totalPrice !== null) {
+    rows.push({
+      label: 'Total',
+      value:
+        request.totalPrice === 0 ? 'Gratuit' : formatAmount(request.totalPrice, request.currency),
+      tone: 'text-white font-bold',
+    });
+  }
+  if (request.paymentMethod) {
+    rows.push({
+      label: 'Paiement',
+      value: PAYMENT_LABELS[request.paymentMethod] ?? request.paymentMethod,
+    });
+  }
+  if (request.startOption) {
+    rows.push({
+      label: 'Démarrage',
+      value:
+        request.startOption === 'custom' && request.startDate
+          ? formatDate(request.startDate)
+          : START_LABELS[request.startOption],
+    });
+  }
+
+  return (
+    <dl className={`space-y-1 text-[11px] ${compact ? '' : 'min-w-[13rem]'}`}>
+      {rows.map((row) => (
+        <div key={row.label} className="flex items-center justify-between gap-3">
+          <dt className="text-slate-500">{row.label}</dt>
+          <dd className={`text-right ${row.tone ?? 'text-slate-200'}`}>{row.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+};
 
 export const RegistrationRequestsPanel: React.FC = () => {
   const { user } = useAuth();
@@ -191,6 +269,10 @@ export const RegistrationRequestsPanel: React.FC = () => {
               )}
             </div>
 
+            <div className="rounded-lg bg-slate-950 p-3">
+              <OfferSummary request={request} compact />
+            </div>
+
             {request.message && (
               <p className="rounded-lg bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-400">
                 {request.message}
@@ -230,6 +312,9 @@ export const RegistrationRequestsPanel: React.FC = () => {
                 <th scope="col" className="p-4">
                   Type
                 </th>
+                <th scope="col" className="p-4">
+                  Offre demandée
+                </th>
                 <SortableHeader column="createdAt" label="Date" sort={sort} onSort={handleSort} />
                 <SortableHeader column="status" label="Statut" sort={sort} onSort={handleSort} />
               </tr>
@@ -237,7 +322,7 @@ export const RegistrationRequestsPanel: React.FC = () => {
             <tbody className="divide-y divide-slate-800">
               {isLoading && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-500">
+                  <td colSpan={9} className="p-8 text-center text-slate-500">
                     Chargement…
                   </td>
                 </tr>
@@ -245,7 +330,7 @@ export const RegistrationRequestsPanel: React.FC = () => {
 
               {!isLoading && visible.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-slate-500">
+                  <td colSpan={9} className="p-8 text-center text-slate-500">
                     Aucune demande à afficher.
                   </td>
                 </tr>
@@ -287,6 +372,9 @@ export const RegistrationRequestsPanel: React.FC = () => {
                   </td>
                   <td className="p-4">
                     {request.establishmentType ? TYPE_LABELS[request.establishmentType] : '—'}
+                  </td>
+                  <td className="p-4">
+                    <OfferSummary request={request} />
                   </td>
                   <td className="whitespace-nowrap p-4">{formatDate(request.createdAt)}</td>
                   <td className="p-4">

@@ -96,9 +96,92 @@ export const fetchCurrentProfile = async (): Promise<UserProfile | null> => {
     avatar_url: data.avatar_url ?? undefined,
     specialty: data.specialty ?? undefined,
     license_number: data.license_number ?? undefined,
+    must_change_password: data.must_change_password === true,
+    activation_required: data.activation_required === true,
     created_at: data.created_at,
     updated_at: data.updated_at,
   };
+};
+
+/**
+ * Dépose une demande de réinitialisation de mot de passe.
+ *
+ * Passe par le serveur : la résolution d'un identifiant vers un compte ne doit
+ * jamais avoir lieu dans le navigateur. La réponse est identique que le compte
+ * existe ou non — c'est volontaire, et la promesse résolue ne dit donc rien de
+ * l'existence du compte.
+ */
+export const requestPasswordReset = async (identifier: string): Promise<string> => {
+  const response = await fetch('/api/auth/password-reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier: identifier.trim() }),
+  });
+
+  const payload = (await response.json().catch(() => null)) as
+    | { message?: string; error?: string }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(payload?.error ?? "Votre demande n'a pas pu être enregistrée.");
+  }
+
+  return (
+    payload?.message ??
+    'Votre demande a été enregistrée. Elle sera traitée par un administrateur.'
+  );
+};
+
+/** Changement de mot de passe par son titulaire (première connexion incluse). */
+export const changeOwnPassword = async (
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> => {
+  const response = await fetch('/api/auth/change-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? 'Le mot de passe n’a pas pu être modifié.');
+  }
+};
+
+export interface ActivationDispatch {
+  delivered: boolean;
+  /** Adresse partiellement masquée, pour confirmer la destination sans la révéler. */
+  email: string;
+  validMinutes: number;
+}
+
+/** Demande l'envoi (ou le renvoi) du code d'activation. */
+export const sendActivationCode = async (): Promise<ActivationDispatch> => {
+  const response = await fetch('/api/auth/activation', { method: 'POST' });
+  const payload = (await response.json().catch(() => null)) as
+    | (ActivationDispatch & { error?: string })
+    | null;
+
+  if (!response.ok || !payload) {
+    throw new Error(payload?.error ?? "Le code n'a pas pu être envoyé.");
+  }
+
+  return { delivered: payload.delivered, email: payload.email, validMinutes: payload.validMinutes };
+};
+
+/** Vérifie le code d'activation et débloque le compte. */
+export const verifyActivationCode = async (code: string): Promise<void> => {
+  const response = await fetch('/api/auth/activation', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(payload?.error ?? 'Code incorrect.');
+  }
 };
 
 /**

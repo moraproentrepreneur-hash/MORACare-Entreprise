@@ -85,25 +85,77 @@ export interface CreatePlatformUserInput {
   email: string;
   phone?: string;
   username?: string;
-  password: string;
+  /** Omis : le serveur génère un mot de passe temporaire conforme. */
+  password?: string;
   role: UserRole;
+  require_activation?: boolean;
 }
 
-const postJson = async (url: string, method: string, body?: unknown): Promise<void> => {
+const request = async <T>(url: string, method: string, body?: unknown): Promise<T> => {
   const response = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
+  const payload = (await response.json().catch(() => null)) as (T & { error?: string }) | null;
+
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
     throw new Error(payload?.error ?? "L'opération a échoué.");
   }
+
+  return payload as T;
 };
 
-export const createPlatformUser = (input: CreatePlatformUserInput): Promise<void> =>
-  postJson('/api/users', 'POST', input);
+const postJson = async (url: string, method: string, body?: unknown): Promise<void> => {
+  await request<unknown>(url, method, body);
+};
+
+/**
+ * Identifiants remis à la création ou à la régénération.
+ *
+ * `password` n'est lisible qu'ici : la base n'en garde qu'un condensé et aucune
+ * route ne le restitue ensuite.
+ */
+export interface IssuedCredentials {
+  id: string | null;
+  username: string;
+  password: string;
+  email: string;
+  emailSent: boolean;
+  requireActivation?: boolean;
+}
+
+export const createPlatformUser = async (
+  input: CreatePlatformUserInput,
+): Promise<IssuedCredentials> => {
+  const result = await request<{
+    id: string | null;
+    username: string;
+    password: string;
+    credentialsEmailSent: boolean;
+    requireActivation: boolean;
+  }>('/api/users', 'POST', input);
+
+  return {
+    id: result.id,
+    username: result.username,
+    password: result.password,
+    email: input.email,
+    emailSent: result.credentialsEmailSent,
+    requireActivation: result.requireActivation,
+  };
+};
+
+/**
+ * Régénère le mot de passe d'un compte existant.
+ *
+ * Le compte est marqué « à changer » : son titulaire devra choisir le sien dès
+ * la connexion suivante, afin que l'administrateur ne conserve pas durablement
+ * un mot de passe qui n'est pas le sien.
+ */
+export const regeneratePassword = (userId: string): Promise<IssuedCredentials> =>
+  request<IssuedCredentials>(`/api/users/${userId}/password`, 'POST');
 
 export interface UpdatePlatformUserInput {
   role?: UserRole;

@@ -22,7 +22,8 @@ import {
   X
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
-import { PlanCards } from './PlanCards';
+import { PlanCards, type DisplayPlan } from './PlanCards';
+import { PlanRequestModal } from './PlanRequestModal';
 import { HeroSection } from './HeroSection';
 import { ContactModal } from './ContactModal';
 import { LegalModal } from './LegalModal';
@@ -70,6 +71,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
   const [isDemoOpen, setIsDemoOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [legalDoc, setLegalDoc] = useState<LegalDocumentKey | null>(null);
+  /** Offre retenue par le visiteur : elle pilote le formulaire de demande. */
+  const [selectedPlan, setSelectedPlan] = useState<DisplayPlan | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const [demo, setDemo] = useState({
@@ -470,12 +473,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
           <motion.div {...reveal} className="mt-20">
             <h3 className="text-center text-2xl sm:text-3xl font-black">Nos formules</h3>
             <p className="mt-3 text-center text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-              Chaque formule affiche son tarif, ses quotas, ses modules et ses limitations. Aucune
-              information n&apos;est masquée.
+              Chaque formule affiche son tarif et ses limites. Choisissez la vôtre : le formulaire
+              reprend automatiquement votre offre, sa durée et son montant.
             </p>
 
             <div className="mt-10">
-              <PlanCards onSelectPlan={openDemo} />
+              <PlanCards onSelectPlan={setSelectedPlan} />
             </div>
           </motion.div>
         </section>
@@ -903,6 +906,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
 
       {/* ============== DOCUMENTS LÉGAUX ============== */}
       <LegalModal documentKey={legalDoc} onClose={() => setLegalDoc(null)} />
+
+      <PlanRequestModal plan={selectedPlan} onClose={() => setSelectedPlan(null)} />
     </div>
   );
 };

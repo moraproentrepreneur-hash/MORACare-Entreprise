@@ -9,6 +9,7 @@ import { useAccess } from '@/context/AccessContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { Header } from '@/components/dashboard/Header';
+import { AccountGate } from '@/components/auth/AccountGate';
 import { getModuleRoute } from '@/lib/navigation';
 
 interface WorkspaceLayoutProps {
@@ -88,6 +89,13 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
   if (!isAuthenticated) return null;
 
   return (
+    /*
+      `AccountGate` enveloppe l'ossature entière, et non le seul contenu : tant
+      qu'un compte doit être activé ou son mot de passe remplacé, ni le menu ni
+      les tableaux de bord ne sont montés — donc aucune donnée métier n'est
+      chargée.
+    */
+    <AccountGate>
     <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100">
       {/* Colonne fixe à partir de 1024 px */}
       <div className="hidden lg:flex">
@@ -131,5 +139,6 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
         </main>
       </div>
     </div>
+    </AccountGate>
   );
 };

@@ -125,6 +125,85 @@ export const listPublicPlans = async (): Promise<PublicPlan[]> => {
   return (data ?? []).map((row) => toPlan(row as SubscriptionPlanRow));
 };
 
+// ---------------------------------------------------------------------------
+// Tarification par durée
+// ---------------------------------------------------------------------------
+
+/**
+ * Palier tarifaire d'une formule.
+ *
+ * Les remises sont lues en base et non calculées à partir d'un pourcentage :
+ * l'éditeur fixe des prix ronds, qu'aucune formule arithmétique ne
+ * reproduirait exactement.
+ */
+export interface PlanDuration {
+  planCode: string;
+  months: number;
+  monthlyPrice: number;
+  totalPrice: number;
+  /** Économie mensuelle par rapport au tarif d'un mois. */
+  monthlySavings: number;
+  /** Économie totale sur la période. */
+  totalSavings: number;
+}
+
+export const listPlanDurations = async (): Promise<PlanDuration[]> => {
+  const { data, error } = await getClient()
+    .from('plan_durations')
+    .select('months, monthly_price, total_price, plan:subscription_plans(code, price_amount)')
+    .order('months');
+
+  failIf(error, 'Chargement des durées d’abonnement');
+
+  return (data ?? []).flatMap((row) => {
+    const joined = row as unknown as { plan?: { code: string; price_amount: number } | null };
+    if (!joined.plan) return [];
+
+    const reference = Number(joined.plan.price_amount);
+    const monthly = Number(row.monthly_price);
+    const total = Number(row.total_price);
+
+    return [
+      {
+        planCode: joined.plan.code,
+        months: row.months,
+        monthlyPrice: monthly,
+        totalPrice: total,
+        monthlySavings: Math.max(0, reference - monthly),
+        totalSavings: Math.max(0, reference * row.months - total),
+      },
+    ];
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Modes de paiement
+// ---------------------------------------------------------------------------
+
+export interface PaymentMethod {
+  code: string;
+  label: string;
+  description: string | null;
+  requiresReference: boolean;
+}
+
+export const listPaymentMethods = async (): Promise<PaymentMethod[]> => {
+  const { data, error } = await getClient()
+    .from('payment_methods')
+    .select('code, label, description, requires_reference')
+    .eq('is_active', true)
+    .order('display_order');
+
+  failIf(error, 'Chargement des modes de paiement');
+
+  return (data ?? []).map((row) => ({
+    code: row.code,
+    label: row.label,
+    description: row.description,
+    requiresReference: row.requires_reference,
+  }));
+};
+
 export const listPlans = async (): Promise<SubscriptionPlan[]> => {
   const { data, error } = await getClient()
     .from('subscription_plans')

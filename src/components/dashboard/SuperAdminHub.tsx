@@ -5,6 +5,7 @@ import { Building2, Plus, Search, ShieldAlert, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { AdminAccountForm } from '@/components/admin/AdminAccountForm';
+import { CredentialsReveal, type Credentials } from '@/components/admin/CredentialsReveal';
 import { formatDate } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -64,6 +65,8 @@ export const SuperAdminHub: React.FC = () => {
   const [adminTarget, setAdminTarget] = useState<Establishment | null>(null);
   /** Vrai lorsque l'étape suit immédiatement une création d'établissement. */
   const [isChainedStep, setIsChainedStep] = useState(false);
+  /** Identifiants générés, présentés une seule fois. */
+  const [issued, setIssued] = useState<Credentials | null>(null);
 
   const [form, setForm] = useState(EMPTY_FORM);
 
@@ -499,13 +502,31 @@ export const SuperAdminHub: React.FC = () => {
             defaultRole="establishment_admin"
             submitLabel="Créer l'administrateur"
             onCancel={() => setAdminTarget(null)}
-            onCreated={async () => {
+            onCreated={async (credentials) => {
               setNotice(`L'administrateur de ${adminTarget.name} a été créé.`);
               setAdminTarget(null);
+              setIssued({
+                username: credentials.username,
+                password: credentials.password,
+                email: credentials.email,
+                fullName: credentials.fullName,
+                establishmentName: credentials.establishmentName,
+                emailSent: credentials.emailSent,
+              });
               await load();
             }}
           />
         )}
+      </Modal>
+
+      {/* Identifiants du compte créé — affichés une seule fois */}
+      <Modal
+        isOpen={issued !== null}
+        onClose={() => setIssued(null)}
+        title="Identifiants de l'administrateur"
+        description="À transmettre par un canal sûr. Un code de vérification lui a également été envoyé."
+      >
+        {issued && <CredentialsReveal credentials={issued} onClose={() => setIssued(null)} />}
       </Modal>
     </div>
   );
