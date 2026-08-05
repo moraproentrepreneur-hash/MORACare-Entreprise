@@ -39,6 +39,10 @@ export interface SubscriptionPlan {
   limitations: string[];
   ctaLabel: string | null;
   isFeatured: boolean;
+  /** Remise par mois accordée au-delà de `discountMinMonths`. */
+  discountPerMonth: number;
+  discountMinMonths: number;
+  maxDurationMonths: number;
 }
 
 export interface SubscriptionSummary {
@@ -98,6 +102,9 @@ const toPlan = (row: SubscriptionPlanRow): SubscriptionPlan => ({
   limitations: row.limitations ?? [],
   ctaLabel: row.cta_label,
   isFeatured: row.is_featured,
+  discountPerMonth: Number(row.discount_per_month),
+  discountMinMonths: row.discount_min_months,
+  maxDurationMonths: row.max_duration_months,
 });
 
 /**
@@ -126,55 +133,81 @@ export const listPublicPlans = async (): Promise<PublicPlan[]> => {
 };
 
 // ---------------------------------------------------------------------------
-// Tarification par durée
+// Tarification longue durée
 // ---------------------------------------------------------------------------
 
 /**
- * Palier tarifaire d'une formule.
+ * Règle de remise d'une formule.
  *
- * Les remises sont lues en base et non calculées à partir d'un pourcentage :
- * l'éditeur fixe des prix ronds, qu'aucune formule arithmétique ne
- * reproduirait exactement.
+ * Une seule règle, la même pour toutes les formules : un mois au tarif normal,
+ * puis une remise fixe par mois au-delà d'un seuil. Elle remplace la grille de
+ * paliers, qui aurait demandé douze lignes par formule et se serait désynchro-
+ * nisée au premier changement de prix.
  */
-export interface PlanDuration {
-  planCode: string;
-  months: number;
-  monthlyPrice: number;
-  totalPrice: number;
-  /** Économie mensuelle par rapport au tarif d'un mois. */
-  monthlySavings: number;
-  /** Économie totale sur la période. */
-  totalSavings: number;
+export interface PricingRule {
+  /** Tarif mensuel affiché, avant remise. */
+  basePrice: number;
+  /** Remise en valeur absolue, par mois, au-delà du seuil. */
+  discountPerMonth: number;
+  /** Durée à partir de laquelle la remise s'applique. */
+  minMonths: number;
+  /** Durée maximale proposée. */
+  maxMonths: number;
+  currency: string;
 }
 
-export const listPlanDurations = async (): Promise<PlanDuration[]> => {
-  const { data, error } = await getClient()
-    .from('plan_durations')
-    .select('months, monthly_price, total_price, plan:subscription_plans(code, price_amount)')
-    .order('months');
+export interface PriceBreakdown {
+  months: number;
+  /** Tarif normal, tel qu'affiché sur la carte. */
+  baseMonthlyPrice: number;
+  /** Tarif réellement appliqué, remise comprise. */
+  monthlyPrice: number;
+  totalPrice: number;
+  /** Économie sur toute la durée. */
+  totalSavings: number;
+  discountApplied: boolean;
+  currency: string;
+}
 
-  failIf(error, 'Chargement des durées d’abonnement');
+/**
+ * Applique la règle de remise.
+ *
+ * Volontairement pure et sans accès réseau : le serveur en fait autorité, le
+ * navigateur l'utilise pour afficher le récapitulatif sans aller-retour. Les
+ * deux calculent donc exactement la même chose, à partir de la même règle lue
+ * en base.
+ */
+export const computePrice = (rule: PricingRule, months: number): PriceBreakdown => {
+  const clamped = Math.min(Math.max(1, Math.round(months)), rule.maxMonths);
+  const discounted = clamped >= rule.minMonths && rule.discountPerMonth > 0;
+  const monthly = discounted
+    ? Math.max(0, rule.basePrice - rule.discountPerMonth)
+    : rule.basePrice;
 
-  return (data ?? []).flatMap((row) => {
-    const joined = row as unknown as { plan?: { code: string; price_amount: number } | null };
-    if (!joined.plan) return [];
-
-    const reference = Number(joined.plan.price_amount);
-    const monthly = Number(row.monthly_price);
-    const total = Number(row.total_price);
-
-    return [
-      {
-        planCode: joined.plan.code,
-        months: row.months,
-        monthlyPrice: monthly,
-        totalPrice: total,
-        monthlySavings: Math.max(0, reference - monthly),
-        totalSavings: Math.max(0, reference * row.months - total),
-      },
-    ];
-  });
+  return {
+    months: clamped,
+    baseMonthlyPrice: rule.basePrice,
+    monthlyPrice: monthly,
+    totalPrice: monthly * clamped,
+    totalSavings: (rule.basePrice - monthly) * clamped,
+    discountApplied: discounted,
+    currency: rule.currency,
+  };
 };
+
+export const pricingRuleOf = (plan: {
+  priceAmount: number;
+  priceCurrency: string;
+  discountPerMonth: number;
+  discountMinMonths: number;
+  maxDurationMonths: number;
+}): PricingRule => ({
+  basePrice: plan.priceAmount,
+  discountPerMonth: plan.discountPerMonth,
+  minMonths: plan.discountMinMonths,
+  maxMonths: plan.maxDurationMonths,
+  currency: plan.priceCurrency,
+});
 
 // ---------------------------------------------------------------------------
 // Modes de paiement

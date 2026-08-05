@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Select } from '@/components/ui/Select';
 import { Binary, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -138,17 +139,17 @@ export const ImagingModule: React.FC = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Modalité</label>
-              <select
+              <Select
                 value={form.modality}
-                onChange={(e) => setForm({ ...form, modality: e.target.value as any })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-              >
-                <option value="X-Ray">Radiographie (X-Ray)</option>
-                <option value="Ultrasound">Échographie</option>
-                <option value="CT">Scanner (CT-Scan)</option>
-                <option value="MRI">IRM (MRI)</option>
-                <option value="ECG">Électrocardiogramme (ECG)</option>
-              </select>
+                onChange={(value) => setForm({ ...form, modality: value as any })}
+                options={[
+                  { value: 'X-Ray', label: 'Radiographie (X-Ray)' },
+                  { value: 'Ultrasound', label: 'Échographie' },
+                  { value: 'CT', label: 'Scanner (CT-Scan)' },
+                  { value: 'MRI', label: 'IRM (MRI)' },
+                  { value: 'ECG', label: 'Électrocardiogramme (ECG)' },
+                ]}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Région Anatomique</label>

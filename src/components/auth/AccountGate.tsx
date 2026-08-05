@@ -145,19 +145,22 @@ const ActivationStep: React.FC<{ onDone: () => Promise<void>; onCancel: () => vo
       onCancel={onCancel}
     >
       {/*
-        L'acheminement peut échouer — fournisseur non configuré, adresse
-        injoignable. Le taire laisserait l'utilisateur attendre indéfiniment un
-        courriel qui n'arrivera pas.
+        Message affiché systématiquement, et non seulement en cas d'échec
+        d'acheminement : un courriel peut aussi se perdre après avoir été
+        accepté par le fournisseur. Annoncer d'emblée le recours évite à
+        l'utilisateur d'attendre un message qui n'arrivera pas.
       */}
-      {dispatch && !dispatch.delivered && (
-        <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-200/90">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-          <span>
-            L&apos;envoi automatique n&apos;a pas abouti. Votre code est enregistré : contactez
-            MORA Shawiri au +269 430 63 06 pour qu&apos;il vous soit communiqué.
-          </span>
-        </div>
-      )}
+      <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] leading-relaxed text-amber-200/90">
+        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+        <span>
+          Si vous ne recevez pas automatiquement votre code de vérification par e-mail ou WhatsApp,
+          veuillez contacter MORA Shawiri au{' '}
+          <a href="tel:+2694306306" className="font-semibold underline">
+            +269 430 63 06
+          </a>{' '}
+          afin qu&apos;il vous soit communiqué.
+        </span>
+      </div>
 
       {error && (
         <div role="alert" className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Select } from '@/components/ui/Select';
 import { FlaskConical, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -146,15 +147,15 @@ export const LabModule: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Priorité</label>
-              <select
+              <Select
                 value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: e.target.value as any })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-              >
-                <option value="routine">Routine</option>
-                <option value="urgent">Urgente</option>
-                <option value="emergency">Urgence Absolue</option>
-              </select>
+                onChange={(value) => setForm({ ...form, priority: value as any })}
+                options={[
+                  { value: 'routine', label: 'Routine' },
+                  { value: 'urgent', label: 'Urgente' },
+                  { value: 'emergency', label: 'Urgence Absolue' },
+                ]}
+              />
             </div>
           </div>
           <p className="text-[11px] text-slate-400">

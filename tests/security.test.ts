@@ -13,6 +13,7 @@ import {
   generateVerificationCode,
   isPasswordValid,
 } from '../src/lib/password-policy';
+import { computePrice } from '../src/services/subscription.service';
 
 /**
  * Sécurité : politique des mots de passe, verrouillage, codes de vérification
@@ -104,6 +105,90 @@ describe('Génération de secrets', () => {
   it('produit des codes de six chiffres, zéro initial conservé', () => {
     for (let i = 0; i < 300; i += 1) {
       expect(generateVerificationCode()).toMatch(/^\d{6}$/);
+    }
+  });
+});
+
+describe('Calcul tarifaire', () => {
+  /** Règle de l'éditeur : tarif normal à un mois, −1 000 KMF/mois dès deux. */
+  const rule = (basePrice: number) => ({
+    basePrice,
+    discountPerMonth: 1000,
+    minMonths: 2,
+    maxMonths: 12,
+    currency: 'KMF',
+  });
+
+  it('applique le tarif normal pour un seul mois', () => {
+    const result = computePrice(rule(5000), 1);
+    expect(result.monthlyPrice).toBe(5000);
+    expect(result.totalPrice).toBe(5000);
+    expect(result.totalSavings).toBe(0);
+    expect(result.discountApplied).toBe(false);
+  });
+
+  it.each([
+    [2, 8000],
+    [3, 12000],
+    [6, 24000],
+    [12, 48000],
+  ])('STANDARD sur %i mois coûte %i KMF', (months, total) => {
+    const result = computePrice(rule(5000), months);
+    expect(result.monthlyPrice).toBe(4000);
+    expect(result.totalPrice).toBe(total);
+    expect(result.totalSavings).toBe(1000 * months);
+  });
+
+  it.each([
+    [1, 10000, 10000],
+    [2, 9000, 18000],
+    [3, 9000, 27000],
+    [12, 9000, 108000],
+  ])('BUSINESS sur %i mois : %i / mois, %i au total', (months, monthly, total) => {
+    const result = computePrice(rule(10000), months);
+    expect(result.monthlyPrice).toBe(monthly);
+    expect(result.totalPrice).toBe(total);
+  });
+
+  it.each([
+    [1, 15000, 15000],
+    [2, 14000, 28000],
+    [3, 14000, 42000],
+    [12, 14000, 168000],
+  ])('VIP sur %i mois : %i / mois, %i au total', (months, monthly, total) => {
+    const result = computePrice(rule(15000), months);
+    expect(result.monthlyPrice).toBe(monthly);
+    expect(result.totalPrice).toBe(total);
+  });
+
+  it('le tarif remisé ne dépend pas de la durée au-delà du seuil', () => {
+    const prices = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(
+      (months) => computePrice(rule(5000), months).monthlyPrice,
+    );
+    expect(new Set(prices).size).toBe(1);
+  });
+
+  it('borne les durées hors plage plutôt que de produire un montant absurde', () => {
+    expect(computePrice(rule(5000), 0).months).toBe(1);
+    expect(computePrice(rule(5000), -3).months).toBe(1);
+    expect(computePrice(rule(5000), 99).months).toBe(12);
+  });
+
+  it('une formule gratuite reste gratuite quelle que soit la durée', () => {
+    const free = { ...rule(0), discountPerMonth: 0 };
+    for (const months of [1, 2, 12]) {
+      const result = computePrice(free, months);
+      expect(result.totalPrice).toBe(0);
+      expect(result.totalSavings).toBe(0);
+    }
+  });
+
+  it('le total est toujours le tarif appliqué multiplié par la durée', () => {
+    for (const base of [5000, 10000, 15000]) {
+      for (let months = 1; months <= 12; months += 1) {
+        const result = computePrice(rule(base), months);
+        expect(result.totalPrice).toBe(result.monthlyPrice * months);
+      }
     }
   });
 });
@@ -262,78 +347,128 @@ describe('Sécurité en base', () => {
     });
   });
 
-  describe('Tarification par durée', () => {
-    it('la grille officielle est chargée pour les trois offres payantes', async () => {
+  describe('Remise longue durée', () => {
+    it('les trois offres payantes accordent 1 000 KMF de remise dès deux mois', async () => {
       const rows = await db.query<{
         code: string;
-        months: number;
-        monthly_price: string;
-        total_price: string;
+        price_amount: string;
+        discount_per_month: string;
+        discount_min_months: number;
+        max_duration_months: number;
       }>(
-        `SELECT p.code, d.months, d.monthly_price, d.total_price
-           FROM public.plan_durations d
-           JOIN public.subscription_plans p ON p.id = d.plan_id
-          ORDER BY p.display_order, d.months`,
+        `SELECT code, price_amount, discount_per_month, discount_min_months, max_duration_months
+           FROM public.subscription_plans
+          WHERE code IN ('standard','business','vip') ORDER BY display_order`,
       );
 
-      expect(rows.rows).toHaveLength(9);
+      expect(rows.rows).toHaveLength(3);
 
-      const grid = Object.fromEntries(
-        rows.rows.map((r) => [
-          `${r.code}-${r.months}`,
-          { monthly: Number(r.monthly_price), total: Number(r.total_price) },
-        ]),
-      );
-
-      // Grille fixée par l'éditeur, reproduite à l'identique.
-      expect(grid['standard-1']).toEqual({ monthly: 5000, total: 5000 });
-      expect(grid['standard-2']).toEqual({ monthly: 4000, total: 8000 });
-      expect(grid['standard-3']).toEqual({ monthly: 3000, total: 9000 });
-      expect(grid['business-1']).toEqual({ monthly: 10000, total: 10000 });
-      expect(grid['business-2']).toEqual({ monthly: 9000, total: 18000 });
-      expect(grid['business-3']).toEqual({ monthly: 8000, total: 24000 });
-      expect(grid['vip-1']).toEqual({ monthly: 15000, total: 15000 });
-      expect(grid['vip-2']).toEqual({ monthly: 14000, total: 28000 });
-      expect(grid['vip-3']).toEqual({ monthly: 13000, total: 39000 });
-    });
-
-    it('chaque total correspond au prix mensuel multiplié par la durée', async () => {
-      const rows = await db.query<{ n: number }>(
-        `SELECT count(*)::int AS n FROM public.plan_durations
-          WHERE total_price <> monthly_price * months`,
-      );
-      expect(rows.rows[0].n).toBe(0);
-    });
-
-    it('le tarif mensuel décroît quand la durée augmente', async () => {
-      const rows = await db.query<{ code: string; months: number; monthly_price: string }>(
-        `SELECT p.code, d.months, d.monthly_price
-           FROM public.plan_durations d
-           JOIN public.subscription_plans p ON p.id = d.plan_id
-          ORDER BY p.code, d.months`,
-      );
-
-      const byPlan = new Map<string, number[]>();
       for (const row of rows.rows) {
-        const list = byPlan.get(row.code) ?? [];
-        list.push(Number(row.monthly_price));
-        byPlan.set(row.code, list);
-      }
-
-      for (const prices of byPlan.values()) {
-        for (let i = 1; i < prices.length; i += 1) {
-          expect(prices[i]).toBeLessThan(prices[i - 1]);
-        }
+        expect(Number(row.discount_per_month)).toBe(1000);
+        expect(row.discount_min_months).toBe(2);
+        expect(row.max_duration_months).toBe(12);
       }
     });
 
-    it('les offres gratuites ne portent aucune grille', async () => {
+    it('les offres gratuites n’accordent aucune remise', async () => {
       const rows = await db.query<{ n: number }>(
-        `SELECT count(*)::int AS n FROM public.plan_durations d
-           JOIN public.subscription_plans p ON p.id = d.plan_id
-          WHERE p.price_amount = 0`,
+        `SELECT count(*)::int AS n FROM public.subscription_plans
+          WHERE price_amount = 0 AND discount_per_month <> 0`,
       );
       expect(rows.rows[0].n).toBe(0);
+    });
+
+    it('la remise ne peut pas dépasser le tarif', async () => {
+      await expect(
+        db.query(
+          `UPDATE public.subscription_plans SET discount_per_month = 99999 WHERE code = 'standard'`,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('les demandes conservent le tarif normal et le tarif appliqué', async () => {
+      const rows = await db.query<{ column_name: string }>(
+        `SELECT column_name FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'registration_requests'
+            AND column_name IN ('base_monthly_price','monthly_price','total_price','savings_amount')`,
+      );
+      expect(rows.rows).toHaveLength(4);
+    });
+
+    it('la grille de paliers a bien disparu', async () => {
+      const rows = await db.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM information_schema.tables
+          WHERE table_schema = 'public' AND table_name = 'plan_durations'`,
+      );
+      expect(rows.rows[0].n).toBe(0);
+    });
+  });
+
+  describe('Centre de notifications', () => {
+    it('refuse une catégorie inconnue', async () => {
+      await expect(
+        db.query(
+          `INSERT INTO public.notifications (title, message, category)
+           VALUES ('Test', 'Corps', 'categorie_inventee')`,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('refuse une gravité inconnue', async () => {
+      await expect(
+        db.query(
+          `INSERT INTO public.notifications (title, message, severity)
+           VALUES ('Test', 'Corps', 'catastrophique')`,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('accepte les dix catégories prévues', async () => {
+      const categories = [
+        'system',
+        'activation_code',
+        'registration_request',
+        'contact_request',
+        'password_reset',
+        'establishment_created',
+        'admin_created',
+        'subscription_expiry',
+        'license_expiry',
+        'critical_error',
+      ];
+
+      for (const category of categories) {
+        await db.query(
+          `INSERT INTO public.notifications (title, message, category) VALUES ($1, 'Corps', $2)`,
+          [`Notification ${category}`, category],
+        );
+      }
+
+      const rows = await db.query<{ n: number }>(
+        'SELECT count(*)::int AS n FROM public.notifications',
+      );
+      expect(rows.rows[0].n).toBe(categories.length);
+    });
+
+    it('reçoit une référence métier et naît non lue, non archivée', async () => {
+      const rows = await db.query<{
+        business_reference: string;
+        is_read: boolean;
+        is_archived: boolean;
+      }>('SELECT business_reference, is_read, is_archived FROM public.notifications LIMIT 1');
+
+      expect(rows.rows[0].business_reference).toMatch(/^MORA-NOT-\d{6}$/);
+      expect(rows.rows[0].is_read).toBe(false);
+      expect(rows.rows[0].is_archived).toBe(false);
+    });
+
+    it('une notification de plateforme n’a pas de destinataire nominatif', async () => {
+      // `user_id` nul signifie « destinée aux Super Admins » : la notification
+      // survit au changement de la personne qui devait la traiter.
+      const rows = await db.query<{ n: number }>(
+        'SELECT count(*)::int AS n FROM public.notifications WHERE user_id IS NULL',
+      );
+      expect(rows.rows[0].n).toBeGreaterThan(0);
     });
   });
 

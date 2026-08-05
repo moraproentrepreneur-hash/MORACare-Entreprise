@@ -12,9 +12,8 @@ import {
   Settings,
   Shield,
   ShieldCheck,
-  Inbox,
+  BellRing,
   KeyRound,
-  MessagesSquare,
   UserPlus,
   LayoutDashboard,
   BarChart3,
@@ -76,9 +75,11 @@ export const ADMIN_SECTIONS: readonly { label: string; href: string; icon: Lucid
   { label: 'Supervision SaaS', href: '/admin', icon: Shield },
   { label: 'Établissements Clients', href: '/admin/etablissements', icon: Users },
   { label: 'Gestion des Admins', href: '/admin/admins', icon: ShieldCheck },
-  { label: 'Gestion des Demandes', href: '/admin/demandes', icon: Inbox },
+  // Les demandes d'abonnement et les prises de contact n'ont plus d'écran
+  // dédié : elles arrivent dans le Centre de notifications, point unique de
+  // réception des événements de la plateforme.
+  { label: 'Centre de notifications', href: '/admin/notifications', icon: BellRing },
   { label: 'Demandes de réinitialisation', href: '/admin/reinitialisations', icon: KeyRound },
-  { label: 'Prises de contact', href: '/admin/contacts', icon: MessagesSquare },
   { label: 'Abonnements & Licences', href: '/admin/abonnements', icon: CreditCard },
   { label: 'Paramètres Globaux', href: '/admin/parametres', icon: Settings },
 ];

@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { Select } from '@/components/ui/Select';
 import { CreditCard, KeyRound, RefreshCw, PauseCircle, PlayCircle, Plus } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { ActionMenu } from '@/components/ui/ActionMenu';
 import { formatDate } from '@/lib/utils';
 import { listEstablishments } from '@/services/establishment.service';
 import {
@@ -229,50 +231,49 @@ export const SaasSubscriptions: React.FC = () => {
                     </span>
                   </td>
                   <td className="p-3">
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        title="Renouveler de 365 jours"
-                        onClick={() =>
-                          void guard(() => renewSubscription(sub.id, 365, user!.id), {
-                            action: 'subscription_renewed',
-                            entity: 'subscriptions',
-                            id: sub.id,
-                          })
-                        }
-                        className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                      </button>
-                      {sub.status === 'active' ? (
-                        <button
-                          title="Suspendre"
-                          onClick={() =>
-                            void guard(() => setSubscriptionStatus(sub.id, 'suspended', user!.id), {
-                              action: 'subscription_suspended',
+                    <ActionMenu
+                      label={`Actions pour ${sub.establishmentName}`}
+                      items={[
+                        {
+                          label: 'Renouveler de 365 jours',
+                          icon: RefreshCw,
+                          onSelect: () =>
+                            void guard(() => renewSubscription(sub.id, 365, user!.id), {
+                              action: 'subscription_renewed',
                               entity: 'subscriptions',
                               id: sub.id,
-                            })
-                          }
-                          className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                        >
-                          <PauseCircle className="w-3.5 h-3.5" />
-                        </button>
-                      ) : (
-                        <button
-                          title="Activer"
-                          onClick={() =>
-                            void guard(() => setSubscriptionStatus(sub.id, 'active', user!.id), {
-                              action: 'subscription_activated',
-                              entity: 'subscriptions',
-                              id: sub.id,
-                            })
-                          }
-                          className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                        >
-                          <PlayCircle className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
+                            }),
+                        },
+                        sub.status === 'active'
+                          ? {
+                              label: "Suspendre l'abonnement",
+                              icon: PauseCircle,
+                              destructive: true,
+                              onSelect: () =>
+                                void guard(
+                                  () => setSubscriptionStatus(sub.id, 'suspended', user!.id),
+                                  {
+                                    action: 'subscription_suspended',
+                                    entity: 'subscriptions',
+                                    id: sub.id,
+                                  },
+                                ),
+                            }
+                          : {
+                              label: "Activer l'abonnement",
+                              icon: PlayCircle,
+                              onSelect: () =>
+                                void guard(
+                                  () => setSubscriptionStatus(sub.id, 'active', user!.id),
+                                  {
+                                    action: 'subscription_activated',
+                                    entity: 'subscriptions',
+                                    id: sub.id,
+                                  },
+                                ),
+                            },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}
@@ -316,33 +317,33 @@ export const SaasSubscriptions: React.FC = () => {
                     </span>
                   </td>
                   <td className="p-3">
-                    {lic.status === 'active' ? (
-                      <button
-                        onClick={() =>
-                          void guard(() => setLicenseStatus(lic.id, 'suspended', user!.id), {
-                            action: 'license_suspended',
-                            entity: 'licenses',
-                            id: lic.id,
-                          })
-                        }
-                        className="px-2.5 py-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 text-[11px] font-semibold"
-                      >
-                        Suspendre
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() =>
-                          void guard(() => setLicenseStatus(lic.id, 'active', user!.id), {
-                            action: 'license_reactivated',
-                            entity: 'licenses',
-                            id: lic.id,
-                          })
-                        }
-                        className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-[11px] font-semibold"
-                      >
-                        Réactiver
-                      </button>
-                    )}
+                    <ActionMenu
+                      label={`Actions pour la licence ${lic.licenseNumber}`}
+                      items={[
+                        lic.status === 'active'
+                          ? {
+                              label: 'Suspendre la licence',
+                              icon: PauseCircle,
+                              destructive: true,
+                              onSelect: () =>
+                                void guard(() => setLicenseStatus(lic.id, 'suspended', user!.id), {
+                                  action: 'license_suspended',
+                                  entity: 'licenses',
+                                  id: lic.id,
+                                }),
+                            }
+                          : {
+                              label: 'Réactiver la licence',
+                              icon: PlayCircle,
+                              onSelect: () =>
+                                void guard(() => setLicenseStatus(lic.id, 'active', user!.id), {
+                                  action: 'license_reactivated',
+                                  entity: 'licenses',
+                                  id: lic.id,
+                                }),
+                            },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}
@@ -364,36 +365,28 @@ export const SaasSubscriptions: React.FC = () => {
         <form onSubmit={handleCreate} className="space-y-4 text-slate-900 dark:text-slate-100">
           <div>
             <label className="block text-xs font-semibold mb-1">Établissement</label>
-            <select
+            <Select
               required
               value={form.establishmentId}
-              onChange={(e) => setForm({ ...form, establishmentId: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-            >
-              <option value="">— Sélectionner —</option>
-              {establishments.map((est) => (
-                <option key={est.id} value={est.id}>
-                  {est.name}
-                </option>
+              onChange={(value) => setForm({ ...form, establishmentId: value })}
+              placeholder="— Sélectionner —"
+              options={establishments.map((est) => (
+                ({ value: est.id, label: est.name })
               ))}
-            </select>
+            />
           </div>
 
           <div>
             <label className="block text-xs font-semibold mb-1">Formule</label>
-            <select
+            <Select
               required
               value={form.planId}
-              onChange={(e) => setForm({ ...form, planId: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-            >
-              <option value="">— Sélectionner —</option>
-              {plans.map((plan) => (
-                <option key={plan.id} value={plan.id}>
-                  {plan.name}
-                </option>
+              onChange={(value) => setForm({ ...form, planId: value })}
+              placeholder="— Sélectionner —"
+              options={plans.map((plan) => (
+                ({ value: plan.id, label: plan.name })
               ))}
-            </select>
+            />
           </div>
 
           <label className="flex items-center gap-2 text-xs">

@@ -1,45 +1,69 @@
 import { failIf, getClient } from './base.service';
 import type { UserRole } from '@/types';
+import type { Json } from '@/types/database';
 import type { EstablishmentLicense, EstablishmentSubscription } from './access.service';
 
 /**
- * Fil de notifications de l'utilisateur connecté.
+ * Centre de notifications.
  *
- * Une notification n'est pas nécessairement une ligne de la table
- * `notifications` : la plupart des alertes utiles — une demande sans réponse,
- * un abonnement qui arrive à échéance — sont des *états* de la base, pas des
- * messages qu'il faudrait penser à écrire. Les recalculer à l'ouverture du
- * panneau garantit qu'ils sont exacts, et qu'aucun événement manqué ne reste
- * invisible faute d'avoir été notifié au bon moment.
+ * Deux natures de notifications coexistent, et la distinction est structurante :
  *
- * Le périmètre suit le rôle : le Super Admin voit la vie de la plateforme, un
- * utilisateur d'établissement ne voit que la sienne. Les politiques RLS le
- * garantissent de toute façon côté base.
+ *   - les **événements**, enregistrés en base au moment où ils se produisent :
+ *     une demande déposée, un code émis, un compte créé. Ils ont eu lieu une
+ *     fois, à un instant donné ; on peut donc les marquer lus et les archiver.
+ *
+ *   - les **états**, recalculés à chaque lecture : un abonnement qui arrive à
+ *     échéance, une licence expirée. Les archiver n'aurait aucun sens — la
+ *     situation, elle, persisterait. Ils disparaissent d'eux-mêmes quand la
+ *     situation est résolue.
+ *
+ * Le Centre les présente ensemble, mais n'offre les actions de lecture et
+ * d'archivage que sur les premiers.
  */
 
-export type NotificationSource =
+export type NotificationCategory =
   | 'system'
-  | 'registration'
-  | 'contact'
+  | 'activation_code'
+  | 'registration_request'
+  | 'contact_request'
   | 'password_reset'
-  | 'subscription'
-  | 'license';
+  | 'establishment_created'
+  | 'admin_created'
+  | 'subscription_expiry'
+  | 'license_expiry'
+  | 'critical_error';
 
 export type NotificationSeverity = 'info' | 'warning' | 'critical';
 
 export interface AppNotification {
   id: string;
+  reference: string | null;
   title: string;
   message: string;
-  source: NotificationSource;
+  category: NotificationCategory;
   severity: NotificationSeverity;
   createdAt: string;
-  /** Écran à ouvrir au clic. */
+  expiresAt: string | null;
   href?: string;
-  /** Ligne de `notifications` correspondante, si l'alerte en est une. */
-  rowId?: string;
+  metadata: Record<string, unknown> | null;
   isRead: boolean;
+  isArchived: boolean;
+  /** Ligne de `notifications` : absente pour un état recalculé. */
+  rowId?: string;
 }
+
+export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
+  system: 'Système',
+  activation_code: "Code d'activation",
+  registration_request: 'Demande d’abonnement',
+  contact_request: 'Prise de contact',
+  password_reset: 'Réinitialisation',
+  establishment_created: 'Établissement créé',
+  admin_created: 'Compte créé',
+  subscription_expiry: 'Abonnement',
+  license_expiry: 'Licence',
+  critical_error: 'Erreur critique',
+};
 
 const DAY = 86_400_000;
 /** Seuil d'alerte avant échéance : un mois pour renouveler sans urgence. */
@@ -53,73 +77,137 @@ const expiryPhrase = (days: number): string => {
   return `échéance dans ${days} jour${days > 1 ? 's' : ''}`;
 };
 
+const asCategory = (value: string): NotificationCategory =>
+  (value in CATEGORY_LABELS ? value : 'system') as NotificationCategory;
+
+const asSeverity = (value: string | null): NotificationSeverity =>
+  value === 'warning' || value === 'critical' ? value : 'info';
+
+const asMetadata = (value: Json | null): Record<string, unknown> | null =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+
 // ---------------------------------------------------------------------------
-// Messages système (table `notifications`)
+// Événements persistés
 // ---------------------------------------------------------------------------
 
-const loadSystemNotifications = async (userId: string): Promise<AppNotification[]> => {
-  const { data, error } = await getClient()
+export interface NotificationQuery {
+  /** Inclure les notifications archivées. Par défaut, elles sont masquées. */
+  includeArchived?: boolean;
+  limit?: number;
+}
+
+const loadStoredNotifications = async (
+  query: NotificationQuery = {},
+): Promise<AppNotification[]> => {
+  let request = getClient()
     .from('notifications')
     .select('*')
-    .eq('user_id', userId)
     .order('created_at', { ascending: false })
-    .limit(30);
+    .limit(query.limit ?? 200);
 
+  if (!query.includeArchived) {
+    request = request.eq('is_archived', false);
+  }
+
+  const { data, error } = await request;
   failIf(error, 'Chargement des notifications');
 
   return (data ?? []).map((row) => ({
-    id: `system:${row.id}`,
+    id: `stored:${row.id}`,
     rowId: row.id,
+    reference: row.business_reference,
     title: row.title,
     message: row.message,
-    source: 'system' as const,
-    severity: row.type === 'error' ? 'critical' : row.type === 'warning' ? 'warning' : 'info',
+    category: asCategory(row.category),
+    severity: asSeverity(row.severity),
     createdAt: row.created_at,
-    isRead: row.is_read === true,
+    expiresAt: row.expires_at,
+    href: row.link ?? undefined,
+    metadata: asMetadata(row.metadata),
+    isRead: row.is_read,
+    isArchived: row.is_archived,
   }));
 };
 
-export const markNotificationRead = async (rowId: string): Promise<void> => {
-  const { error } = await getClient().from('notifications').update({ is_read: true }).eq('id', rowId);
+export const markNotificationRead = async (rowId: string, isRead = true): Promise<void> => {
+  const { error } = await getClient()
+    .from('notifications')
+    .update({ is_read: isRead, read_at: isRead ? new Date().toISOString() : null })
+    .eq('id', rowId);
+
   failIf(error, 'Mise à jour de la notification');
 };
 
-export const markAllNotificationsRead = async (userId: string): Promise<void> => {
+export const archiveNotification = async (rowId: string, isArchived = true): Promise<void> => {
+  const now = new Date().toISOString();
   const { error } = await getClient()
     .from('notifications')
-    .update({ is_read: true })
-    .eq('user_id', userId)
-    .eq('is_read', false);
+    .update({
+      is_archived: isArchived,
+      archived_at: isArchived ? now : null,
+      // Archiver, c'est avoir traité : la marquer non lue n'aurait plus de sens.
+      ...(isArchived ? { is_read: true, read_at: now } : {}),
+    })
+    .eq('id', rowId);
+
+  failIf(error, 'Archivage de la notification');
+};
+
+export const markAllNotificationsRead = async (): Promise<void> => {
+  const { error } = await getClient()
+    .from('notifications')
+    .update({ is_read: true, read_at: new Date().toISOString() })
+    .eq('is_read', false)
+    .eq('is_archived', false);
 
   failIf(error, 'Mise à jour des notifications');
 };
 
+/**
+ * Publie un événement depuis le navigateur.
+ *
+ * Réservé aux actions déjà effectuées côté client par un Super Admin — la
+ * création d'un établissement, par exemple. Les événements déclenchés par un
+ * Route Handler sont publiés côté serveur, au plus près de leur origine.
+ */
+export const publishPlatformNotification = async (input: {
+  category: NotificationCategory;
+  severity?: NotificationSeverity;
+  title: string;
+  message: string;
+  link?: string;
+  establishmentId?: string | null;
+  metadata?: Record<string, unknown>;
+}): Promise<void> => {
+  const { error } = await getClient().from('notifications').insert({
+    user_id: null,
+    establishment_id: input.establishmentId ?? null,
+    category: input.category,
+    severity: input.severity ?? 'info',
+    type: input.severity ?? 'info',
+    title: input.title,
+    message: input.message,
+    link: input.link ?? null,
+    metadata: (input.metadata ?? null) as Json,
+    is_read: false,
+    is_archived: false,
+  });
+
+  // Une notification manquée ne doit pas faire échouer l'action qui l'a
+  // déclenchée : l'établissement créé reste créé.
+  if (error) return;
+};
+
 // ---------------------------------------------------------------------------
-// Alertes de la plateforme (Super Admin)
+// États recalculés
 // ---------------------------------------------------------------------------
 
-const loadPlatformAlerts = async (): Promise<AppNotification[]> => {
+const loadPlatformExpiries = async (): Promise<AppNotification[]> => {
   const client = getClient();
 
-  const [requests, contacts, resets, subscriptions, licenses] = await Promise.all([
-    client
-      .from('registration_requests')
-      .select('id, business_reference, establishment_name, created_at')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(10),
-    client
-      .from('contact_requests')
-      .select('id, business_reference, full_name, subject, created_at')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(10),
-    client
-      .from('password_reset_requests')
-      .select('id, business_reference, identifier, full_name, created_at')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(10),
+  const [subscriptions, licenses] = await Promise.all([
     client
       .from('subscriptions')
       .select('id, end_date, status, establishment:establishments(name)')
@@ -127,7 +215,7 @@ const loadPlatformAlerts = async (): Promise<AppNotification[]> => {
       .in('status', ['active', 'pending'])
       .is('deleted_at', null)
       .order('end_date')
-      .limit(20),
+      .limit(50),
     client
       .from('licenses')
       .select('id, license_number, expires_at, status, establishment:establishments(name)')
@@ -135,55 +223,13 @@ const loadPlatformAlerts = async (): Promise<AppNotification[]> => {
       .eq('status', 'active')
       .is('deleted_at', null)
       .order('expires_at')
-      .limit(20),
+      .limit(50),
   ]);
 
-  failIf(requests.error, 'Chargement des demandes');
-  failIf(contacts.error, 'Chargement des prises de contact');
-  failIf(resets.error, 'Chargement des demandes de réinitialisation');
   failIf(subscriptions.error, 'Chargement des abonnements');
   failIf(licenses.error, 'Chargement des licences');
 
   const alerts: AppNotification[] = [];
-
-  for (const row of requests.data ?? []) {
-    alerts.push({
-      id: `registration:${row.id}`,
-      title: 'Nouvelle demande de démonstration',
-      message: `${row.establishment_name} — référence ${row.business_reference}`,
-      source: 'registration',
-      severity: 'info',
-      createdAt: row.created_at,
-      href: '/admin/demandes',
-      isRead: false,
-    });
-  }
-
-  for (const row of contacts.data ?? []) {
-    alerts.push({
-      id: `contact:${row.id}`,
-      title: 'Nouveau message de contact',
-      message: `${row.full_name} — ${row.subject}`,
-      source: 'contact',
-      severity: 'info',
-      createdAt: row.created_at,
-      href: '/admin/contacts',
-      isRead: false,
-    });
-  }
-
-  for (const row of resets.data ?? []) {
-    alerts.push({
-      id: `password_reset:${row.id}`,
-      title: 'Demande de réinitialisation',
-      message: `${row.full_name ?? row.identifier} — référence ${row.business_reference}`,
-      source: 'password_reset',
-      severity: 'warning',
-      createdAt: row.created_at,
-      href: '/admin/reinitialisations',
-      isRead: false,
-    });
-  }
 
   for (const row of subscriptions.data ?? []) {
     if (!row.end_date) continue;
@@ -193,13 +239,17 @@ const loadPlatformAlerts = async (): Promise<AppNotification[]> => {
     const joined = row as unknown as { establishment?: { name: string } | null };
     alerts.push({
       id: `subscription:${row.id}`,
+      reference: null,
       title: days < 0 ? 'Abonnement expiré' : 'Abonnement bientôt expiré',
       message: `${joined.establishment?.name ?? 'Établissement'} — ${expiryPhrase(days)}`,
-      source: 'subscription',
+      category: 'subscription_expiry',
       severity: days < 0 ? 'critical' : 'warning',
       createdAt: row.end_date,
+      expiresAt: null,
       href: '/admin/abonnements',
+      metadata: null,
       isRead: false,
+      isArchived: false,
     });
   }
 
@@ -211,25 +261,25 @@ const loadPlatformAlerts = async (): Promise<AppNotification[]> => {
     const joined = row as unknown as { establishment?: { name: string } | null };
     alerts.push({
       id: `license:${row.id}`,
+      reference: row.license_number,
       title: days < 0 ? 'Licence expirée' : 'Licence bientôt expirée',
-      message: `${joined.establishment?.name ?? 'Établissement'} — ${row.license_number} — ${expiryPhrase(days)}`,
-      source: 'license',
+      message: `${joined.establishment?.name ?? 'Établissement'} — ${expiryPhrase(days)}`,
+      category: 'license_expiry',
       severity: days < 0 ? 'critical' : 'warning',
       createdAt: row.expires_at,
+      expiresAt: null,
       href: '/admin/abonnements',
+      metadata: null,
       isRead: false,
+      isArchived: false,
     });
   }
 
   return alerts;
 };
 
-// ---------------------------------------------------------------------------
-// Alertes de l'établissement
-// ---------------------------------------------------------------------------
-
 /**
- * Alertes déduites du contrat de l'établissement.
+ * Alertes de l'établissement, déduites de son contrat.
  *
  * Elles s'appuient sur le snapshot déjà chargé par `AccessContext` : aucune
  * requête supplémentaire, et surtout aucune lecture d'une table que le rôle
@@ -241,49 +291,66 @@ const buildEstablishmentAlerts = (
 ): AppNotification[] => {
   const alerts: AppNotification[] = [];
 
+  const push = (
+    id: string,
+    title: string,
+    message: string,
+    severity: NotificationSeverity,
+    createdAt: string,
+    category: NotificationCategory,
+  ) =>
+    alerts.push({
+      id,
+      reference: null,
+      title,
+      message,
+      category,
+      severity,
+      createdAt,
+      expiresAt: null,
+      href: '/settings',
+      metadata: null,
+      isRead: false,
+      isArchived: false,
+    });
+
   if (subscription?.endDate) {
     const days = daysUntil(subscription.endDate);
     if (days <= EXPIRY_WARNING_DAYS) {
-      alerts.push({
-        id: 'subscription:self',
-        title: days < 0 ? 'Votre abonnement a expiré' : 'Votre abonnement arrive à échéance',
-        message: `Formule ${subscription.planName} — ${expiryPhrase(days)}. Aucune donnée n'est supprimée.`,
-        source: 'subscription',
-        severity: days < 0 ? 'critical' : 'warning',
-        createdAt: subscription.endDate,
-        href: '/settings',
-        isRead: false,
-      });
+      push(
+        'subscription:self',
+        days < 0 ? 'Votre abonnement a expiré' : 'Votre abonnement arrive à échéance',
+        `Formule ${subscription.planName} — ${expiryPhrase(days)}. Aucune donnée n'est supprimée.`,
+        days < 0 ? 'critical' : 'warning',
+        subscription.endDate,
+        'subscription_expiry',
+      );
     }
   }
 
   if (license?.expiresAt) {
     const days = daysUntil(license.expiresAt);
     if (days <= EXPIRY_WARNING_DAYS) {
-      alerts.push({
-        id: 'license:self',
-        title: days < 0 ? 'Votre licence a expiré' : 'Votre licence arrive à échéance',
-        message: `Licence ${license.licenseNumber} — ${expiryPhrase(days)}.`,
-        source: 'license',
-        severity: days < 0 ? 'critical' : 'warning',
-        createdAt: license.expiresAt,
-        href: '/settings',
-        isRead: false,
-      });
+      push(
+        'license:self',
+        days < 0 ? 'Votre licence a expiré' : 'Votre licence arrive à échéance',
+        `Licence ${license.licenseNumber} — ${expiryPhrase(days)}.`,
+        days < 0 ? 'critical' : 'warning',
+        license.expiresAt,
+        'license_expiry',
+      );
     }
   }
 
   if (subscription && subscription.status !== 'active') {
-    alerts.push({
-      id: 'subscription:status',
-      title: "L'abonnement n'est pas actif",
-      message: `Statut actuel : ${subscription.status}. Contactez MORA Shawiri.`,
-      source: 'subscription',
-      severity: 'warning',
-      createdAt: subscription.startDate,
-      href: '/settings',
-      isRead: false,
-    });
+    push(
+      'subscription:status',
+      "L'abonnement n'est pas actif",
+      `Statut actuel : ${subscription.status}. Contactez MORA Shawiri.`,
+      'warning',
+      subscription.startDate,
+      'subscription_expiry',
+    );
   }
 
   return alerts;
@@ -294,7 +361,6 @@ const buildEstablishmentAlerts = (
 // ---------------------------------------------------------------------------
 
 export interface NotificationContext {
-  userId: string;
   role: UserRole;
   subscription: EstablishmentSubscription | null;
   license: EstablishmentLicense | null;
@@ -302,18 +368,19 @@ export interface NotificationContext {
 
 export const loadNotifications = async (
   context: NotificationContext,
+  query: NotificationQuery = {},
 ): Promise<AppNotification[]> => {
-  const system = await loadSystemNotifications(context.userId);
+  const stored = await loadStoredNotifications(query);
 
-  const scoped =
+  const derived =
     context.role === 'super_admin'
-      ? await loadPlatformAlerts()
+      ? await loadPlatformExpiries()
       : buildEstablishmentAlerts(context.subscription, context.license);
 
-  return [...system, ...scoped].sort(
+  return [...stored, ...derived].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 };
 
 export const unreadCount = (notifications: readonly AppNotification[]): number =>
-  notifications.filter((item) => !item.isRead).length;
+  notifications.filter((item) => !item.isRead && !item.isArchived).length;

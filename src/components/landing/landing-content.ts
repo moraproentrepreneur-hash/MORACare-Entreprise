@@ -167,6 +167,10 @@ export interface FallbackPlan {
   requiresApproval: boolean;
   ctaLabel: string;
   isFeatured: boolean;
+  /** Remise par mois accordée dès `discountMinMonths`. 0 = aucune. */
+  discountPerMonth: number;
+  discountMinMonths: number;
+  maxDurationMonths: number;
 }
 
 export const FALLBACK_PLANS: readonly FallbackPlan[] = [
@@ -182,6 +186,9 @@ export const FALLBACK_PLANS: readonly FallbackPlan[] = [
     requiresApproval: false,
     ctaLabel: "Démarrer l'essai",
     isFeatured: false,
+    discountPerMonth: 0,
+    discountMinMonths: 2,
+    maxDurationMonths: 1,
   },
   {
     code: 'gratuit',
@@ -195,6 +202,9 @@ export const FALLBACK_PLANS: readonly FallbackPlan[] = [
     requiresApproval: true,
     ctaLabel: "Demander l'accès",
     isFeatured: false,
+    discountPerMonth: 0,
+    discountMinMonths: 2,
+    maxDurationMonths: 1,
   },
   {
     code: 'standard',
@@ -208,6 +218,9 @@ export const FALLBACK_PLANS: readonly FallbackPlan[] = [
     requiresApproval: false,
     ctaLabel: 'Choisir Standard',
     isFeatured: false,
+    discountPerMonth: 1000,
+    discountMinMonths: 2,
+    maxDurationMonths: 12,
   },
   {
     code: 'business',
@@ -221,6 +234,9 @@ export const FALLBACK_PLANS: readonly FallbackPlan[] = [
     requiresApproval: false,
     ctaLabel: 'Choisir Business',
     isFeatured: true,
+    discountPerMonth: 1000,
+    discountMinMonths: 2,
+    maxDurationMonths: 12,
   },
   {
     code: 'vip',
@@ -234,50 +250,10 @@ export const FALLBACK_PLANS: readonly FallbackPlan[] = [
     requiresApproval: false,
     ctaLabel: 'Choisir VIP',
     isFeatured: false,
+    discountPerMonth: 1000,
+    discountMinMonths: 2,
+    maxDurationMonths: 12,
   },
-];
-
-/**
- * Grille tarifaire dégressive — repli hors ligne.
- *
- * Copie exacte de la table `plan_durations`. Comme pour les formules, une page
- * commerciale ne doit pas afficher un tarif vide si la base est injoignable.
- * Toute modification de la grille en base doit être répercutée ici.
- */
-export interface FallbackDuration {
-  planCode: string;
-  months: number;
-  monthlyPrice: number;
-  totalPrice: number;
-  monthlySavings: number;
-  totalSavings: number;
-}
-
-const duration = (
-  planCode: string,
-  months: number,
-  monthlyPrice: number,
-  totalPrice: number,
-  reference: number,
-): FallbackDuration => ({
-  planCode,
-  months,
-  monthlyPrice,
-  totalPrice,
-  monthlySavings: Math.max(0, reference - monthlyPrice),
-  totalSavings: Math.max(0, reference * months - totalPrice),
-});
-
-export const FALLBACK_PLAN_DURATIONS: readonly FallbackDuration[] = [
-  duration('standard', 1, 5000, 5000, 5000),
-  duration('standard', 2, 4000, 8000, 5000),
-  duration('standard', 3, 3000, 9000, 5000),
-  duration('business', 1, 10000, 10000, 10000),
-  duration('business', 2, 9000, 18000, 10000),
-  duration('business', 3, 8000, 24000, 10000),
-  duration('vip', 1, 15000, 15000, 15000),
-  duration('vip', 2, 14000, 28000, 15000),
-  duration('vip', 3, 13000, 39000, 15000),
 ];
 
 /** Modes de paiement — repli hors ligne, identique à `payment_methods`. */

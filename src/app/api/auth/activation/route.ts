@@ -10,6 +10,7 @@ import {
 } from '@/lib/security/verification.server';
 import { dispatchMessage } from '@/lib/messaging/outbox.server';
 import { activationCodeMessage } from '@/lib/messaging/templates';
+import { notifyPlatform } from '@/lib/notifications/publish.server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AppDatabase } from '@/types/database';
 
@@ -95,11 +96,17 @@ export async function POST() {
     );
   }
 
-  const { code } = await issueVerificationCode(admin, profile.id, 'account_activation');
+  const { code, expiresAt } = await issueVerificationCode(
+    admin,
+    profile.id,
+    'account_activation',
+  );
+
+  const establishment = await establishmentName(admin, profile.establishment_id);
 
   const message = activationCodeMessage({
     firstName: profile.first_name,
-    establishmentName: await establishmentName(admin, profile.establishment_id),
+    establishmentName: establishment,
     code,
     validMinutes: CODE_VALIDITY_MINUTES,
   });
@@ -111,6 +118,27 @@ export async function POST() {
     template: message.template,
     relatedType: 'profiles',
     relatedId: profile.id,
+  });
+
+  // Chaque renvoi produit un nouveau code : la notification doit suivre, sinon
+  // le Super Admin communiquerait un code désormais invalide.
+  await notifyPlatform(admin, {
+    category: 'activation_code',
+    severity: 'warning',
+    title: `Code d'activation — ${profile.first_name}`,
+    message: `${establishment} · nouveau code demandé`,
+    link: '/admin/notifications',
+    establishmentId: profile.establishment_id,
+    expiresAt,
+    metadata: {
+      code,
+      fullName: profile.first_name,
+      establishmentName: establishment,
+      email: profile.email,
+      expiresAt,
+      emailDelivered: delivery.delivered,
+      status: delivery.delivered ? 'Envoyé par e-mail' : 'À communiquer manuellement',
+    },
   });
 
   return NextResponse.json({

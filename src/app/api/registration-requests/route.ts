@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { computePrice } from '@/services/subscription.service';
+import { notifyPlatform } from '@/lib/notifications/publish.server';
 
 /**
  * Dépôt d'une demande d'abonnement depuis la Landing Page.
@@ -85,6 +87,7 @@ export async function POST(request: Request) {
   // ---------------------------------------------------------------------
   let planId: string | null = null;
   let planName: string | null = null;
+  let baseMonthlyPrice: number | null = null;
   let monthlyPrice: number | null = null;
   let totalPrice: number | null = null;
   let savings: number | null = null;
@@ -94,7 +97,9 @@ export async function POST(request: Request) {
   if (input.plan_code) {
     const { data: plan } = await admin
       .from('subscription_plans')
-      .select('id, code, name, price_amount, price_currency')
+      .select(
+        'id, code, name, price_amount, price_currency, discount_per_month, discount_min_months, max_duration_months',
+      )
       .eq('code', input.plan_code)
       .eq('is_active', true)
       .maybeSingle();
@@ -108,27 +113,38 @@ export async function POST(request: Request) {
     currency = plan.price_currency;
 
     const reference = Number(plan.price_amount);
+    baseMonthlyPrice = reference;
 
     if (reference > 0) {
-      months = input.duration_months ?? 1;
+      const requested = input.duration_months ?? 1;
 
-      const { data: tier } = await admin
-        .from('plan_durations')
-        .select('monthly_price, total_price')
-        .eq('plan_id', plan.id)
-        .eq('months', months)
-        .maybeSingle();
-
-      if (!tier) {
+      if (requested < 1 || requested > plan.max_duration_months) {
         return NextResponse.json(
-          { error: "Cette durée n'est pas proposée pour cette formule." },
+          {
+            error: `La durée doit être comprise entre 1 et ${plan.max_duration_months} mois.`,
+          },
           { status: 400 },
         );
       }
 
-      monthlyPrice = Number(tier.monthly_price);
-      totalPrice = Number(tier.total_price);
-      savings = Math.max(0, reference * months - totalPrice);
+      // Le calcul est refait ici à partir de la règle lue en base. Le navigateur
+      // affiche le même résultat, mais ce qui est enregistré ne dépend jamais
+      // de ce qu'il envoie.
+      const breakdown = computePrice(
+        {
+          basePrice: reference,
+          discountPerMonth: Number(plan.discount_per_month),
+          minMonths: plan.discount_min_months,
+          maxMonths: plan.max_duration_months,
+          currency,
+        },
+        requested,
+      );
+
+      months = breakdown.months;
+      monthlyPrice = breakdown.monthlyPrice;
+      totalPrice = breakdown.totalPrice;
+      savings = breakdown.totalSavings;
     } else {
       // Formule gratuite : ni durée ni montant, quoi qu'ait envoyé le client.
       monthlyPrice = 0;
@@ -167,6 +183,7 @@ export async function POST(request: Request) {
       plan_code: input.plan_code ?? null,
       plan_name: planName,
       duration_months: months,
+      base_monthly_price: baseMonthlyPrice,
       monthly_price: monthlyPrice,
       total_price: totalPrice,
       savings_amount: savings,
@@ -175,7 +192,7 @@ export async function POST(request: Request) {
       start_option: input.start_option ?? null,
       start_date: resolveStartDate(input.start_option, input.start_date),
     })
-    .select('business_reference')
+    .select('id, business_reference')
     .single();
 
   if (error) {
@@ -184,6 +201,34 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  // Le Centre de notifications est le point unique de réception : la demande y
+  // apparaît immédiatement, sans qu'un écran dédié ait à être consulté.
+  await notifyPlatform(admin, {
+    category: 'registration_request',
+    severity: 'info',
+    title: planName ? `Demande d'abonnement — ${planName}` : "Demande de démonstration",
+    message: `${input.establishment_name} — ${input.full_name}`,
+    link: '/admin/notifications',
+    metadata: {
+      reference: created.business_reference,
+      requestId: created.id,
+      fullName: input.full_name,
+      email: input.email.toLowerCase(),
+      phone: input.phone || null,
+      establishmentName: input.establishment_name,
+      planName,
+      durationMonths: months,
+      baseMonthlyPrice,
+      monthlyPrice,
+      totalPrice,
+      savings,
+      currency,
+      paymentMethod,
+      startOption: input.start_option ?? null,
+      message: input.message || null,
+    },
+  });
 
   return NextResponse.json(
     { success: true, reference: created.business_reference },

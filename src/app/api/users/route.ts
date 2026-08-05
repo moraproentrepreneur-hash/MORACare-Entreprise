@@ -7,6 +7,7 @@ import { describePasswordError, generatePassword } from '@/lib/password-policy';
 import { issueVerificationCode, CODE_VALIDITY_MINUTES } from '@/lib/security/verification.server';
 import { dispatchMessage } from '@/lib/messaging/outbox.server';
 import { activationCodeMessage, temporaryPasswordMessage } from '@/lib/messaging/templates';
+import { notifyPlatform } from '@/lib/notifications/publish.server';
 
 /**
  * Création d'un compte utilisateur d'établissement (UG02 §5-6).
@@ -213,7 +214,11 @@ export async function POST(request: Request) {
   // Code d'activation, si le compte doit être confirmé avant tout accès.
   let activationDelivered = false;
   if (requireActivation && newUserId) {
-    const { code } = await issueVerificationCode(admin, newUserId, 'account_activation');
+    const { code, expiresAt } = await issueVerificationCode(
+      admin,
+      newUserId,
+      'account_activation',
+    );
     const message = activationCodeMessage({
       firstName: input.first_name,
       establishmentName,
@@ -231,7 +236,53 @@ export async function POST(request: Request) {
     });
 
     activationDelivered = delivery.delivered;
+
+    /*
+     * Le code est publié dans le Centre de notifications afin que MORA Shawiri
+     * puisse le communiquer si l'acheminement automatique échoue.
+     *
+     * C'est un compromis assumé : la base ne conserve que le condensé du code,
+     * mais la notification en porte la valeur. Elle n'est lisible que par les
+     * Super Admins — qui peuvent déjà régénérer le mot de passe de n'importe
+     * quel compte. Le code ne leur confère donc aucun pouvoir supplémentaire,
+     * et la notification expire avec lui.
+     */
+    await notifyPlatform(admin, {
+      category: 'activation_code',
+      severity: 'warning',
+      title: `Code d'activation — ${input.first_name} ${input.last_name}`,
+      message: `${establishmentName} · identifiant ${username}`,
+      link: '/admin/notifications',
+      establishmentId: establishmentId,
+      expiresAt,
+      metadata: {
+        code,
+        fullName: `${input.first_name} ${input.last_name}`,
+        establishmentName,
+        username,
+        email: input.email,
+        expiresAt,
+        emailDelivered: delivery.delivered,
+        status: delivery.delivered ? 'Envoyé par e-mail' : 'À communiquer manuellement',
+      },
+    });
   }
+
+  await notifyPlatform(admin, {
+    category: 'admin_created',
+    severity: 'info',
+    title: `Compte créé — ${input.first_name} ${input.last_name}`,
+    message: `${establishmentName} · ${input.role === 'establishment_admin' ? "Responsable d'établissement" : input.role}`,
+    link: '/admin/admins',
+    establishmentId: establishmentId,
+    metadata: {
+      username,
+      email: input.email,
+      role: input.role,
+      establishmentName,
+      credentialsEmailSent: credentialsDelivery.delivered,
+    },
+  });
 
   await admin.from('audit_logs').insert({
     establishment_id: establishmentId,

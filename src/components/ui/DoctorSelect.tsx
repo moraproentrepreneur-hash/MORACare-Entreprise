@@ -3,6 +3,7 @@
 import React from 'react';
 import { Stethoscope } from 'lucide-react';
 import { useData } from '@/context/DataContext';
+import { Select } from './Select';
 
 interface DoctorSelectProps {
   value: string;
@@ -42,26 +43,19 @@ export const DoctorSelect: React.FC<DoctorSelectProps> = ({
           </span>
         </div>
       ) : (
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-            <Stethoscope className="w-4 h-4" />
-          </div>
-          <select
-            id="doctor-select"
-            required={required}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-          >
-            <option value="">— Sélectionner un praticien —</option>
-            {doctors.map((doctor) => (
-              <option key={doctor.id} value={doctor.id}>
-                {doctor.full_name}
-                {doctor.specialty ? ` — ${doctor.specialty}` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          id="doctor-select"
+          name="doctor_id"
+          required={required}
+          value={value}
+          onChange={onChange}
+          placeholder="— Sélectionner un praticien —"
+          options={doctors.map((doctor) => ({
+            value: doctor.id,
+            label: doctor.full_name,
+            hint: doctor.specialty,
+          }))}
+        />
       )}
     </div>
   );

@@ -1569,33 +1569,70 @@ export type Database = {
       }
       notifications: {
         Row: {
+          archived_at: string | null
+          business_reference: string | null
+          category: string
           created_at: string
+          establishment_id: string | null
+          expires_at: string | null
           id: string
-          is_read: boolean | null
+          is_archived: boolean
+          is_read: boolean
+          link: string | null
           message: string
+          metadata: Json | null
+          read_at: string | null
+          severity: string
           title: string
           type: string | null
           user_id: string | null
         }
         Insert: {
+          archived_at?: string | null
+          business_reference?: string | null
+          category?: string
           created_at?: string
+          establishment_id?: string | null
+          expires_at?: string | null
           id?: string
-          is_read?: boolean | null
+          is_archived?: boolean
+          is_read?: boolean
+          link?: string | null
           message: string
+          metadata?: Json | null
+          read_at?: string | null
+          severity?: string
           title: string
           type?: string | null
           user_id?: string | null
         }
         Update: {
+          archived_at?: string | null
+          business_reference?: string | null
+          category?: string
           created_at?: string
+          establishment_id?: string | null
+          expires_at?: string | null
           id?: string
-          is_read?: boolean | null
+          is_archived?: boolean
+          is_read?: boolean
+          link?: string | null
           message?: string
+          metadata?: Json | null
+          read_at?: string | null
+          severity?: string
           title?: string
           type?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_user_id_fkey"
             columns: ["user_id"]
@@ -2046,44 +2083,6 @@ export type Database = {
           },
         ]
       }
-      plan_durations: {
-        Row: {
-          created_at: string
-          id: string
-          monthly_price: number
-          months: number
-          plan_id: string
-          total_price: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          monthly_price: number
-          months: number
-          plan_id: string
-          total_price: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          monthly_price?: number
-          months?: number
-          plan_id?: string
-          total_price?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "plan_durations_plan_id_fkey"
-            columns: ["plan_id"]
-            isOneToOne: false
-            referencedRelation: "subscription_plans"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       plan_modules: {
         Row: {
           module_id: string
@@ -2455,6 +2454,7 @@ export type Database = {
       }
       registration_requests: {
         Row: {
+          base_monthly_price: number | null
           business_reference: string
           created_at: string
           duration_months: number | null
@@ -2483,6 +2483,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          base_monthly_price?: number | null
           business_reference: string
           created_at?: string
           duration_months?: number | null
@@ -2511,6 +2512,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          base_monthly_price?: number | null
           business_reference?: string
           created_at?: string
           duration_months?: number | null
@@ -2846,6 +2848,8 @@ export type Database = {
           created_at: string
           cta_label: string | null
           description: string | null
+          discount_min_months: number
+          discount_per_month: number
           display_order: number
           duration_days: number | null
           highlights: string[] | null
@@ -2854,6 +2858,7 @@ export type Database = {
           is_automatic: boolean
           is_featured: boolean
           limitations: string[] | null
+          max_duration_months: number
           max_patients: number | null
           max_records_per_module: number | null
           max_users: number | null
@@ -2874,6 +2879,8 @@ export type Database = {
           created_at?: string
           cta_label?: string | null
           description?: string | null
+          discount_min_months?: number
+          discount_per_month?: number
           display_order?: number
           duration_days?: number | null
           highlights?: string[] | null
@@ -2882,6 +2889,7 @@ export type Database = {
           is_automatic?: boolean
           is_featured?: boolean
           limitations?: string[] | null
+          max_duration_months?: number
           max_patients?: number | null
           max_records_per_module?: number | null
           max_users?: number | null
@@ -2902,6 +2910,8 @@ export type Database = {
           created_at?: string
           cta_label?: string | null
           description?: string | null
+          discount_min_months?: number
+          discount_per_month?: number
           display_order?: number
           duration_days?: number | null
           highlights?: string[] | null
@@ -2910,6 +2920,7 @@ export type Database = {
           is_automatic?: boolean
           is_featured?: boolean
           limitations?: string[] | null
+          max_duration_months?: number
           max_patients?: number | null
           max_records_per_module?: number | null
           max_users?: number | null

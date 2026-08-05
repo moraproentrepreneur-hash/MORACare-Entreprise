@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
+import { notifyPlatform } from '@/lib/notifications/publish.server';
 
 /**
  * Dépôt d'un message depuis le formulaire Contact de la vitrine.
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
       message: input.message,
       status: 'pending',
     })
-    .select('business_reference')
+    .select('id, business_reference')
     .single();
 
   if (error) {
@@ -63,6 +64,23 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  await notifyPlatform(admin, {
+    category: 'contact_request',
+    severity: 'info',
+    title: 'Nouvelle prise de contact',
+    message: `${input.full_name} — ${input.subject}`,
+    link: '/admin/notifications',
+    metadata: {
+      reference: data.business_reference,
+      requestId: data.id,
+      fullName: input.full_name,
+      email: input.email.toLowerCase(),
+      phone: input.phone || null,
+      subject: input.subject,
+      message: input.message,
+    },
+  });
 
   return NextResponse.json(
     { success: true, reference: data.business_reference },

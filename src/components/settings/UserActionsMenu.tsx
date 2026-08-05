@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Select } from '@/components/ui/Select';
 import { KeyRound, UserCog, ArrowRightLeft, UserX, UserCheck } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { ActionMenu } from '@/components/ui/ActionMenu';
 import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { listEstablishments } from '@/services/establishment.service';
@@ -61,53 +63,46 @@ export const UserActionsMenu: React.FC<{ account: UserAccount }> = ({ account })
     }
   };
 
-  const iconButton =
-    'p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors disabled:opacity-40';
-
   return (
     <>
-      <div className="flex items-center gap-1.5">
-        <button
-          title="Réinitialiser le mot de passe"
-          onClick={() => {
-            setAction('password');
-            setError(null);
-          }}
-          className={iconButton}
-        >
-          <KeyRound className="w-3.5 h-3.5" />
-        </button>
-
-        <button
-          title="Changer le rôle"
-          onClick={() => {
-            setRole(account.role);
-            setAction('role');
-            setError(null);
-          }}
-          className={iconButton}
-        >
-          <UserCog className="w-3.5 h-3.5" />
-        </button>
-
-        {isSuperAdmin && (
-          <button title="Transférer d'établissement" onClick={() => void openTransfer()} className={iconButton}>
-            <ArrowRightLeft className="w-3.5 h-3.5" />
-          </button>
-        )}
-
-        <button
-          title={isActive ? 'Suspendre' : 'Réactiver'}
-          onClick={() => void run({ is_active: !isActive })}
-          className={`p-1.5 rounded-lg transition-colors ${
-            isActive
-              ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
-              : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-          }`}
-        >
-          {isActive ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
-        </button>
-      </div>
+      <ActionMenu
+        disabled={busy}
+        label={`Actions pour ${account.first_name} ${account.last_name}`}
+        items={[
+          {
+            label: 'Réinitialiser le mot de passe',
+            icon: KeyRound,
+            onSelect: () => {
+              setAction('password');
+              setError(null);
+            },
+          },
+          {
+            label: 'Changer le rôle',
+            icon: UserCog,
+            onSelect: () => {
+              setRole(account.role);
+              setAction('role');
+              setError(null);
+            },
+          },
+          ...(isSuperAdmin
+            ? [
+                {
+                  label: "Transférer d'établissement",
+                  icon: ArrowRightLeft,
+                  onSelect: () => void openTransfer(),
+                },
+              ]
+            : []),
+          {
+            label: isActive ? 'Suspendre' : 'Réactiver',
+            icon: isActive ? UserX : UserCheck,
+            destructive: isActive,
+            onSelect: () => void run({ is_active: !isActive }),
+          },
+        ]}
+      />
 
       <Modal
         isOpen={action !== null}
@@ -161,17 +156,13 @@ export const UserActionsMenu: React.FC<{ account: UserAccount }> = ({ account })
             <>
               <div>
                 <label className="block text-xs font-semibold mb-1">Rôle</label>
-                <select
+                <Select
                   value={role}
-                  onChange={(e) => setRole(e.target.value as UserRole)}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-                >
-                  {ASSIGNABLE_ROLES.map((key) => (
-                    <option key={key} value={key}>
-                      {ROLE_LABELS[key]}
-                    </option>
+                  onChange={(value) => setRole(value as UserRole)}
+                  options={ASSIGNABLE_ROLES.map((key) => (
+                    ({ value: key, label: ROLE_LABELS[key] })
                   ))}
-                </select>
+                />
                 <p className="mt-1 text-[11px] text-slate-400">
                   Les droits du compte changent immédiatement, conformément à la matrice des
                   permissions.
@@ -192,18 +183,14 @@ export const UserActionsMenu: React.FC<{ account: UserAccount }> = ({ account })
             <>
               <div>
                 <label className="block text-xs font-semibold mb-1">Établissement de destination</label>
-                <select
+                <Select
                   value={establishmentId}
-                  onChange={(e) => setEstablishmentId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-                >
-                  <option value="">— Sélectionner —</option>
-                  {establishments.map((est) => (
-                    <option key={est.id} value={est.id}>
-                      {est.name}
-                    </option>
+                  onChange={(value) => setEstablishmentId(value)}
+                  placeholder="— Sélectionner —"
+                  options={establishments.map((est) => (
+                    ({ value: est.id, label: est.name })
                   ))}
-                </select>
+                />
                 <p className="mt-1 text-[11px] text-amber-400">
                   Le compte perdra l&apos;accès aux données de son établissement actuel : chaque
                   établissement est totalement isolé.

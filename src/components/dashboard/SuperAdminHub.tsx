@@ -1,7 +1,17 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Building2, Plus, Search, ShieldAlert, UserPlus } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
+import {
+  Building2,
+  PauseCircle,
+  PlayCircle,
+  Plus,
+  Search,
+  ShieldAlert,
+  UserPlus,
+} from 'lucide-react';
+import { ActionMenu } from '@/components/ui/ActionMenu';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { AdminAccountForm } from '@/components/admin/AdminAccountForm';
@@ -15,6 +25,7 @@ import {
 } from '@/services/establishment.service';
 import { listEstablishmentsWithAdmin } from '@/services/platform-admin.service';
 import { recordAudit } from '@/services/audit.service';
+import { publishPlatformNotification } from '@/services/notification.service';
 import type { Establishment, EstablishmentType } from '@/types';
 
 /**
@@ -109,6 +120,20 @@ export const SuperAdminHub: React.FC = () => {
         null,
         user.id,
       );
+      await publishPlatformNotification({
+        category: 'establishment_created',
+        severity: 'info',
+        title: `Établissement créé — ${created.name}`,
+        message: `${created.business_reference} · ${[created.city, created.country].filter(Boolean).join(', ')}`,
+        link: '/admin/etablissements',
+        establishmentId: created.id,
+        metadata: {
+          reference: created.business_reference,
+          establishmentName: created.name,
+          email: created.email,
+          phone: created.phone,
+        },
+      });
       await load();
       setIsCreateOpen(false);
       setForm(EMPTY_FORM);
@@ -262,26 +287,16 @@ export const SuperAdminHub: React.FC = () => {
               </div>
             </dl>
 
-            <div className="flex flex-wrap gap-2">
-              {!withAdmin.has(est.id) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsChainedStep(false);
-                    setAdminTarget(est);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-mora-green px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-mora-green/90"
-                >
-                  <UserPlus className="h-3.5 w-3.5" /> Créer l&apos;administrateur
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => void handleToggle(est)}
-                className="rounded-lg bg-slate-800 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-700"
-              >
-                {est.is_active ? 'Suspendre' : 'Réactiver'}
-              </button>
+            <div className="flex justify-end">
+              <EstablishmentActions
+                establishment={est}
+                hasAdmin={withAdmin.has(est.id)}
+                onCreateAdmin={() => {
+                  setIsChainedStep(false);
+                  setAdminTarget(est);
+                }}
+                onToggle={() => void handleToggle(est)}
+              />
             </div>
           </article>
         ))}
@@ -360,27 +375,15 @@ export const SuperAdminHub: React.FC = () => {
                     </span>
                   </td>
                   <td className="p-4">
-                    <div className="flex flex-wrap gap-1.5">
-                      {!withAdmin.has(est.id) && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsChainedStep(false);
-                            setAdminTarget(est);
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-mora-green px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-mora-green/90"
-                        >
-                          <UserPlus className="h-3.5 w-3.5" /> Administrateur
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => void handleToggle(est)}
-                        className="rounded-lg bg-slate-800 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-700"
-                      >
-                        {est.is_active ? 'Suspendre' : 'Réactiver'}
-                      </button>
-                    </div>
+                    <EstablishmentActions
+                      establishment={est}
+                      hasAdmin={withAdmin.has(est.id)}
+                      onCreateAdmin={() => {
+                        setIsChainedStep(false);
+                        setAdminTarget(est);
+                      }}
+                      onToggle={() => void handleToggle(est)}
+                    />
                   </td>
                 </tr>
               ))}
@@ -416,18 +419,14 @@ export const SuperAdminHub: React.FC = () => {
               <label htmlFor="est-type" className="mb-1 block text-xs font-semibold text-slate-300">
                 Type
               </label>
-              <select
+              <Select
                 id="est-type"
                 value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as EstablishmentType })}
-                className={fieldClass}
-              >
-                {(Object.keys(TYPE_LABELS) as EstablishmentType[]).map((type) => (
-                  <option key={type} value={type}>
-                    {TYPE_LABELS[type]}
-                  </option>
+                onChange={(value) => setForm({ ...form, type: value as EstablishmentType })}
+                options={(Object.keys(TYPE_LABELS) as EstablishmentType[]).map((type) => (
+                  ({ value: type, label: TYPE_LABELS[type] })
                 ))}
-              </select>
+              />
             </div>
             <div>
               <label htmlFor="est-city" className="mb-1 block text-xs font-semibold text-slate-300">
@@ -531,6 +530,33 @@ export const SuperAdminHub: React.FC = () => {
     </div>
   );
 };
+
+/**
+ * Actions d'un établissement, derrière un déclencheur unique.
+ *
+ * « Créer l'administrateur » n'apparaît que lorsqu'il en manque un : proposer
+ * d'en créer un second sans le dire relèverait du piège.
+ */
+const EstablishmentActions: React.FC<{
+  establishment: Establishment;
+  hasAdmin: boolean;
+  onCreateAdmin: () => void;
+  onToggle: () => void;
+}> = ({ establishment, hasAdmin, onCreateAdmin, onToggle }) => (
+  <ActionMenu
+    label={`Actions pour ${establishment.name}`}
+    items={[
+      ...(hasAdmin
+        ? []
+        : [{ label: "Créer l'administrateur", icon: UserPlus, onSelect: onCreateAdmin }]),
+      {
+        label: establishment.is_active ? 'Suspendre' : 'Réactiver',
+        icon: establishment.is_active ? PauseCircle : PlayCircle,
+        onSelect: onToggle,
+      },
+    ]}
+  />
+);
 
 /** État « a un administrateur » d'un établissement, sous forme de pastille. */
 const AdminState: React.FC<{ hasAdmin: boolean }> = ({ hasAdmin }) => (

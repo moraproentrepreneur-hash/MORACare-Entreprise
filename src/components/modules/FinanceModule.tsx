@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Select } from '@/components/ui/Select';
 import { 
   CreditCard, 
   Plus, 
@@ -439,18 +440,18 @@ export const FinanceModule: React.FC = () => {
           </div>
           <div>
             <label className="block text-xs font-semibold mb-1">Mode de Règlement *</label>
-            <select
+            <Select
               value={invoiceForm.payment_method}
-              onChange={(e) => setInvoiceForm({ ...invoiceForm, payment_method: e.target.value as any })}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-            >
-              <option value="Espèces">Espèces</option>
-              <option value="Holo">Holo (Mobile Money)</option>
-              <option value="Mvola">Mvola</option>
-              <option value="Wakati">Wakati</option>
-              <option value="Chèque">Chèque Bancaire</option>
-              <option value="Carte">Carte Bancaire</option>
-            </select>
+              onChange={(value) => setInvoiceForm({ ...invoiceForm, payment_method: value as any })}
+              options={[
+                { value: 'Espèces', label: 'Espèces' },
+                { value: 'Holo', label: 'Holo (Mobile Money)' },
+                { value: 'Mvola', label: 'Mvola' },
+                { value: 'Wakati', label: 'Wakati' },
+                { value: 'Chèque', label: 'Chèque Bancaire' },
+                { value: 'Carte', label: 'Carte Bancaire' },
+              ]}
+            />
           </div>
           <div className="pt-2">
             <Button type="submit" variant="secondary" className="w-full py-2.5 font-bold">

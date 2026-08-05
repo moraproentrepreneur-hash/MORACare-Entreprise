@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { Select } from '@/components/ui/Select';
 import {
   AlertTriangle,
   Check,
@@ -353,21 +354,19 @@ export const SecurityPanel: React.FC = () => {
                 <label htmlFor="tf-method" className="mb-1 block text-xs font-semibold text-slate-300">
                   Canal du second facteur
                 </label>
-                <select
+                <Select
                   id="tf-method"
                   disabled={!isSuperAdmin}
                   value={draft.twoFactorMethod}
-                  onChange={(e) =>
-                    update({
-                      twoFactorMethod: e.target.value as SecurityConfiguration['twoFactorMethod'],
-                    })
-                  }
-                  className={field}
-                >
-                  <option value="email">E-mail</option>
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="totp">Application d&apos;authentification</option>
-                </select>
+                  onChange={(value) => update({
+                      twoFactorMethod: value as SecurityConfiguration['twoFactorMethod'],
+                    })}
+                  options={[
+                    { value: 'email', label: 'E-mail' },
+                    { value: 'whatsapp', label: 'WhatsApp' },
+                    { value: 'totp', label: 'Application d&apos;authentification' },
+                  ]}
+                />
               </div>
             </div>
           </div>

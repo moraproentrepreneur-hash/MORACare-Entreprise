@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Select } from '@/components/ui/Select';
 import { Users, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -214,20 +215,20 @@ export const UserManagementModule: React.FC = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Rôle Métier *</label>
-              <select
+              <Select
                 value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-              >
-                <option value="doctor">Médecin</option>
-                <option value="nurse">Infirmier / Infirmère</option>
-                <option value="pharmacist">Pharmacien</option>
-                <option value="lab_tech">Technicien de Laboratoire</option>
-                <option value="radiologist">Radiologue / Manipulateur Radio</option>
-                <option value="receptionist">Réceptionniste / Accueil</option>
-                <option value="accountant">Comptable / Caissier</option>
-                <option value="establishment_admin">Responsable d'Établissement</option>
-              </select>
+                onChange={(value) => setForm({ ...form, role: value as UserRole })}
+                options={[
+                  { value: 'doctor', label: 'Médecin' },
+                  { value: 'nurse', label: 'Infirmier / Infirmère' },
+                  { value: 'pharmacist', label: 'Pharmacien' },
+                  { value: 'lab_tech', label: 'Technicien de Laboratoire' },
+                  { value: 'radiologist', label: 'Radiologue / Manipulateur Radio' },
+                  { value: 'receptionist', label: 'Réceptionniste / Accueil' },
+                  { value: 'accountant', label: 'Comptable / Caissier' },
+                  { value: 'establishment_admin', label: 'Responsable d\'Établissement' },
+                ]}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Département *</label>

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { dispatchMessage } from '@/lib/messaging/outbox.server';
 import { passwordResetAcknowledgement } from '@/lib/messaging/templates';
+import { notifyPlatform } from '@/lib/notifications/publish.server';
 
 /**
  * Dépôt d'une demande « mot de passe oublié ».
@@ -88,6 +89,23 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  await notifyPlatform(admin, {
+    category: 'password_reset',
+    severity: 'warning',
+    title: 'Demande de réinitialisation',
+    message: profile
+      ? `${profile.first_name} ${profile.last_name} — ${identifier}`
+      : `Identifiant inconnu — ${identifier}`,
+    link: '/admin/reinitialisations',
+    establishmentId: profile?.establishment_id ?? null,
+    metadata: {
+      reference: created.business_reference,
+      identifier,
+      email: profile?.email ?? null,
+      accountFound: Boolean(profile),
+    },
+  });
 
   // Accusé de réception, uniquement si une adresse est connue. Il n'expose rien :
   // il ne part que vers l'adresse déjà enregistrée pour ce compte.

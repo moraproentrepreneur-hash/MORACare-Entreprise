@@ -1,7 +1,18 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { KeyRound, Plus, RefreshCw, ShieldCheck, Trash2, UserCog } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
+import {
+  KeyRound,
+  Plus,
+  RefreshCw,
+  ShieldCheck,
+  Trash2,
+  UserCheck,
+  UserCog,
+  UserX,
+} from 'lucide-react';
+import { ActionMenu } from '@/components/ui/ActionMenu';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { formatDate } from '@/lib/utils';
@@ -149,9 +160,6 @@ export const AdminAccountsPanel: React.FC = () => {
 
   const handleSort = (column: SortColumn) => setSort((current) => nextSort(current, column));
 
-  const selectClass =
-    'w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5 text-sm text-slate-200 outline-none focus:ring-1 focus:ring-mora-blue';
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
@@ -193,44 +201,36 @@ export const AdminAccountsPanel: React.FC = () => {
           />
         </div>
 
-        <select
+        <Select
           aria-label="Filtrer par rôle"
           value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
-          className={selectClass}
-        >
-          <option value="all">Tous les rôles</option>
-          {ASSIGNABLE_ROLES.map((role) => (
-            <option key={role} value={role}>
-              {ROLE_LABELS[role]}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setRoleFilter(value as UserRole | 'all')}
+          options={[
+            { value: 'all', label: 'Tous les rôles' },
+            ...ASSIGNABLE_ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
+          ]}
+        />
 
-        <select
+        <Select
           aria-label="Filtrer par établissement"
           value={establishmentFilter}
-          onChange={(e) => setEstablishmentFilter(e.target.value)}
-          className={selectClass}
-        >
-          <option value="all">Tous les établissements</option>
-          {establishments.map((est) => (
-            <option key={est.id} value={est.id}>
-              {est.name}
-            </option>
-          ))}
-        </select>
+          onChange={setEstablishmentFilter}
+          options={[
+            { value: 'all', label: 'Tous les établissements' },
+            ...establishments.map((est) => ({ value: est.id, label: est.name })),
+          ]}
+        />
 
-        <select
+        <Select
           aria-label="Filtrer par statut"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-          className={selectClass}
-        >
-          <option value="all">Tous les statuts</option>
-          <option value="active">Actifs</option>
-          <option value="inactive">Désactivés</option>
-        </select>
+          onChange={(value) => setStatusFilter(value as 'all' | 'active' | 'inactive')}
+          options={[
+            { value: 'all', label: 'Tous les statuts' },
+            { value: 'active', label: 'Actifs' },
+            { value: 'inactive', label: 'Désactivés' },
+          ]}
+        />
       </div>
 
       {/* Vue mobile */}
@@ -498,36 +498,28 @@ export const AdminAccountsPanel: React.FC = () => {
               <label htmlFor="edit-role" className="mb-1 block text-xs font-semibold text-slate-300">
                 Rôle
               </label>
-              <select
+              <Select
                 id="edit-role"
                 value={editRole}
-                onChange={(e) => setEditRole(e.target.value as UserRole)}
-                className={selectClass}
-              >
-                {ASSIGNABLE_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {ROLE_LABELS[role]}
-                  </option>
+                onChange={(value) => setEditRole(value as UserRole)}
+                options={ASSIGNABLE_ROLES.map((role) => (
+                  ({ value: role, label: ROLE_LABELS[role] })
                 ))}
-              </select>
+              />
             </div>
 
             <div>
               <label htmlFor="edit-est" className="mb-1 block text-xs font-semibold text-slate-300">
                 Établissement
               </label>
-              <select
+              <Select
                 id="edit-est"
                 value={editEstablishment}
-                onChange={(e) => setEditEstablishment(e.target.value)}
-                className={selectClass}
-              >
-                {establishments.map((est) => (
-                  <option key={est.id} value={est.id}>
-                    {est.name}
-                  </option>
+                onChange={(value) => setEditEstablishment(value)}
+                options={establishments.map((est) => (
+                  ({ value: est.id, label: est.name })
                 ))}
-              </select>
+              />
               <p className="mt-1 text-[11px] text-slate-500">
                 Le transfert d&apos;un compte vers un autre établissement change immédiatement les
                 données auxquelles il accède.
@@ -652,7 +644,13 @@ export const AdminAccountsPanel: React.FC = () => {
   );
 };
 
-/** Actions d'une ligne. Extrait pour rester identique entre carte et tableau. */
+/**
+ * Actions d'une ligne, derrière un déclencheur unique.
+ *
+ * Les cinq actions occupaient auparavant toute la largeur de la cellule et
+ * repoussaient les colonnes de données hors de l'écran. Le menu rend la largeur
+ * de la colonne indépendante du nombre d'actions.
+ */
 const ActionButtons: React.FC<{
   user: PlatformUser;
   busy: boolean;
@@ -661,56 +659,20 @@ const ActionButtons: React.FC<{
   onPassword: () => void;
   onToggle: () => void;
   onDelete: () => void;
-}> = ({ user, busy, onEdit, onGenerate, onPassword, onToggle, onDelete }) => {
-  const base =
-    'inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors disabled:opacity-50';
-
-  return (
-    <>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={onEdit}
-        className={`${base} bg-slate-800 text-slate-200 hover:bg-slate-700`}
-      >
-        <UserCog className="h-3.5 w-3.5" /> Modifier
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={onGenerate}
-        className={`${base} bg-mora-green/15 text-mora-green hover:bg-mora-green/25`}
-      >
-        <RefreshCw className="h-3.5 w-3.5" /> Générer un mot de passe
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={onPassword}
-        className={`${base} bg-slate-800 text-slate-200 hover:bg-slate-700`}
-      >
-        <KeyRound className="h-3.5 w-3.5" /> Définir
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={onToggle}
-        className={`${base} ${
-          user.isActive
-            ? 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25'
-            : 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'
-        }`}
-      >
-        {user.isActive ? 'Désactiver' : 'Activer'}
-      </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={onDelete}
-        className={`${base} bg-red-500/10 text-red-400 hover:bg-red-500/20`}
-      >
-        <Trash2 className="h-3.5 w-3.5" /> Supprimer
-      </button>
-    </>
-  );
-};
+}> = ({ user, busy, onEdit, onGenerate, onPassword, onToggle, onDelete }) => (
+  <ActionMenu
+    disabled={busy}
+    label={`Actions pour ${user.fullName}`}
+    items={[
+      { label: 'Modifier', icon: UserCog, onSelect: onEdit },
+      { label: 'Générer un mot de passe', icon: RefreshCw, onSelect: onGenerate },
+      { label: 'Définir un mot de passe', icon: KeyRound, onSelect: onPassword },
+      {
+        label: user.isActive ? 'Désactiver' : 'Activer',
+        icon: user.isActive ? UserX : UserCheck,
+        onSelect: onToggle,
+      },
+      { label: 'Supprimer', icon: Trash2, destructive: true, onSelect: onDelete },
+    ]}
+  />
+);

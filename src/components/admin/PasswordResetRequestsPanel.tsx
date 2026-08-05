@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { ActionMenu } from '@/components/ui/ActionMenu';
 import {
   listPasswordResetRequests,
   setPasswordResetStatus,
@@ -200,14 +201,19 @@ export const PasswordResetRequestsPanel: React.FC = () => {
             </dl>
 
             {request.profileId ? (
-              <button
-                type="button"
-                disabled={busyId === request.id}
-                onClick={() => setConfirming(request)}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-mora-green px-2.5 py-2 text-[11px] font-bold text-white hover:bg-mora-green/90 disabled:opacity-50"
-              >
-                <RefreshCw className="h-3.5 w-3.5" /> Générer un mot de passe
-              </button>
+              <div className="flex justify-end">
+                <ActionMenu
+                  disabled={busyId === request.id}
+                  label={`Actions pour ${request.fullName}`}
+                  items={[
+                    {
+                      label: 'Générer un mot de passe',
+                      icon: RefreshCw,
+                      onSelect: () => setConfirming(request),
+                    },
+                  ]}
+                />
+              </div>
             ) : (
               <UnknownAccountNotice />
             )}
@@ -286,14 +292,17 @@ export const PasswordResetRequestsPanel: React.FC = () => {
                   </td>
                   <td className="p-4">
                     {request.profileId ? (
-                      <button
-                        type="button"
+                      <ActionMenu
                         disabled={busyId === request.id}
-                        onClick={() => setConfirming(request)}
-                        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-mora-green px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-mora-green/90 disabled:opacity-50"
-                      >
-                        <RefreshCw className="h-3.5 w-3.5" /> Générer
-                      </button>
+                        label={`Actions pour ${request.fullName}`}
+                        items={[
+                          {
+                            label: 'Générer un mot de passe',
+                            icon: RefreshCw,
+                            onSelect: () => setConfirming(request),
+                          },
+                        ]}
+                      />
                     ) : (
                       <UnknownAccountNotice />
                     )}

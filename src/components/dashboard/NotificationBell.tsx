@@ -2,17 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Bell,
-  CheckCheck,
-  CreditCard,
-  Info,
-  Inbox,
-  KeyRound,
-  MessagesSquare,
-  AlertTriangle,
-  X,
-} from 'lucide-react';
+import { Bell, CheckCheck, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useAccess } from '@/context/AccessContext';
 import {
@@ -21,47 +11,23 @@ import {
   markNotificationRead,
   unreadCount,
   type AppNotification,
-  type NotificationSource,
 } from '@/services/notification.service';
+import { NotificationRow, formatMoment } from './notification-ui';
 
 /**
- * Cloche de notifications et panneau associé.
+ * Cloche de notifications.
  *
- * Le panneau se recharge à chaque ouverture : la plupart des alertes sont des
- * états de la base — une demande sans réponse, une échéance proche — et non des
- * messages figés. Les afficher tels qu'ils étaient au chargement de la page
+ * Aperçu des derniers événements. Le traitement — filtrage, consultation du
+ * détail, archivage — se fait dans le Centre de notifications ; ce panneau
+ * n'en est que le raccourci, et évite d'y dupliquer une seconde interface de
+ * gestion qui divergerait.
+ *
+ * Le contenu est rechargé à chaque ouverture : les échéances d'abonnement sont
+ * recalculées, et l'afficher tel qu'il était au chargement de la page
  * reviendrait à mentir dès la première minute.
- *
- * Sur mobile, le panneau occupe la largeur de l'écran plutôt qu'une colonne
- * flottante coupée par le bord droit.
  */
 
-const SOURCE_ICONS: Record<NotificationSource, React.ElementType> = {
-  system: Info,
-  registration: Inbox,
-  contact: MessagesSquare,
-  password_reset: KeyRound,
-  subscription: CreditCard,
-  license: KeyRound,
-};
-
-const SEVERITY_TONES = {
-  info: 'text-mora-green',
-  warning: 'text-amber-400',
-  critical: 'text-red-400',
-} as const;
-
-const formatMoment = (iso: string): string => {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
-
-  const minutes = Math.round((Date.now() - date.getTime()) / 60_000);
-  if (minutes < 1) return "À l'instant";
-  if (minutes < 60) return `Il y a ${minutes} min`;
-  if (minutes < 1440) return `Il y a ${Math.floor(minutes / 60)} h`;
-
-  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-};
+const PREVIEW_LIMIT = 8;
 
 export const NotificationBell: React.FC = () => {
   const { user } = useAuth();
@@ -81,7 +47,7 @@ export const NotificationBell: React.FC = () => {
     if (!user) return;
     setIsLoading(true);
     try {
-      setItems(await loadNotifications({ userId: user.id, role: user.role, subscription, license }));
+      setItems(await loadNotifications({ role: user.role, subscription, license }));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chargement impossible.');
@@ -95,8 +61,6 @@ export const NotificationBell: React.FC = () => {
     void load();
   }, [load]);
 
-  // Fermeture au clic extérieur et à Échap : un panneau flottant qui reste
-  // ouvert masque le contenu de la page.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -123,7 +87,7 @@ export const NotificationBell: React.FC = () => {
     if (next) void load();
   };
 
-  const handleClick = async (item: AppNotification) => {
+  const handleOpen = async (item: AppNotification) => {
     if (item.rowId && !item.isRead) {
       try {
         await markNotificationRead(item.rowId);
@@ -134,16 +98,13 @@ export const NotificationBell: React.FC = () => {
         // Marquer comme lu est secondaire : ne jamais empêcher la navigation.
       }
     }
-    if (item.href) {
-      setIsOpen(false);
-      router.push(item.href);
-    }
+    setIsOpen(false);
+    router.push(item.href ?? '/admin/notifications');
   };
 
   const handleMarkAll = async () => {
-    if (!user) return;
     try {
-      await markAllNotificationsRead(user.id);
+      await markAllNotificationsRead();
       setItems((list) => list.map((entry) => ({ ...entry, isRead: true })));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Mise à jour impossible.');
@@ -151,7 +112,9 @@ export const NotificationBell: React.FC = () => {
   };
 
   const unread = unreadCount(items);
-  const hasSystemUnread = items.some((item) => item.rowId && !item.isRead);
+  const hasStoredUnread = items.some((item) => item.rowId && !item.isRead);
+  const preview = items.slice(0, PREVIEW_LIMIT);
+  const isSuperAdmin = user?.role === 'super_admin';
 
   return (
     <div ref={containerRef} className="relative">
@@ -185,7 +148,7 @@ export const NotificationBell: React.FC = () => {
               </p>
             </div>
             <div className="flex items-center gap-1">
-              {hasSystemUnread && (
+              {hasStoredUnread && (
                 <button
                   type="button"
                   onClick={() => void handleMarkAll()}
@@ -206,10 +169,8 @@ export const NotificationBell: React.FC = () => {
             </div>
           </div>
 
-          <div className="max-h-[calc(70vh-4rem)] overflow-y-auto sm:max-h-96">
-            {isLoading && (
-              <p className="px-4 py-8 text-center text-xs text-slate-500">Chargement…</p>
-            )}
+          <div className="max-h-[calc(70vh-8rem)] overflow-y-auto sm:max-h-80">
+            {isLoading && <p className="px-4 py-8 text-center text-xs text-slate-500">Chargement…</p>}
 
             {error && (
               <p className="m-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
@@ -217,56 +178,40 @@ export const NotificationBell: React.FC = () => {
               </p>
             )}
 
-            {!isLoading && !error && items.length === 0 && (
+            {!isLoading && !error && preview.length === 0 && (
               <div className="px-4 py-10 text-center">
                 <Bell className="mx-auto h-8 w-8 text-slate-700" />
                 <p className="mt-3 text-xs text-slate-500">
-                  Aucune notification. Les demandes, messages et échéances
-                  apparaîtront ici.
+                  Aucune notification. Les demandes, codes et échéances apparaîtront ici.
                 </p>
               </div>
             )}
 
             <ul className="divide-y divide-slate-800">
-              {items.map((item) => {
-                const Icon = SOURCE_ICONS[item.source];
-                const clickable = Boolean(item.href) || Boolean(item.rowId);
-
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      disabled={!clickable}
-                      onClick={() => void handleClick(item)}
-                      className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${
-                        clickable ? 'hover:bg-slate-800/60' : 'cursor-default'
-                      } ${item.isRead ? 'opacity-60' : ''}`}
-                    >
-                      <span className={`mt-0.5 shrink-0 ${SEVERITY_TONES[item.severity]}`}>
-                        {item.severity === 'critical' ? (
-                          <AlertTriangle className="h-4 w-4" />
-                        ) : (
-                          <Icon className="h-4 w-4" />
-                        )}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-xs font-bold text-white">{item.title}</span>
-                        <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-400">
-                          {item.message}
-                        </span>
-                        <span className="mt-1 block text-[10px] text-slate-500">
-                          {formatMoment(item.createdAt)}
-                        </span>
-                      </span>
-                      {!item.isRead && (
-                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-mora-green" />
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
+              {preview.map((item) => (
+                <li key={item.id}>
+                  <NotificationRow
+                    notification={item}
+                    onOpen={() => void handleOpen(item)}
+                    subtitle={formatMoment(item.createdAt)}
+                  />
+                </li>
+              ))}
             </ul>
           </div>
+
+          {isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                router.push('/admin/notifications');
+              }}
+              className="w-full border-t border-slate-800 px-4 py-3 text-center text-xs font-semibold text-mora-green transition-colors hover:bg-slate-800/60"
+            >
+              Ouvrir le Centre de notifications
+            </button>
+          )}
         </div>
       )}
     </div>

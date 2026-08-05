@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { Select } from '@/components/ui/Select';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import {
   Activity,
@@ -856,20 +857,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
                 <label htmlFor="demo-type" className="block text-xs font-semibold mb-1">
                   Type
                 </label>
-                <select
+                <Select
                   id="demo-type"
                   value={demo.establishment_type}
-                  onChange={(e) => setDemo({ ...demo, establishment_type: e.target.value })}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-                >
-                  <option value="cabinet">Cabinet médical</option>
-                  <option value="clinique">Clinique</option>
-                  <option value="centre_medical">Centre médical</option>
-                  <option value="hopital">Hôpital</option>
-                  <option value="laboratoire">Laboratoire</option>
-                  <option value="imagerie">Centre d&apos;imagerie</option>
-                  <option value="ong">ONG médicale</option>
-                </select>
+                  onChange={(value) => setDemo({ ...demo, establishment_type: value })}
+                  options={[
+                    { value: 'cabinet', label: 'Cabinet médical' },
+                    { value: 'clinique', label: 'Clinique' },
+                    { value: 'centre_medical', label: 'Centre médical' },
+                    { value: 'hopital', label: 'Hôpital' },
+                    { value: 'laboratoire', label: 'Laboratoire' },
+                    { value: 'imagerie', label: 'Centre d&apos;imagerie' },
+                    { value: 'ong', label: 'ONG médicale' },
+                  ]}
+                />
               </div>
             </div>
 

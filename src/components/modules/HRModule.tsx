@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Select } from '@/components/ui/Select';
 import { UserCheck, Plus, Clock, Calendar, FileText, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -387,17 +388,17 @@ export const HRModule: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Type de Contrat *</label>
-              <select
+              <Select
                 value={empForm.contract_type}
-                onChange={(e) => setEmpForm({ ...empForm, contract_type: e.target.value as any })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-              >
-                <option value="CDI">CDI</option>
-                <option value="CDD">CDD</option>
-                <option value="Vacation">Vacation</option>
-                <option value="Stage">Stage</option>
-                <option value="Consultant">Consultant</option>
-              </select>
+                onChange={(value) => setEmpForm({ ...empForm, contract_type: value as any })}
+                options={[
+                  { value: 'CDI', label: 'CDI' },
+                  { value: 'CDD', label: 'CDD' },
+                  { value: 'Vacation', label: 'Vacation' },
+                  { value: 'Stage', label: 'Stage' },
+                  { value: 'Consultant', label: 'Consultant' },
+                ]}
+              />
             </div>
           </div>
           <div className="pt-2">
@@ -418,19 +419,17 @@ export const HRModule: React.FC = () => {
           )}
           <div>
             <label className="block text-xs font-semibold mb-1">Employé</label>
-            <select
+            <Select
               required
               value={shiftForm.employee_id}
-              onChange={(e) => setShiftForm({ ...shiftForm, employee_id: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-            >
-              <option value="">— Sélectionner un employé —</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.full_name} — {emp.department}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setShiftForm({ ...shiftForm, employee_id: value })}
+              placeholder="— Sélectionner un employé —"
+              options={employees.map((emp) => ({
+                value: emp.id,
+                label: emp.full_name,
+                hint: emp.department,
+              }))}
+            />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -445,15 +444,15 @@ export const HRModule: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Type de Garde</label>
-              <select
+              <Select
                 value={shiftForm.shift_type}
-                onChange={(e) => setShiftForm({ ...shiftForm, shift_type: e.target.value as any })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-              >
-                <option value="Garde Nuit">Garde Nuit</option>
-                <option value="Garde Jour">Garde Jour</option>
-                <option value="Astreinte">Astreinte</option>
-              </select>
+                onChange={(value) => setShiftForm({ ...shiftForm, shift_type: value as any })}
+                options={[
+                  { value: 'Garde Nuit', label: 'Garde Nuit' },
+                  { value: 'Garde Jour', label: 'Garde Jour' },
+                  { value: 'Astreinte', label: 'Astreinte' },
+                ]}
+              />
             </div>
           </div>
           <div className="pt-2">
@@ -474,19 +473,17 @@ export const HRModule: React.FC = () => {
           )}
           <div>
             <label className="block text-xs font-semibold mb-1">Employé</label>
-            <select
+            <Select
               required
               value={payrollForm.employee_id}
-              onChange={(e) => setPayrollForm({ ...payrollForm, employee_id: e.target.value })}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
-            >
-              <option value="">— Sélectionner un employé —</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.full_name} — {emp.position}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setPayrollForm({ ...payrollForm, employee_id: value })}
+              placeholder="— Sélectionner un employé —"
+              options={employees.map((emp) => ({
+                value: emp.id,
+                label: emp.full_name,
+                hint: emp.position,
+              }))}
+            />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>

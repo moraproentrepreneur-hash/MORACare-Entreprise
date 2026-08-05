@@ -115,7 +115,7 @@ export type VerificationCodeRow = Row<'verification_codes'>;
 export type PasswordResetRequestRow = Row<'password_reset_requests'>;
 export type MessageOutboxRow = Row<'message_outbox'>;
 export type PaymentMethodRow = Row<'payment_methods'>;
-export type PlanDurationRow = Row<'plan_durations'>;
+export type NotificationCategoryRow = Row<'notifications'>['category'];
 
 /** Motif d'un code de vérification à six chiffres. */
 export type VerificationPurpose =

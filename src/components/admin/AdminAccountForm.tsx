@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/lib/roles';
 import { createPlatformUser, type IssuedCredentials } from '@/services/platform-admin.service';
@@ -129,20 +130,16 @@ export const AdminAccountForm: React.FC<AdminAccountFormProps> = ({
             {lockedEstablishment.name}
           </p>
         ) : (
-          <select
+          <Select
             id="adm-est"
             required
             value={form.establishment_id}
-            onChange={(e) => setForm({ ...form, establishment_id: e.target.value })}
-            className={FIELD}
-          >
-            <option value="">— Sélectionner —</option>
-            {establishments.map((est) => (
-              <option key={est.id} value={est.id}>
-                {est.name}
-              </option>
+            onChange={(value) => setForm({ ...form, establishment_id: value })}
+            placeholder="— Sélectionner —"
+            options={establishments.map((est) => (
+              ({ value: est.id, label: est.name })
             ))}
-          </select>
+          />
         )}
       </div>
 
@@ -226,19 +223,15 @@ export const AdminAccountForm: React.FC<AdminAccountFormProps> = ({
           <label htmlFor="adm-role" className="mb-1 block text-xs font-semibold text-slate-300">
             Rôle *
           </label>
-          <select
+          <Select
             id="adm-role"
             required
             value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
-            className={FIELD}
-          >
-            {ASSIGNABLE_ROLES.map((role) => (
-              <option key={role} value={role}>
-                {ROLE_LABELS[role]}
-              </option>
+            onChange={(value) => setForm({ ...form, role: value as UserRole })}
+            options={ASSIGNABLE_ROLES.map((role) => (
+              ({ value: role, label: ROLE_LABELS[role] })
             ))}
-          </select>
+          />
         </div>
       </div>
 

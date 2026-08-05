@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Select } from '@/components/ui/Select';
 import Link from 'next/link';
 import { Users, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -195,15 +196,15 @@ export const PatientsModule: React.FC = () => {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <label className="block text-xs font-semibold mb-1">Sexe</label>
-              <select
+              <Select
                 value={form.gender}
-                onChange={(e) => setForm({ ...form, gender: e.target.value as any })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-              >
-                <option value="M">Masculin</option>
-                <option value="F">Féminin</option>
-                <option value="Autre">Autre</option>
-              </select>
+                onChange={(value) => setForm({ ...form, gender: value as any })}
+                options={[
+                  { value: 'M', label: 'Masculin' },
+                  { value: 'F', label: 'Féminin' },
+                  { value: 'Autre', label: 'Autre' },
+                ]}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Date de Naissance</label>
@@ -217,15 +218,13 @@ export const PatientsModule: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Groupe Sanguin</label>
-              <select
+              <Select
                 value={form.blood_group}
-                onChange={(e) => setForm({ ...form, blood_group: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-              >
-                {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
-                  <option key={bg} value={bg}>{bg}</option>
+                onChange={(value) => setForm({ ...form, blood_group: value })}
+                options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
+                  ({ value: bg, label: bg })
                 ))}
-              </select>
+              />
             </div>
           </div>
 

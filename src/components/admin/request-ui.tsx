@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Search } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
 import {
   REQUEST_STATUSES,
   REQUEST_STATUS_LABELS,
@@ -25,6 +26,11 @@ export const StatusBadge: React.FC<{ status: RequestStatus }> = ({ status }) => 
   </span>
 );
 
+const STATUS_OPTIONS = REQUEST_STATUSES.map((status) => ({
+  value: status,
+  label: REQUEST_STATUS_LABELS[status],
+}));
+
 /** Sélecteur de statut : c'est ici que le Super Admin fait avancer un dossier. */
 export const StatusSelect: React.FC<{
   value: RequestStatus;
@@ -32,19 +38,14 @@ export const StatusSelect: React.FC<{
   disabled?: boolean;
   'aria-label'?: string;
 }> = ({ value, onChange, disabled, ...rest }) => (
-  <select
+  <Select<RequestStatus>
     value={value}
+    onChange={onChange}
     disabled={disabled}
     aria-label={rest['aria-label'] ?? 'Statut'}
-    onChange={(e) => onChange(e.target.value as RequestStatus)}
-    className="w-full min-w-[8.5rem] rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-100 outline-none focus:ring-1 focus:ring-mora-blue disabled:opacity-50"
-  >
-    {REQUEST_STATUSES.map((status) => (
-      <option key={status} value={status}>
-        {REQUEST_STATUS_LABELS[status]}
-      </option>
-    ))}
-  </select>
+    options={STATUS_OPTIONS}
+    className="min-w-[9rem]"
+  />
 );
 
 /** Filtre de statut, avec l'option « Tous » que le sélecteur d'édition n'a pas. */
@@ -52,19 +53,13 @@ export const StatusFilter: React.FC<{
   value: RequestStatus | 'all';
   onChange: (value: RequestStatus | 'all') => void;
 }> = ({ value, onChange }) => (
-  <select
+  <Select
     value={value}
+    onChange={(next) => onChange(next as RequestStatus | 'all')}
     aria-label="Filtrer par statut"
-    onChange={(e) => onChange(e.target.value as RequestStatus | 'all')}
-    className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5 text-sm text-slate-200 outline-none focus:ring-1 focus:ring-mora-blue sm:w-52"
-  >
-    <option value="all">Tous les statuts</option>
-    {REQUEST_STATUSES.map((status) => (
-      <option key={status} value={status}>
-        {REQUEST_STATUS_LABELS[status]}
-      </option>
-    ))}
-  </select>
+    options={[{ value: 'all', label: 'Tous les statuts' }, ...STATUS_OPTIONS]}
+    className="sm:w-52"
+  />
 );
 
 export const SearchField: React.FC<{
