@@ -51,6 +51,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onRequestDemo }) => {
     <section ref={sectionRef} className="relative overflow-hidden">
       <AuroraBackground className="-z-10" />
 
+      {/*
+        Ombre interne sous le bandeau.
+
+        Le Hero commence légèrement plus sombre puis retrouve la teinte de la
+        page : le bandeau paraît ainsi posé au-dessus du contenu, et non
+        découpé dedans. L'effet s'éteint sur 6 rem, assez pour être perçu, trop
+        court pour être remarqué.
+      */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-24 bg-gradient-to-b from-slate-950/70 to-transparent dark:from-slate-950/80"
+      />
+
       {/* Grille discrète, pour la profondeur */}
       <div
         aria-hidden

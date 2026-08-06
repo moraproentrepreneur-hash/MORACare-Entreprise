@@ -45,12 +45,22 @@ interface TabDefinition {
   superAdminOnly?: boolean;
 }
 
+/**
+ * Onglets des Paramètres.
+ *
+ * « Rôles & Permissions » et « Sécurité » portent la politique de la
+ * plateforme, pas celle d'un établissement : la matrice des permissions et la
+ * politique des mots de passe s'appliquent à tous les clients à la fois. Les
+ * afficher à un responsable laissait croire qu'il pouvait les régler pour sa
+ * seule structure, alors que les politiques RLS lui refusaient de toute façon
+ * l'écriture. Ils sont désormais réservés au Super Admin.
+ */
 const TABS: readonly TabDefinition[] = [
   { id: 'establishment', label: 'Établissement', icon: Building2 },
   { id: 'subscription', label: 'Abonnement & Licence', icon: CreditCard },
   { id: 'modules', label: 'Modules Applicatifs', icon: Boxes },
-  { id: 'roles', label: 'Rôles & Permissions', icon: ShieldCheck },
-  { id: 'security', label: 'Sécurité', icon: Lock },
+  { id: 'roles', label: 'Rôles & Permissions', icon: ShieldCheck, superAdminOnly: true },
+  { id: 'security', label: 'Sécurité', icon: Lock, superAdminOnly: true },
   { id: 'backups', label: 'Sauvegardes', icon: Database },
   { id: 'audit', label: "Journal d'audit", icon: History },
 ];
@@ -62,6 +72,11 @@ export const SettingsModule: React.FC = () => {
 
   const isSuperAdmin = user?.role === 'super_admin';
   const visibleTabs = TABS.filter((tab) => !tab.superAdminOnly || isSuperAdmin);
+
+  // Un onglet masqué ne doit pas rester affiché parce qu'il était sélectionné.
+  const currentTab = visibleTabs.some((tab) => tab.id === activeTab)
+    ? activeTab
+    : visibleTabs[0].id;
 
   return (
     <div className="space-y-6">
@@ -83,7 +98,7 @@ export const SettingsModule: React.FC = () => {
       <div className="flex overflow-x-auto gap-2 border-b border-slate-800 pb-2">
         {visibleTabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+          const isActive = currentTab === tab.id;
           return (
             <button
               key={tab.id}
@@ -101,14 +116,14 @@ export const SettingsModule: React.FC = () => {
         })}
       </div>
 
-      {activeTab === 'establishment' && <EstablishmentSettings />}
-      {activeTab === 'subscription' && <SubscriptionPanel />}
-      {activeTab === 'modules' && <ModulesSettings />}
-      {activeTab === 'roles' && <PermissionsMatrix />}
-      {activeTab === 'security' && <SecurityPanel />}
-      {activeTab === 'audit' && <AuditLogPanel />}
+      {currentTab === 'establishment' && <EstablishmentSettings />}
+      {currentTab === 'subscription' && <SubscriptionPanel />}
+      {currentTab === 'modules' && <ModulesSettings />}
+      {currentTab === 'roles' && <PermissionsMatrix />}
+      {currentTab === 'security' && <SecurityPanel />}
+      {currentTab === 'audit' && <AuditLogPanel />}
 
-      {activeTab === 'backups' && <BackupsPanel />}
+      {currentTab === 'backups' && <BackupsPanel />}
     </div>
   );
 };

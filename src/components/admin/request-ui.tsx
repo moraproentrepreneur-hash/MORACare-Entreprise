@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Check, ChevronDown, Search } from 'lucide-react';
 import { Select } from '@/components/ui/Select';
 import {
   REQUEST_STATUSES,
@@ -31,22 +31,142 @@ const STATUS_OPTIONS = REQUEST_STATUSES.map((status) => ({
   label: REQUEST_STATUS_LABELS[status],
 }));
 
-/** Sélecteur de statut : c'est ici que le Super Admin fait avancer un dossier. */
+/**
+ * Statut d'un dossier : un badge, et le changement derrière un menu.
+ *
+ * Une liste déroulante occupait toute la cellule et imposait sa largeur à la
+ * colonne ; ouverte, elle débordait du conteneur défilant du tableau. Le badge
+ * dit l'état d'un coup d'œil, et le menu — rendu en position fixe, donc jamais
+ * découpé — sert à le faire avancer.
+ *
+ * Le statut courant reste coché dans le menu : sans repère, on ne saurait plus
+ * d'où l'on part une fois le menu ouvert.
+ */
 export const StatusSelect: React.FC<{
   value: RequestStatus;
   onChange: (status: RequestStatus) => void;
   disabled?: boolean;
   'aria-label'?: string;
 }> = ({ value, onChange, disabled, ...rest }) => (
-  <Select<RequestStatus>
+  <StatusMenu
     value={value}
     onChange={onChange}
     disabled={disabled}
-    aria-label={rest['aria-label'] ?? 'Statut'}
-    options={STATUS_OPTIONS}
-    className="min-w-[9rem]"
+    label={rest['aria-label'] ?? 'Changer le statut'}
   />
 );
+
+const StatusMenu: React.FC<{
+  value: RequestStatus;
+  onChange: (status: RequestStatus) => void;
+  disabled?: boolean;
+  label: string;
+}> = ({ value, onChange, disabled, label }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [position, setPosition] = React.useState<{ top: number; left: number } | null>(null);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  const close = React.useCallback((refocus = true) => {
+    setIsOpen(false);
+    if (refocus) buttonRef.current?.focus();
+  }, []);
+
+  const open = () => {
+    if (disabled) return;
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) {
+      const height = REQUEST_STATUSES.length * 38 + 16;
+      const below = window.innerHeight - rect.bottom;
+      setPosition({
+        top: below < height && rect.top > below ? Math.max(8, rect.top - height - 4) : rect.bottom + 4,
+        left: Math.min(Math.max(8, rect.left), window.innerWidth - STATUS_MENU_WIDTH - 8),
+      });
+    }
+    setIsOpen(true);
+  };
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (!menuRef.current?.contains(target) && !buttonRef.current?.contains(target)) {
+        close(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    const onMove = () => close(false);
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('scroll', onMove, true);
+    window.addEventListener('resize', onMove);
+
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('scroll', onMove, true);
+      window.removeEventListener('resize', onMove);
+    };
+  }, [isOpen, close]);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        disabled={disabled}
+        onClick={() => (isOpen ? close() : open())}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        aria-label={`${label} — actuellement ${REQUEST_STATUS_LABELS[value]}`}
+        className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold uppercase transition-opacity hover:opacity-80 disabled:opacity-50 ${REQUEST_STATUS_TONES[value]}`}
+      >
+        {REQUEST_STATUS_LABELS[value]}
+        <ChevronDown className="h-3 w-3 shrink-0" />
+      </button>
+
+      {isOpen && position && (
+        <div
+          ref={menuRef}
+          role="menu"
+          aria-label={label}
+          style={{ top: position.top, left: position.left, width: STATUS_MENU_WIDTH }}
+          className="fixed z-50 overflow-hidden rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-2xl"
+        >
+          {REQUEST_STATUSES.map((status) => (
+            <button
+              key={status}
+              type="button"
+              role="menuitemradio"
+              aria-checked={status === value}
+              onClick={() => {
+                close(false);
+                if (status !== value) onChange(status);
+              }}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-slate-200 transition-colors hover:bg-slate-800"
+            >
+              <Check
+                className={`h-3.5 w-3.5 shrink-0 ${
+                  status === value ? 'text-mora-green' : 'text-transparent'
+                }`}
+              />
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${REQUEST_STATUS_TONES[status].split(' ')[0]}`}
+              />
+              <span className="truncate">{REQUEST_STATUS_LABELS[status]}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
+};
+
+const STATUS_MENU_WIDTH = 200;
 
 /** Filtre de statut, avec l'option « Tous » que le sélecteur d'édition n'a pas. */
 export const StatusFilter: React.FC<{

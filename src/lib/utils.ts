@@ -5,12 +5,21 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Formatage monétaire de l'application.
+ *
+ * Le code ISO est affiché tel quel. Une version antérieure remplaçait « KMF »
+ * par « FC » : les deux désignent bien le franc comorien, mais l'abréviation
+ * locale est ambiguë — elle sert aussi au franc congolais — et surtout elle
+ * contredisait les tarifs de la vitrine, libellés en KMF. Un même montant
+ * s'affichait donc sous deux unités selon l'écran.
+ */
 export function formatCurrency(amount: number, currency: string = 'KMF'): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
-    currency: currency,
+    currency,
     maximumFractionDigits: 0,
-  }).format(amount).replace('KMF', 'FC');
+  }).format(amount);
 }
 
 export function formatDate(dateString: string): string {

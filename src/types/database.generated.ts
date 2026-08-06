@@ -761,63 +761,150 @@ export type Database = {
       establishments: {
         Row: {
           address: string | null
+          authorization_number: string | null
+          banner_url: string | null
           business_reference: string
           city: string | null
           country: string | null
           created_at: string
           created_by: string | null
+          currency: string
           deleted_at: string | null
           email: string
           id: string
           is_active: boolean | null
+          island: string | null
+          latitude: number | null
+          legal_mentions: string | null
+          legal_name: string | null
+          locale: string
+          logo_url: string | null
+          longitude: number | null
           max_users: number | null
           name: string
+          opening_hours: Json | null
+          pdf_footer: string | null
+          pdf_header: string | null
           phone: string
+          phone_secondary: string | null
+          postal_code: string | null
+          primary_color: string
+          secondary_color: string
+          short_name: string | null
+          signature_holder: string | null
+          signature_url: string | null
+          slogan: string | null
+          specialties: string[]
+          stamp_url: string | null
           subscription_plan: string | null
           subscription_status: Database["public"]["Enums"]["subscription_status"]
+          support_email: string | null
+          tax_id: string | null
+          timezone: string
+          trade_register: string | null
           type: Database["public"]["Enums"]["establishment_type"]
           updated_at: string
           updated_by: string | null
+          website: string | null
+          whatsapp: string | null
         }
         Insert: {
           address?: string | null
+          authorization_number?: string | null
+          banner_url?: string | null
           business_reference: string
           city?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
+          currency?: string
           deleted_at?: string | null
           email: string
           id?: string
           is_active?: boolean | null
+          island?: string | null
+          latitude?: number | null
+          legal_mentions?: string | null
+          legal_name?: string | null
+          locale?: string
+          logo_url?: string | null
+          longitude?: number | null
           max_users?: number | null
           name: string
+          opening_hours?: Json | null
+          pdf_footer?: string | null
+          pdf_header?: string | null
           phone: string
+          phone_secondary?: string | null
+          postal_code?: string | null
+          primary_color?: string
+          secondary_color?: string
+          short_name?: string | null
+          signature_holder?: string | null
+          signature_url?: string | null
+          slogan?: string | null
+          specialties?: string[]
+          stamp_url?: string | null
           subscription_plan?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          support_email?: string | null
+          tax_id?: string | null
+          timezone?: string
+          trade_register?: string | null
           type?: Database["public"]["Enums"]["establishment_type"]
           updated_at?: string
           updated_by?: string | null
+          website?: string | null
+          whatsapp?: string | null
         }
         Update: {
           address?: string | null
+          authorization_number?: string | null
+          banner_url?: string | null
           business_reference?: string
           city?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
+          currency?: string
           deleted_at?: string | null
           email?: string
           id?: string
           is_active?: boolean | null
+          island?: string | null
+          latitude?: number | null
+          legal_mentions?: string | null
+          legal_name?: string | null
+          locale?: string
+          logo_url?: string | null
+          longitude?: number | null
           max_users?: number | null
           name?: string
+          opening_hours?: Json | null
+          pdf_footer?: string | null
+          pdf_header?: string | null
           phone?: string
+          phone_secondary?: string | null
+          postal_code?: string | null
+          primary_color?: string
+          secondary_color?: string
+          short_name?: string | null
+          signature_holder?: string | null
+          signature_url?: string | null
+          slogan?: string | null
+          specialties?: string[]
+          stamp_url?: string | null
           subscription_plan?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          support_email?: string | null
+          tax_id?: string | null
+          timezone?: string
+          trade_register?: string | null
           type?: Database["public"]["Enums"]["establishment_type"]
           updated_at?: string
           updated_by?: string | null
+          website?: string | null
+          whatsapp?: string | null
         }
         Relationships: []
       }

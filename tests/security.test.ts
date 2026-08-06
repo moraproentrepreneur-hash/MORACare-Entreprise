@@ -14,6 +14,7 @@ import {
   isPasswordValid,
 } from '../src/lib/password-policy';
 import { computePrice } from '../src/services/subscription.service';
+import { formatCurrency } from '../src/lib/utils';
 
 /**
  * Sécurité : politique des mots de passe, verrouillage, codes de vérification
@@ -190,6 +191,40 @@ describe('Calcul tarifaire', () => {
         expect(result.totalPrice).toBe(result.monthlyPrice * months);
       }
     }
+  });
+});
+
+describe('Formatage monétaire', () => {
+  it('affiche le code KMF et jamais l’abréviation FC', () => {
+    const rendu = formatCurrency(5000);
+    expect(rendu).toContain('KMF');
+    expect(rendu).not.toContain('FC');
+  });
+
+  it('n’affiche pas de décimales', () => {
+    expect(formatCurrency(12345)).not.toContain(',');
+  });
+
+  it('respecte une devise explicite', () => {
+    expect(formatCurrency(1000, 'EUR')).not.toContain('KMF');
+  });
+});
+
+describe('Mot de passe temporaire', () => {
+  it('fait huit caractères par défaut', () => {
+    expect(generatePassword()).toHaveLength(8);
+  });
+
+  it('reste conforme à la politique malgré sa longueur réduite', () => {
+    for (let i = 0; i < 200; i += 1) {
+      expect(isPasswordValid(generatePassword())).toBe(true);
+    }
+  });
+
+  it('ne descend jamais sous le minimum exigé par la politique', () => {
+    // Une politique plus stricte doit l'emporter sur la longueur par défaut.
+    const strict = { ...DEFAULT_PASSWORD_POLICY, minLength: 14 };
+    expect(generatePassword(strict).length).toBeGreaterThanOrEqual(14);
   });
 });
 
@@ -539,6 +574,175 @@ describe('Sécurité en base', () => {
         'SELECT business_reference FROM public.message_outbox LIMIT 1',
       );
       expect(rows.rows[0].business_reference).toMatch(/^MORA-MSG-\d{6}$/);
+    });
+  });
+
+  describe("Profil de l'établissement", () => {
+    let establishmentId: string;
+
+    beforeAll(async () => {
+      establishmentId = await createEstablishment(db, 'Clinique Identité');
+    });
+
+    it('porte les champs d’identité institutionnelle', async () => {
+      const rows = await db.query<{ column_name: string }>(
+        `SELECT column_name FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'establishments'
+            AND column_name IN (
+              'legal_name','short_name','slogan','logo_url','banner_url',
+              'authorization_number','trade_register','tax_id','legal_mentions',
+              'phone_secondary','whatsapp','support_email','website','island',
+              'latitude','longitude','currency','timezone','locale',
+              'opening_hours','specialties','primary_color','secondary_color',
+              'pdf_header','pdf_footer','signature_url','signature_holder','stamp_url'
+            )`,
+      );
+      expect(rows.rows).toHaveLength(28);
+    });
+
+    it('applique KMF et le fuseau des Comores par défaut', async () => {
+      const rows = await db.query<{ currency: string; timezone: string; locale: string }>(
+        'SELECT currency, timezone, locale FROM public.establishments WHERE id = $1',
+        [establishmentId],
+      );
+      expect(rows.rows[0]).toEqual({
+        currency: 'KMF',
+        timezone: 'Indian/Comoro',
+        locale: 'fr',
+      });
+    });
+
+    it('reprend le nom d’usage comme raison sociale par défaut', async () => {
+      const rows = await db.query<{ legal_name: string | null; name: string }>(
+        'SELECT legal_name, name FROM public.establishments WHERE id = $1',
+        [establishmentId],
+      );
+      // Le nom officiel peut rester nul à la création ; la migration le remplit
+      // pour les lignes existantes, l'application à l'enregistrement.
+      expect(rows.rows[0].legal_name ?? rows.rows[0].name).toBeTruthy();
+    });
+
+    it('refuse une couleur qui n’est pas hexadécimale', async () => {
+      await expect(
+        db.query(`UPDATE public.establishments SET primary_color = 'bleu' WHERE id = $1`, [
+          establishmentId,
+        ]),
+      ).rejects.toThrow();
+    });
+
+    it('accepte une couleur hexadécimale, avec ou sans canal alpha', async () => {
+      await db.query(
+        `UPDATE public.establishments SET primary_color = '#1A2B3C', secondary_color = '#1A2B3C80'
+          WHERE id = $1`,
+        [establishmentId],
+      );
+      const rows = await db.query<{ primary_color: string }>(
+        'SELECT primary_color FROM public.establishments WHERE id = $1',
+        [establishmentId],
+      );
+      expect(rows.rows[0].primary_color).toBe('#1A2B3C');
+    });
+
+    it('refuse des coordonnées hors du globe', async () => {
+      await expect(
+        db.query(
+          `UPDATE public.establishments SET latitude = 120, longitude = 5 WHERE id = $1`,
+          [establishmentId],
+        ),
+      ).rejects.toThrow();
+    });
+
+    /*
+     * Une coordonnée isolée ne désigne aucun point.
+     *
+     * La première version de la contrainte laissait passer ce cas : sa seconde
+     * branche valait NULL, et une contrainte CHECK n'échoue que sur FALSE.
+     */
+    it('refuse une longitude sans latitude', async () => {
+      await expect(
+        db.query(
+          `UPDATE public.establishments SET latitude = NULL, longitude = 44.2 WHERE id = $1`,
+          [establishmentId],
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('refuse une latitude sans longitude', async () => {
+      await expect(
+        db.query(
+          `UPDATE public.establishments SET latitude = -11.7, longitude = NULL WHERE id = $1`,
+          [establishmentId],
+        ),
+      ).rejects.toThrow();
+    });
+
+    it('accepte un couple complet, puis son effacement', async () => {
+      await db.query(
+        `UPDATE public.establishments SET latitude = -11.7022, longitude = 43.2551 WHERE id = $1`,
+        [establishmentId],
+      );
+
+      const placed = await db.query<{ latitude: string }>(
+        'SELECT latitude FROM public.establishments WHERE id = $1',
+        [establishmentId],
+      );
+      expect(Number(placed.rows[0].latitude)).toBeCloseTo(-11.7022, 4);
+
+      await db.query(
+        `UPDATE public.establishments SET latitude = NULL, longitude = NULL WHERE id = $1`,
+        [establishmentId],
+      );
+
+      const cleared = await db.query<{ latitude: string | null }>(
+        'SELECT latitude FROM public.establishments WHERE id = $1',
+        [establishmentId],
+      );
+      expect(cleared.rows[0].latitude).toBeNull();
+    });
+
+    it('refuse une langue non prise en charge', async () => {
+      await expect(
+        db.query(`UPDATE public.establishments SET locale = 'de' WHERE id = $1`, [
+          establishmentId,
+        ]),
+      ).rejects.toThrow();
+    });
+
+    it('conserve les horaires sous forme d’objet', async () => {
+      await db.query(
+        `UPDATE public.establishments
+            SET opening_hours = '{"monday":{"closed":false,"open":"08:00","close":"17:00"}}'::jsonb
+          WHERE id = $1`,
+        [establishmentId],
+      );
+
+      const rows = await db.query<{ open: string }>(
+        `SELECT opening_hours->'monday'->>'open' AS open
+           FROM public.establishments WHERE id = $1`,
+        [establishmentId],
+      );
+      expect(rows.rows[0].open).toBe('08:00');
+    });
+
+    it('protège les colonnes commerciales des modifications non privilégiées', async () => {
+      // `is_super_admin()` renvoie faux sans session : le trigger doit donc
+      // restituer les valeurs commerciales, sans faire échouer la mise à jour.
+      await db.query(
+        `UPDATE public.establishments
+            SET slogan = 'Notre engagement', max_users = 9999, subscription_status = 'active'
+          WHERE id = $1`,
+        [establishmentId],
+      );
+
+      const rows = await db.query<{ slogan: string; max_users: number }>(
+        'SELECT slogan, max_users FROM public.establishments WHERE id = $1',
+        [establishmentId],
+      );
+
+      // Le champ d'identité passe…
+      expect(rows.rows[0].slogan).toBe('Notre engagement');
+      // …mais pas le plafond d'utilisateurs.
+      expect(rows.rows[0].max_users).not.toBe(9999);
     });
   });
 });

@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { listEstablishments } from '@/services/establishment.service';
 import { ASSIGNABLE_ROLES, ROLE_LABELS } from '@/lib/roles';
+import { DEFAULT_PASSWORD_POLICY, describePolicy } from '@/lib/password-policy';
 import type { Establishment, UserAccount, UserRole } from '@/types';
 
 /**
@@ -129,16 +130,16 @@ export const UserActionsMenu: React.FC<{ account: UserAccount }> = ({ account })
                 <label className="block text-xs font-semibold mb-1">Nouveau mot de passe</label>
                 <input
                   type="password"
-                  minLength={12}
+                  minLength={DEFAULT_PASSWORD_POLICY.minLength}
                   autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder="••••••••"
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
                 />
                 <p className="mt-1 text-[11px] text-slate-400">
-                  12 caractères minimum. À transmettre à l&apos;utilisateur par un canal sûr : il ne
-                  sera plus affiché.
+                  {describePolicy()} À transmettre à l&apos;utilisateur par un canal sûr : il ne sera
+                  plus affiché.
                 </p>
               </div>
               <Button

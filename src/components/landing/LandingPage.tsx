@@ -174,12 +174,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
     <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 selection:bg-mora-green selection:text-white">
       <ScrollProgress />
 
-      {/* ================= NAVBAR — CTA toujours visible (LP-001 §7) ============ */}
+      {/*
+        ================= NAVBAR — CTA toujours visible (LP-001 §7) ============
+
+        Le bandeau doit se lire comme un élément distinct du Hero, et non comme
+        son prolongement. Trois effets s'additionnent, tous discrets :
+
+          - un fond de verre plus clair que la page (slate-900 sur slate-950),
+            qui pose le bandeau au-dessus du contenu plutôt qu'au même niveau ;
+          - une ombre portée, qui lui donne son épaisseur ;
+          - un filet dégradé sous le bandeau, plus dense au centre et éteint sur
+            les bords : un trait plein d'un bord à l'autre ferait règle
+            administrative, celui-ci accompagne le regard.
+
+        Au défilement, l'ensemble se densifie — le contenu passe alors dessous
+        et le bandeau doit rester lisible. La charte n'est pas touchée : seules
+        l'opacité et la profondeur varient.
+      */}
       <header
-        className={`sticky top-0 z-50 backdrop-blur-lg transition-all duration-300 ${
+        className={`sticky top-0 z-50 backdrop-blur-xl transition-all duration-300 ${
           isScrolled
-            ? 'bg-white/90 dark:bg-slate-950/90 border-b border-slate-200/80 dark:border-slate-800 shadow-sm'
-            : 'bg-white/60 dark:bg-slate-950/60 border-b border-transparent'
+            ? 'bg-white/90 dark:bg-slate-900/85 shadow-lg shadow-slate-950/40'
+            : 'bg-white/70 dark:bg-slate-900/60 shadow-md shadow-slate-950/20'
         }`}
       >
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -254,6 +270,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoToLogin }) => {
             </div>
           </div>
         )}
+
+        {/*
+          Filet de séparation, posé sur le bord inférieur du bandeau. Le dégradé
+          l'éteint sur les côtés : la ligne se devine au centre et disparaît aux
+          extrémités, sans jamais couper la page en deux.
+        */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-slate-700"
+        />
       </header>
 
       <main id="top">

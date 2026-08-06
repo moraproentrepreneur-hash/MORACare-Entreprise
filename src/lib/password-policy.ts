@@ -164,18 +164,32 @@ const shuffle = (characters: string[], random: Crypto): string[] => {
 };
 
 /**
+ * Longueur par défaut d'un mot de passe temporaire.
+ *
+ * Aligné sur le minimum de la politique : ce mot de passe est lu à voix haute
+ * ou recopié à la main, et il ne vit que jusqu'à la première connexion, où son
+ * titulaire doit le remplacer. Un secret plus long serait plus sûr dans
+ * l'absolu, mais une transmission fautive coûte un appel au support pour un
+ * gain nul sur un secret jetable.
+ */
+const TEMPORARY_PASSWORD_LENGTH = 8;
+
+/**
  * Produit un mot de passe temporaire conforme à la politique.
  *
  * Chaque contrainte est d'abord satisfaite par un caractère dédié, le reste est
  * complété au hasard, puis l'ensemble est mélangé : sans ce mélange, la place
  * de la majuscule et du chiffre serait toujours la même.
  *
+ * La longueur ne descend jamais sous le minimum exigé par la politique : si
+ * celle-ci passe à douze caractères, le générateur suit.
+ *
  * Fonctionne dans le navigateur comme sur le serveur : `crypto` est global dans
  * les deux depuis Node 18.
  */
 export const generatePassword = (
   policy: PasswordPolicy = DEFAULT_PASSWORD_POLICY,
-  length = 12,
+  length = TEMPORARY_PASSWORD_LENGTH,
 ): string => {
   const random = globalThis.crypto;
   if (!random?.getRandomValues) {

@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { UserRole } from '@/types';
 import { useData } from '@/context/DataContext';
 import { UserActionsMenu } from '@/components/settings/UserActionsMenu';
+import { DEFAULT_PASSWORD_POLICY, describePolicy } from '@/lib/password-policy';
 
 export const UserManagementModule: React.FC = () => {
   const { userAccounts, addUserAccount } = useData();
@@ -248,15 +249,15 @@ export const UserManagementModule: React.FC = () => {
             <input
               type="password"
               required
-              minLength={12}
+              minLength={DEFAULT_PASSWORD_POLICY.minLength}
               autoComplete="new-password"
               value={form.temp_password}
               onChange={(e) => setForm({ ...form, temp_password: e.target.value })}
-              placeholder="••••••••••••"
+              placeholder="••••••••"
               className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
             />
             <p className="mt-1 text-[11px] text-slate-400">
-              12 caractères minimum. À transmettre à l&apos;utilisateur par un canal sûr.
+              {describePolicy()} À transmettre à l&apos;utilisateur par un canal sûr.
             </p>
           </div>
 
