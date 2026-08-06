@@ -17,9 +17,20 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Invoice, Patient, CashMovement } from '@/types';
-import { formatCurrency, formatDate, downloadMedicalPDF } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { useDocument } from '@/hooks/useDocument';
 import { useData } from '@/context/DataContext';
 import { PatientSelect } from '@/components/ui/PatientSelect';
+
+/** Statuts de facture, en clair sur le document remis au patient. */
+const STATUS_LABELS: Record<string, string> = {
+  draft: 'Brouillon',
+  pending: 'En attente de règlement',
+  partial: 'Partiellement réglée',
+  paid: 'Réglée',
+  cancelled: 'Annulée',
+  overdue: 'Échue',
+};
 
 export const FinanceModule: React.FC = () => {
   const { 
@@ -32,6 +43,7 @@ export const FinanceModule: React.FC = () => {
     cashMovements, 
     addCashMovement 
   } = useData();
+  const { print, error: documentError } = useDocument();
 
   const [activeTab, setActiveTab] = useState<'invoices' | 'cash_movements' | 'cash_registers' | 'treasury'>('invoices');
 
@@ -171,21 +183,49 @@ export const FinanceModule: React.FC = () => {
     setIsCloseRegModalOpen(false);
   };
 
+  /**
+   * Facture.
+   *
+   * Le NIF, l'autorisation et les mentions légales viennent des Paramètres :
+   * une facture doit porter l'identité fiscale de l'établissement, pas celle de
+   * l'éditeur du logiciel.
+   */
   const handleDownloadInvoicePDF = (inv: Invoice) => {
-    downloadMedicalPDF(
-      'Facture Médicale Officielle',
-      `Patient: ${inv.patient_name}`,
-      inv.business_reference,
-      [
-        `Date de facturation: ${formatDate(inv.invoice_date)}`,
-        `Montant Sous-Total: ${formatCurrency(inv.subtotal)}`,
-        `Taxes / TVA: ${formatCurrency(inv.tax_amount)}`,
-        `Montant Total Réglé: ${formatCurrency(inv.paid_amount)}`,
-        `Statut du règlement: ${inv.status.toUpperCase()}`,
-        '--------------------------------------------------',
-        'Reçu comptable généré via MORACare.',
-      ]
-    );
+    const balance = inv.total_amount - inv.paid_amount;
+
+    void print({
+      kind: 'invoice',
+      reference: inv.business_reference,
+      title: 'Facture',
+      subtitle: `Émise le ${formatDate(inv.invoice_date)}`,
+      highlight: [
+        { label: 'Patient', value: inv.patient_name },
+        { label: 'Facture', value: inv.business_reference },
+        { label: 'Date', value: formatDate(inv.invoice_date) },
+        { label: 'Statut', value: STATUS_LABELS[inv.status] ?? inv.status },
+      ],
+      sections: [
+        {
+          title: 'Détail du règlement',
+          table: {
+            columns: ['Libellé', 'Montant'],
+            rows: [
+              ['Sous-total', formatCurrency(inv.subtotal)],
+              ['Taxes et TVA', formatCurrency(inv.tax_amount)],
+              ['Total à régler', formatCurrency(inv.total_amount)],
+              ['Déjà réglé', formatCurrency(inv.paid_amount)],
+              ['Reste à payer', formatCurrency(balance > 0 ? balance : 0)],
+            ],
+            numericColumns: [1],
+          },
+        },
+      ],
+      total: { label: 'Total à payer', value: formatCurrency(inv.total_amount) },
+      note:
+        balance > 0
+          ? `Solde restant dû : ${formatCurrency(balance)}.`
+          : 'Facture intégralement réglée. Ce document tient lieu de reçu.',
+    });
   };
 
   return (
@@ -209,6 +249,12 @@ export const FinanceModule: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {documentError && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-400">
+          {documentError}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex space-x-2 overflow-x-auto border-b border-slate-800 pb-2">

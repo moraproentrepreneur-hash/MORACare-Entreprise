@@ -5,13 +5,15 @@ import { Stethoscope, Plus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Consultation, Patient } from '@/types';
-import { formatDateTime, downloadMedicalPDF } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
+import { useDocument } from '@/hooks/useDocument';
 import { useData } from '@/context/DataContext';
 import { PatientSelect } from '@/components/ui/PatientSelect';
 import { DoctorSelect } from '@/components/ui/DoctorSelect';
 
 export const ConsultationsModule: React.FC = () => {
   const { patients, consultations, addConsultation } = useData();
+  const { print, error: documentError } = useDocument();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const [selectedPatientId, setSelectedPatientId] = useState('');
@@ -75,21 +77,54 @@ export const ConsultationsModule: React.FC = () => {
     });
   };
 
+  /**
+   * Compte rendu de consultation.
+   *
+   * L'identité de l'émetteur, les couleurs, la signature et le modèle viennent
+   * des Paramètres de l'établissement : rien n'est écrit en dur ici.
+   */
   const handleDownloadPDF = (con: Consultation) => {
-    downloadMedicalPDF(
-      'Ordonnance & Compte-Rendu Médical',
-      `Patient: ${con.patient_name} | Médecin: ${con.doctor_name}`,
-      con.business_reference,
-      [
-        `Motif de consultation: ${con.chief_complaint}`,
-        `Symptômes observés: ${con.symptoms || 'Non renseignés'}`,
-        `Constantes: Poids ${con.weight_kg}kg, Temp. ${con.temperature_celsius}°C, TA ${con.blood_pressure_systolic}/${con.blood_pressure_diastolic} mmHg`,
-        `Résumé Diagnostic (CIM-10): ${con.diagnosis_summary}`,
-        `Prescription & Traitement: ${con.treatment_plan}`,
-        '--------------------------------------------------',
-        'Document médical officiel délivré via la plateforme MORACare SaaS.',
-      ]
-    );
+    void print({
+      kind: 'consultation',
+      reference: con.business_reference,
+      title: 'Compte rendu de consultation',
+      subtitle: formatDateTime(con.consultation_date),
+      highlight: [
+        { label: 'Patient', value: con.patient_name },
+        { label: 'Praticien', value: con.doctor_name },
+        { label: 'Référence', value: con.business_reference },
+        { label: 'Date', value: formatDateTime(con.consultation_date) },
+      ],
+      sections: [
+        {
+          title: 'Motif et observations',
+          fields: [
+            { label: 'Motif', value: con.chief_complaint || '—' },
+            { label: 'Symptômes', value: con.symptoms || 'Non renseignés' },
+          ],
+        },
+        {
+          title: 'Constantes vitales',
+          table: {
+            columns: ['Paramètre', 'Valeur'],
+            rows: [
+              ['Poids', `${con.weight_kg} kg`],
+              ['Température', `${con.temperature_celsius} °C`],
+              [
+                'Tension artérielle',
+                `${con.blood_pressure_systolic}/${con.blood_pressure_diastolic} mmHg`,
+              ],
+            ],
+            numericColumns: [1],
+          },
+        },
+        {
+          title: 'Diagnostic et conduite à tenir',
+          fields: [{ label: 'Diagnostic', value: con.diagnosis_summary || '—' }],
+          paragraphs: con.treatment_plan ? [con.treatment_plan] : [],
+        },
+      ],
+    });
   };
 
   return (
@@ -107,6 +142,12 @@ export const ConsultationsModule: React.FC = () => {
           <Plus className="w-4 h-4" /> Nouvelle Consultation
         </Button>
       </div>
+
+      {documentError && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-400">
+          {documentError}
+        </div>
+      )}
 
       <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
         {consultations.length === 0 ? (

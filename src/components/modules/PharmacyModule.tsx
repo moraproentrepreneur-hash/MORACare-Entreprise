@@ -1,18 +1,111 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Pill, Plus } from 'lucide-react';
+import { FileText, Pill, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useData } from '@/context/DataContext';
+import { useDocument } from '@/hooks/useDocument';
+
+/**
+ * Signalement des péremptions (BP19 §15).
+ *
+ * Un médicament périmé ne doit pas se lire comme les autres : la date seule
+ * oblige à la comparer mentalement à celle du jour, à chaque ligne.
+ */
+const expiryState = (date: string | null | undefined): { tone: string; note: string | null } => {
+  if (!date) return { tone: 'text-slate-400', note: null };
+
+  const days = Math.round((new Date(date).getTime() - Date.now()) / 86_400_000);
+  if (days < 0) return { tone: 'text-red-400', note: 'Périmé' };
+  if (days <= 30) return { tone: 'text-amber-400', note: `Périme dans ${days} j` };
+  return { tone: 'text-slate-300', note: null };
+};
 
 export const PharmacyModule: React.FC = () => {
   // Ce module conservait auparavant son stock dans un état local : rien n'était
   // jamais enregistré. Il lit désormais la base comme les autres modules.
   const { pharmacyItems: items, addPharmacyItem } = useData();
+  const { print, error: documentError } = useDocument();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  /**
+   * État du stock (BP19 §19).
+   *
+   * L'identité de l'établissement, ses couleurs et son modèle documentaire
+   * viennent de ses Paramètres : cet état est un document officiel, pas un
+   * export technique.
+   */
+  const printStockReport = () => {
+    const valuation = items.reduce(
+      (total, item) => total + item.stock_quantity * item.unit_price,
+      0,
+    );
+    const lowStock = items.filter((item) => item.stock_quantity <= (item.reorder_level ?? 0));
+    const expiring = items.filter((item) => expiryState(item.expiry_date).note !== null);
+
+    void print({
+      kind: 'dispensation',
+      reference: `STOCK-${new Date().toISOString().slice(0, 10)}`,
+      title: 'État du stock pharmaceutique',
+      subtitle: `Arrêté au ${formatDate(new Date().toISOString())}`,
+      highlight: [
+        { label: 'Références', value: String(items.length) },
+        { label: 'Valorisation', value: formatCurrency(valuation) },
+        { label: 'Sous le seuil', value: String(lowStock.length) },
+        { label: 'Péremptions à surveiller', value: String(expiring.length) },
+      ],
+      sections: [
+        {
+          title: 'Inventaire',
+          table: {
+            columns: ['Référence', 'Médicament', 'Quantité', 'Valeur'],
+            rows: items.map((item) => [
+              item.business_reference,
+              item.name,
+              String(item.stock_quantity),
+              formatCurrency(item.stock_quantity * item.unit_price),
+            ]),
+            numericColumns: [2, 3],
+          },
+        },
+        ...(lowStock.length > 0
+          ? [
+              {
+                title: 'À réapprovisionner',
+                table: {
+                  columns: ['Médicament', 'Stock', 'Seuil'],
+                  rows: lowStock.map((item) => [
+                    item.name,
+                    String(item.stock_quantity),
+                    String(item.reorder_level ?? 0),
+                  ]),
+                  numericColumns: [1, 2],
+                },
+              },
+            ]
+          : []),
+        ...(expiring.length > 0
+          ? [
+              {
+                title: 'Péremptions',
+                table: {
+                  columns: ['Médicament', 'Péremption', 'État'],
+                  rows: expiring.map((item) => [
+                    item.name,
+                    item.expiry_date ? formatDate(item.expiry_date) : '—',
+                    expiryState(item.expiry_date).note ?? '—',
+                  ]),
+                },
+              },
+            ]
+          : []),
+      ],
+      total: { label: 'Valorisation du stock', value: formatCurrency(valuation) },
+    });
+  };
 
   const [form, setForm] = useState({
     name: '',
@@ -64,10 +157,23 @@ export const PharmacyModule: React.FC = () => {
           </h2>
           <p className="text-xs text-slate-400 mt-1">Catalogue de médicaments, inventaire, réapprovisionnement et délivrance.</p>
         </div>
-        <Button variant="secondary" onClick={() => setIsAddModalOpen(true)} className="gap-2 shrink-0">
-          <Plus className="w-4 h-4" /> Ajouter un Médicament
-        </Button>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          {items.length > 0 && (
+            <Button variant="outline" onClick={printStockReport} className="gap-2">
+              <FileText className="w-4 h-4" /> État du stock
+            </Button>
+          )}
+          <Button variant="secondary" onClick={() => setIsAddModalOpen(true)} className="gap-2 shrink-0">
+            <Plus className="w-4 h-4" /> Ajouter un Médicament
+          </Button>
+        </div>
       </div>
+
+      {documentError && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-400">
+          {documentError}
+        </div>
+      )}
 
       <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
         {items.length === 0 ? (
@@ -96,17 +202,48 @@ export const PharmacyModule: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {items.map((i) => (
-                  <tr key={i.id} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="p-4 font-mono text-mora-green font-bold">{i.business_reference}</td>
-                    <td className="p-4 font-bold text-white">{i.name}</td>
-                    <td className="p-4">{i.generic_name || '-'}</td>
-                    <td className="p-4">{i.category}</td>
-                    <td className="p-4 font-bold text-emerald-400">{i.stock_quantity} unités</td>
-                    <td className="p-4 font-mono text-slate-200">{formatCurrency(i.unit_price)}</td>
-                    <td className="p-4">{formatDate(i.expiry_date || '')}</td>
-                  </tr>
-                ))}
+                {items.map((i) => {
+                  const expiry = expiryState(i.expiry_date);
+                  const lowStock = i.stock_quantity <= (i.reorder_level ?? 0);
+
+                  return (
+                    <tr key={i.id} className="hover:bg-slate-800/50 transition-colors">
+                      <td className="p-4 font-mono text-mora-green font-bold">
+                        {i.business_reference}
+                      </td>
+                      <td className="p-4 font-bold text-white">{i.name}</td>
+                      <td className="p-4">{i.generic_name || '-'}</td>
+                      <td className="p-4">{i.category}</td>
+                      <td className="p-4">
+                        {/* BP19 §13 : le seuil de réapprovisionnement doit se
+                            voir sur la ligne, pas dans un rapport séparé. */}
+                        <span
+                          className={`font-bold ${lowStock ? 'text-amber-400' : 'text-emerald-400'}`}
+                        >
+                          {i.stock_quantity} unités
+                        </span>
+                        {lowStock && (
+                          <span className="mt-0.5 block text-[10px] text-amber-400">
+                            Seuil de réapprovisionnement atteint
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 font-mono text-slate-200">
+                        {formatCurrency(i.unit_price)}
+                      </td>
+                      <td className="p-4">
+                        <span className={expiry.tone}>
+                          {i.expiry_date ? formatDate(i.expiry_date) : '—'}
+                        </span>
+                        {expiry.note && (
+                          <span className={`mt-0.5 block text-[10px] ${expiry.tone}`}>
+                            {expiry.note}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

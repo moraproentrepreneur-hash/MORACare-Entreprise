@@ -45,16 +45,119 @@ export interface SubscriptionPlan {
   maxDurationMonths: number;
 }
 
+/**
+ * État affiché d'un abonnement.
+ *
+ * Distinct du statut enregistré : un abonnement « actif » dont l'échéance est
+ * passée n'est plus actif, et une échéance proche mérite d'être signalée avant
+ * de devenir un incident.
+ */
+export type SubscriptionHealth =
+  | 'active'
+  | 'expiring_soon'
+  | 'expired'
+  | 'suspended'
+  | 'terminated'
+  | 'pending';
+
+export const HEALTH_LABELS: Record<SubscriptionHealth, string> = {
+  active: 'Actif',
+  expiring_soon: 'Expire bientôt',
+  expired: 'Expiré',
+  suspended: 'Suspendu',
+  terminated: 'Résilié',
+  pending: 'En attente',
+};
+
+export const HEALTH_TONES: Record<SubscriptionHealth, string> = {
+  active: 'bg-emerald-500/15 text-emerald-400',
+  expiring_soon: 'bg-amber-500/15 text-amber-400',
+  expired: 'bg-red-500/15 text-red-400',
+  suspended: 'bg-orange-500/15 text-orange-400',
+  terminated: 'bg-slate-700/40 text-slate-400',
+  pending: 'bg-blue-500/15 text-blue-400',
+};
+
+/** Seuil d'alerte : un mois pour renouveler sans urgence. */
+export const EXPIRY_WARNING_DAYS = 30;
+
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * Jours restants avant échéance. Négatif si elle est passée.
+ *
+ * Calculé sur des dates civiles et non sur l'instant courant : un abonnement
+ * qui expire aujourd'hui doit afficher « 0 jour », pas « quelques heures ».
+ */
+export const daysRemaining = (endDate: string | null): number | null => {
+  if (!endDate) return null;
+  const end = new Date(`${endDate.slice(0, 10)}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((end.getTime() - today.getTime()) / MS_PER_DAY);
+};
+
+/** Mois pleins restants, pour une lecture commerciale du temps qui reste. */
+export const monthsRemaining = (endDate: string | null): number | null => {
+  const days = daysRemaining(endDate);
+  return days === null ? null : Math.max(0, Math.floor(days / 30));
+};
+
+/**
+ * Croise le statut enregistré et l'échéance réelle.
+ *
+ * Reproduit exactement `public.subscription_state_of` : l'interface et la base
+ * doivent dire la même chose, faute de quoi elles se contrediraient devant le
+ * client.
+ */
+export const healthOf = (
+  status: SubscriptionState,
+  endDate: string | null,
+): SubscriptionHealth => {
+  if (status === 'suspended') return 'suspended';
+  if (status === 'terminated') return 'terminated';
+  if (status === 'pending') return 'pending';
+  if (!endDate) return 'active';
+
+  const days = daysRemaining(endDate);
+  if (days === null) return 'active';
+  if (days < 0) return 'expired';
+  if (days <= EXPIRY_WARNING_DAYS) return 'expiring_soon';
+  return 'active';
+};
+
+/** Formulation lisible du temps restant. */
+export const describeRemaining = (endDate: string | null): string => {
+  const days = daysRemaining(endDate);
+  if (days === null) return 'Sans échéance';
+  if (days < 0) {
+    const past = Math.abs(days);
+    return `Expiré depuis ${past} jour${past > 1 ? 's' : ''}`;
+  }
+  if (days === 0) return "Expire aujourd'hui";
+  if (days < 31) return `${days} jour${days > 1 ? 's' : ''} restants`;
+
+  const months = Math.floor(days / 30);
+  const rest = days % 30;
+  const monthPart = `${months} mois`;
+  return rest === 0 ? `${monthPart} restants` : `${monthPart} et ${rest} j restants`;
+};
+
 export interface SubscriptionSummary {
   id: string;
   businessReference: string;
   establishmentId: string;
   establishmentName: string;
+  planId: string;
   planCode: string;
   planName: string;
   status: SubscriptionState;
+  health: SubscriptionHealth;
   startDate: string;
   endDate: string | null;
+  durationMonths: number | null;
+  daysLeft: number | null;
+  monthsLeft: number | null;
 }
 
 export interface SubscriptionEvent {
@@ -247,6 +350,35 @@ export const listPlans = async (): Promise<SubscriptionPlan[]> => {
   return (data ?? []).map(toPlan);
 };
 
+const toSummary = (row: {
+  id: string;
+  business_reference: string;
+  establishment_id: string;
+  plan_id: string;
+  status: SubscriptionState;
+  start_date: string;
+  end_date: string | null;
+  duration_months: number | null;
+}, joined: {
+  plan?: { code: string; name: string } | null;
+  establishment?: { name: string } | null;
+}): SubscriptionSummary => ({
+  id: row.id,
+  businessReference: row.business_reference,
+  establishmentId: row.establishment_id,
+  establishmentName: joined.establishment?.name ?? '',
+  planId: row.plan_id,
+  planCode: joined.plan?.code ?? '',
+  planName: joined.plan?.name ?? '',
+  status: row.status,
+  health: healthOf(row.status, row.end_date),
+  startDate: row.start_date,
+  endDate: row.end_date,
+  durationMonths: row.duration_months,
+  daysLeft: daysRemaining(row.end_date),
+  monthsLeft: monthsRemaining(row.end_date),
+});
+
 export const listSubscriptions = async (): Promise<SubscriptionSummary[]> => {
   const { data, error } = await getClient()
     .from('subscriptions')
@@ -258,41 +390,88 @@ export const listSubscriptions = async (): Promise<SubscriptionSummary[]> => {
 
   failIf(error, 'Chargement des abonnements');
 
-  return (data ?? []).map((row) => {
-    const joined = row as unknown as {
+  return (data ?? []).map((row) =>
+    toSummary(
+      row,
+      row as unknown as {
+        plan?: { code: string; name: string } | null;
+        establishment?: { name: string } | null;
+      },
+    ),
+  );
+};
+
+/**
+ * Abonnement d'un établissement précis.
+ *
+ * Sert à l'interface du responsable : il doit connaître sa formule, son
+ * échéance et le temps qui lui reste (UG02 §17). La politique
+ * `subscriptions_read_own` l'autorise à lire le sien, et lui seul.
+ */
+export const getEstablishmentSubscription = async (
+  establishmentId: string,
+): Promise<SubscriptionSummary | null> => {
+  const { data, error } = await getClient()
+    .from('subscriptions')
+    .select('*, plan:subscription_plans(code, name), establishment:establishments(name)')
+    .eq('establishment_id', establishmentId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  failIf(error, "Chargement de l'abonnement");
+  if (!data) return null;
+
+  return toSummary(
+    data,
+    data as unknown as {
       plan?: { code: string; name: string } | null;
       establishment?: { name: string } | null;
-    };
-    return {
-      id: row.id,
-      businessReference: row.business_reference,
-      establishmentId: row.establishment_id,
-      establishmentName: joined.establishment?.name ?? '',
-      planCode: joined.plan?.code ?? '',
-      planName: joined.plan?.name ?? '',
-      status: row.status,
-      startDate: row.start_date,
-      endDate: row.end_date,
-    };
-  });
+    },
+  );
 };
+
+const toIsoDate = (date: Date): string => date.toISOString().split('T')[0];
 
 /**
  * Calcule la date de fin d'un abonnement.
  *
- * BP09 §5 : « une date de fin (sauf Gratuit) ». Un plan sans durée définie
- * (`duration_days` NULL) est donc permanent.
+ * Trois cas, dans cet ordre :
+ *
+ *   1. une durée en mois est vendue : elle prime, c'est ce que le client a payé ;
+ *   2. la formule fixe une durée en jours (l'essai) : elle s'applique ;
+ *   3. ni l'une ni l'autre : l'abonnement est permanent (BP09 §5, « sauf Gratuit »).
+ *
+ * L'ajout de mois passe par `setMonth`, qui ramène au dernier jour du mois
+ * lorsque le quantième n'existe pas — un abonnement souscrit le 31 janvier
+ * pour un mois échoit ainsi le 28 ou 29 février, et non le 3 mars.
  */
-const computeEndDate = (plan: SubscriptionPlan, startDate: Date): string | null => {
+const computeEndDate = (
+  plan: SubscriptionPlan,
+  startDate: Date,
+  durationMonths?: number | null,
+): string | null => {
+  if (durationMonths && durationMonths > 0) {
+    const end = new Date(startDate);
+    const day = end.getDate();
+    end.setMonth(end.getMonth() + durationMonths);
+    if (end.getDate() < day) end.setDate(0);
+    return toIsoDate(end);
+  }
+
   if (plan.durationDays === null) return null;
+
   const end = new Date(startDate);
   end.setDate(end.getDate() + plan.durationDays);
-  return end.toISOString().split('T')[0];
+  return toIsoDate(end);
 };
 
 export interface CreateSubscriptionInput {
   establishmentId: string;
   planId: string;
+  /** Durée vendue, en mois. Absente pour un essai ou une formule permanente. */
+  durationMonths?: number | null;
   /** BP09 §6 : un abonnement naît « En attente » sauf activation immédiate. */
   activateImmediately?: boolean;
 }
@@ -319,7 +498,7 @@ export const createSubscription = async (
   const plan = toPlan(planRow as SubscriptionPlanRow);
 
   const start = new Date();
-  const endDate = computeEndDate(plan, start);
+  const endDate = computeEndDate(plan, start, input.durationMonths);
 
   const { data: created, error } = await client
     .from('subscriptions')
@@ -327,8 +506,9 @@ export const createSubscription = async (
       establishment_id: input.establishmentId,
       plan_id: input.planId,
       status: input.activateImmediately ? 'active' : 'pending',
-      start_date: start.toISOString().split('T')[0],
+      start_date: toIsoDate(start),
       end_date: endDate,
+      duration_months: input.durationMonths ?? null,
       created_by: userId,
       updated_by: userId,
     })
@@ -378,37 +558,173 @@ export const setSubscriptionStatus = async (
  */
 export const renewSubscription = async (
   subscriptionId: string,
-  additionalDays: number,
+  additionalMonths: number,
   userId: string,
 ): Promise<void> => {
   const client = getClient();
 
   const { data, error } = await client
     .from('subscriptions')
-    .select('end_date')
+    .select('end_date, duration_months')
     .eq('id', subscriptionId)
     .single();
 
   failIf(error, "Lecture de l'abonnement");
 
-  const current = (data as { end_date: string | null }).end_date;
-  const base = current && new Date(current) > new Date() ? new Date(current) : new Date();
-  base.setDate(base.getDate() + additionalDays);
-  const newEnd = base.toISOString().split('T')[0];
+  const row = data as { end_date: string | null; duration_months: number | null };
 
+  // La prolongation part de l'échéance en cours si elle est future : le client
+  // ne doit pas perdre les jours qu'il a déjà payés. Si elle est passée, elle
+  // repart d'aujourd'hui — prolonger dans le passé n'ouvrirait aucun accès.
+  const base =
+    row.end_date && new Date(row.end_date) > new Date() ? new Date(row.end_date) : new Date();
+
+  const day = base.getDate();
+  base.setMonth(base.getMonth() + additionalMonths);
+  if (base.getDate() < day) base.setDate(0);
+
+  const newEnd = toIsoDate(base);
+
+  // La licence est mise à jour par le trigger `sync_license_with_subscription`.
   const { error: updateError } = await client
     .from('subscriptions')
-    .update({ end_date: newEnd, status: 'active', updated_by: userId })
+    .update({
+      end_date: newEnd,
+      status: 'active',
+      duration_months: (row.duration_months ?? 0) + additionalMonths,
+      updated_by: userId,
+    })
     .eq('id', subscriptionId);
 
   failIf(updateError, 'Renouvellement de l’abonnement');
+};
 
-  const { error: licenseError } = await client
-    .from('licenses')
-    .update({ expires_at: newEnd, status: 'active', updated_by: userId })
-    .eq('subscription_id', subscriptionId);
+export interface ChangePlanInput {
+  subscriptionId: string;
+  /** Nouvelle formule. */
+  planId: string;
+  /** Durée de la nouvelle période, en mois. */
+  durationMonths?: number | null;
+  /**
+   * Repartir d'aujourd'hui plutôt que de conserver l'échéance en cours.
+   *
+   * Une montée en gamme se facture en général sur une nouvelle période ; une
+   * correction d'erreur, non. Le choix appartient à l'éditeur.
+   */
+  restartPeriod?: boolean;
+}
 
-  failIf(licenseError, 'Prolongation de la licence');
+/**
+ * Change la formule d'un établissement (BP09 §7).
+ *
+ * Trois effets, tous portés par la base plutôt que par cet appel :
+ *
+ *   - l'événement `plan_changed` est écrit par `log_subscription_change`, avec
+ *     l'ancienne et la nouvelle formule ;
+ *   - la licence reprend le plafond d'utilisateurs et le stockage de la
+ *     nouvelle formule, via `sync_license_with_subscription` ;
+ *   - l'échéance suit la durée retenue.
+ *
+ * Aucune donnée de l'établissement n'est touchée : BP09 §8 l'exige pour le
+ * renouvellement, et il n'y a pas de raison qu'un changement de formule soit
+ * plus destructeur.
+ */
+export const changeSubscriptionPlan = async (
+  input: ChangePlanInput,
+  userId: string,
+): Promise<void> => {
+  const client = getClient();
+
+  const [{ data: current, error: currentError }, { data: planRow, error: planError }] =
+    await Promise.all([
+      client
+        .from('subscriptions')
+        .select('start_date, end_date, status')
+        .eq('id', input.subscriptionId)
+        .single(),
+      client.from('subscription_plans').select('*').eq('id', input.planId).single(),
+    ]);
+
+  failIf(currentError, "Lecture de l'abonnement");
+  failIf(planError, 'Lecture de la formule');
+
+  const existing = current as { start_date: string; end_date: string | null; status: string };
+  const plan = toPlan(planRow as SubscriptionPlanRow);
+
+  const start = input.restartPeriod ? new Date() : new Date(existing.start_date);
+
+  // Sans redémarrage ni durée explicite, l'échéance en cours est conservée :
+  // changer de formule ne doit pas raccourcir une période déjà payée.
+  const endDate =
+    input.durationMonths || input.restartPeriod
+      ? computeEndDate(plan, start, input.durationMonths)
+      : existing.end_date;
+
+  const { error } = await client
+    .from('subscriptions')
+    .update({
+      plan_id: input.planId,
+      start_date: toIsoDate(start),
+      end_date: endDate,
+      duration_months: input.durationMonths ?? null,
+      updated_by: userId,
+    })
+    .eq('id', input.subscriptionId);
+
+  failIf(error, 'Changement de formule');
+};
+
+/**
+ * Historique d'un abonnement, formule comprise.
+ *
+ * BP09 §14 : l'historique est écrit par des triggers et ne peut être ni omis
+ * ni supprimé.
+ */
+export interface SubscriptionHistoryEntry {
+  id: string;
+  eventType: string;
+  previousStatus: SubscriptionState | null;
+  newStatus: SubscriptionState | null;
+  previousPlanName: string | null;
+  newPlanName: string | null;
+  createdAt: string;
+}
+
+export const listSubscriptionHistory = async (
+  subscriptionId: string,
+): Promise<SubscriptionHistoryEntry[]> => {
+  const { data, error } = await getClient()
+    .from('subscription_events')
+    .select(
+      '*, previousPlan:subscription_plans!subscription_events_previous_plan_id_fkey(name), newPlan:subscription_plans!subscription_events_new_plan_id_fkey(name)',
+    )
+    .eq('subscription_id', subscriptionId)
+    .order('created_at', { ascending: false });
+
+  failIf(error, "Chargement de l'historique");
+
+  return (data ?? []).map((row) => {
+    const joined = row as unknown as {
+      previousPlan?: { name: string } | null;
+      newPlan?: { name: string } | null;
+    };
+    return {
+      id: row.id,
+      eventType: row.event_type,
+      previousStatus: row.previous_status,
+      newStatus: row.new_status,
+      previousPlanName: joined.previousPlan?.name ?? null,
+      newPlanName: joined.newPlan?.name ?? null,
+      createdAt: row.created_at,
+    };
+  });
+};
+
+export const EVENT_LABELS: Record<string, string> = {
+  created: 'Abonnement créé',
+  plan_changed: 'Changement de formule',
+  status_changed: 'Changement de statut',
+  renewed: 'Renouvellement',
 };
 
 export const listSubscriptionEvents = async (

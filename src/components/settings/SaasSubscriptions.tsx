@@ -2,7 +2,16 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { Select } from '@/components/ui/Select';
-import { CreditCard, KeyRound, RefreshCw, PauseCircle, PlayCircle, Plus } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  CreditCard,
+  History,
+  KeyRound,
+  RefreshCw,
+  PauseCircle,
+  PlayCircle,
+  Plus,
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -13,10 +22,17 @@ import {
   listPlans,
   listSubscriptions,
   listLicenses,
+  listSubscriptionHistory,
   createSubscription,
+  changeSubscriptionPlan,
   setSubscriptionStatus,
   setLicenseStatus,
   renewSubscription,
+  describeRemaining,
+  EVENT_LABELS,
+  HEALTH_LABELS,
+  HEALTH_TONES,
+  type SubscriptionHistoryEntry,
   type SubscriptionPlan,
   type SubscriptionSummary,
   type LicenseSummary,
@@ -54,6 +70,12 @@ const tone = (status: string): string =>
       ? 'bg-amber-500/15 text-amber-400'
       : 'bg-red-500/15 text-red-400';
 
+/** Durées proposées : de 1 à 12 mois, sans mention tarifaire. */
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
+  value: String(index + 1),
+  label: index === 0 ? '1 mois' : `${index + 1} mois`,
+}));
+
 export const SaasSubscriptions: React.FC = () => {
   const { user } = useAuth();
 
@@ -64,7 +86,21 @@ export const SaasSubscriptions: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [form, setForm] = useState({ establishmentId: '', planId: '', activate: true });
+  const [form, setForm] = useState({
+    establishmentId: '',
+    planId: '',
+    durationMonths: '1',
+    activate: true,
+  });
+
+  /** Abonnement en cours de modification, et nature de l'action demandée. */
+  const [pending, setPending] = useState<
+    { kind: 'plan' | 'renew' | 'history'; subscription: SubscriptionSummary } | null
+  >(null);
+  const [planChange, setPlanChange] = useState({ planId: '', durationMonths: '1', restart: true });
+  const [renewMonths, setRenewMonths] = useState('12');
+  const [history, setHistory] = useState<SubscriptionHistoryEntry[]>([]);
+  const [isBusy, setIsBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -89,6 +125,48 @@ export const SaasSubscriptions: React.FC = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /** Une formule à 0 KMF n'a ni durée à choisir ni échéance à calculer. */
+  const selectedPlanIsPaid = plans.find((plan) => plan.id === form.planId)?.priceAmount
+    ? true
+    : false;
+
+  const openPlanChange = (subscription: SubscriptionSummary) => {
+    setPlanChange({
+      planId: subscription.planId,
+      durationMonths: String(subscription.durationMonths ?? 1),
+      restart: true,
+    });
+    setPending({ kind: 'plan', subscription });
+  };
+
+  const openRenewal = (subscription: SubscriptionSummary) => {
+    setRenewMonths('12');
+    setPending({ kind: 'renew', subscription });
+  };
+
+  const openHistory = async (subscription: SubscriptionSummary) => {
+    setPending({ kind: 'history', subscription });
+    setHistory([]);
+    try {
+      setHistory(await listSubscriptionHistory(subscription.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Historique indisponible.');
+    }
+  };
+
+  const run = async (
+    action: () => Promise<void>,
+    audit: { action: string; entity: string; id: string },
+  ) => {
+    setIsBusy(true);
+    try {
+      await guard(action, audit);
+      setPending(null);
+    } finally {
+      setIsBusy(false);
+    }
+  };
 
   const guard = async (action: () => Promise<void>, audit: { action: string; entity: string; id: string }) => {
     if (!user) return;
@@ -119,6 +197,9 @@ export const SaasSubscriptions: React.FC = () => {
           {
             establishmentId: form.establishmentId,
             planId: form.planId,
+            // La durée n'a de sens que pour une formule payante : l'essai porte
+            // la sienne en jours, et le plan gratuit n'expire pas.
+            durationMonths: selectedPlanIsPaid ? Number(form.durationMonths) : null,
             activateImmediately: form.activate,
           },
           user.id,
@@ -127,7 +208,7 @@ export const SaasSubscriptions: React.FC = () => {
     );
 
     setIsCreateOpen(false);
-    setForm({ establishmentId: '', planId: '', activate: true });
+    setForm({ establishmentId: '', planId: '', durationMonths: '1', activate: true });
   };
 
   if (isLoading) {
@@ -206,14 +287,15 @@ export const SaasSubscriptions: React.FC = () => {
                 <th className="p-3">Formule</th>
                 <th className="p-3">Début</th>
                 <th className="p-3">Échéance</th>
-                <th className="p-3">Statut</th>
+                <th className="p-3">Temps restant</th>
+                <th className="p-3">État</th>
                 <th className="p-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {subscriptions.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500">
+                  <td colSpan={8} className="p-8 text-center text-slate-500">
                     Aucun abonnement enregistré.
                   </td>
                 </tr>
@@ -222,12 +304,36 @@ export const SaasSubscriptions: React.FC = () => {
                 <tr key={sub.id} className="hover:bg-slate-800/40">
                   <td className="p-3 font-mono text-mora-green font-bold">{sub.businessReference}</td>
                   <td className="p-3 font-bold text-white">{sub.establishmentName}</td>
-                  <td className="p-3">{sub.planName}</td>
-                  <td className="p-3">{formatDate(sub.startDate)}</td>
-                  <td className="p-3">{sub.endDate ? formatDate(sub.endDate) : 'Permanent'}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${tone(sub.status)}`}>
-                      {SUB_LABELS[sub.status] ?? sub.status}
+                    {sub.planName}
+                    {sub.durationMonths && (
+                      <span className="block text-[10px] text-slate-500">
+                        {sub.durationMonths} mois
+                      </span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap p-3">{formatDate(sub.startDate)}</td>
+                  <td className="whitespace-nowrap p-3">
+                    {sub.endDate ? formatDate(sub.endDate) : 'Permanent'}
+                  </td>
+                  <td className="whitespace-nowrap p-3">
+                    <span
+                      className={
+                        sub.health === 'expired'
+                          ? 'text-red-400'
+                          : sub.health === 'expiring_soon'
+                            ? 'text-amber-400'
+                            : 'text-slate-300'
+                      }
+                    >
+                      {describeRemaining(sub.endDate)}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span
+                      className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${HEALTH_TONES[sub.health]}`}
+                    >
+                      {HEALTH_LABELS[sub.health]}
                     </span>
                   </td>
                   <td className="p-3">
@@ -235,14 +341,19 @@ export const SaasSubscriptions: React.FC = () => {
                       label={`Actions pour ${sub.establishmentName}`}
                       items={[
                         {
-                          label: 'Renouveler de 365 jours',
+                          label: 'Changer de formule',
+                          icon: ArrowLeftRight,
+                          onSelect: () => openPlanChange(sub),
+                        },
+                        {
+                          label: 'Prolonger',
                           icon: RefreshCw,
-                          onSelect: () =>
-                            void guard(() => renewSubscription(sub.id, 365, user!.id), {
-                              action: 'subscription_renewed',
-                              entity: 'subscriptions',
-                              id: sub.id,
-                            }),
+                          onSelect: () => openRenewal(sub),
+                        },
+                        {
+                          label: 'Voir l’historique',
+                          icon: History,
+                          onSelect: () => void openHistory(sub),
                         },
                         sub.status === 'active'
                           ? {
@@ -389,6 +500,22 @@ export const SaasSubscriptions: React.FC = () => {
             />
           </div>
 
+          {/* La durée ne concerne que les formules payantes : l'essai a la
+              sienne, en jours, et le plan gratuit n'expire pas. */}
+          {selectedPlanIsPaid && (
+            <div>
+              <label className="block text-xs font-semibold mb-1">Durée</label>
+              <Select
+                value={form.durationMonths}
+                onChange={(value) => setForm({ ...form, durationMonths: value })}
+                options={MONTH_OPTIONS}
+              />
+              <p className="mt-1 text-[11px] text-slate-400">
+                L&apos;échéance est calculée à partir de cette durée.
+              </p>
+            </div>
+          )}
+
           <label className="flex items-center gap-2 text-xs">
             <input
               type="checkbox"
@@ -404,6 +531,240 @@ export const SaasSubscriptions: React.FC = () => {
           </Button>
         </form>
       </Modal>
+
+      {/* ---------------------- Changement de formule ---------------------- */}
+      <Modal
+        isOpen={pending?.kind === 'plan'}
+        onClose={() => setPending(null)}
+        title="Changer de formule"
+        description={pending?.subscription.establishmentName}
+        maxWidth="xl"
+      >
+        {pending?.kind === 'plan' && (
+          <div className="space-y-4">
+            <dl className="divide-y divide-slate-800 rounded-xl border border-slate-800 bg-slate-950 text-xs">
+              <InfoRow label="Formule actuelle" value={pending.subscription.planName} />
+              <InfoRow
+                label="Échéance actuelle"
+                value={
+                  pending.subscription.endDate
+                    ? formatDate(pending.subscription.endDate)
+                    : 'Permanente'
+                }
+              />
+            </dl>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-300">
+                Nouvelle formule
+              </label>
+              <Select
+                value={planChange.planId}
+                onChange={(value) => setPlanChange({ ...planChange, planId: value })}
+                options={plans.map((plan) => ({ value: plan.id, label: plan.name }))}
+              />
+            </div>
+
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl bg-slate-950 p-3 text-xs text-slate-300">
+              <input
+                type="checkbox"
+                checked={planChange.restart}
+                onChange={(e) => setPlanChange({ ...planChange, restart: e.target.checked })}
+                className="mt-0.5 h-4 w-4 accent-mora-green"
+              />
+              <span>
+                Démarrer une nouvelle période à compter d&apos;aujourd&apos;hui.
+                <span className="mt-0.5 block text-[11px] text-slate-500">
+                  Décoché, l&apos;échéance en cours est conservée : le client ne perd pas les jours
+                  déjà réglés.
+                </span>
+              </span>
+            </label>
+
+            {planChange.restart && (
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-slate-300">
+                  Durée de la nouvelle période
+                </label>
+                <Select
+                  value={planChange.durationMonths}
+                  onChange={(value) => setPlanChange({ ...planChange, durationMonths: value })}
+                  options={MONTH_OPTIONS}
+                />
+              </div>
+            )}
+
+            <p className="rounded-xl bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-400">
+              Le changement est historisé, et la licence reprend automatiquement le plafond
+              d&apos;utilisateurs et le stockage de la nouvelle formule. Aucune donnée de
+              l&apos;établissement n&apos;est supprimée.
+            </p>
+
+            <div className="flex flex-col gap-2 sm:flex-row-reverse">
+              <Button
+                variant="secondary"
+                isLoading={isBusy}
+                className="w-full py-2.5 font-bold sm:w-auto sm:px-8"
+                onClick={() =>
+                  void run(
+                    () =>
+                      changeSubscriptionPlan(
+                        {
+                          subscriptionId: pending.subscription.id,
+                          planId: planChange.planId,
+                          durationMonths: planChange.restart
+                            ? Number(planChange.durationMonths)
+                            : null,
+                          restartPeriod: planChange.restart,
+                        },
+                        user!.id,
+                      ),
+                    {
+                      action: 'subscription_plan_changed',
+                      entity: 'subscriptions',
+                      id: pending.subscription.id,
+                    },
+                  )
+                }
+              >
+                Appliquer la nouvelle formule
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setPending(null)}
+                className="w-full py-2.5 sm:w-auto sm:px-6"
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* -------------------------- Prolongation --------------------------- */}
+      <Modal
+        isOpen={pending?.kind === 'renew'}
+        onClose={() => setPending(null)}
+        title="Prolonger l'abonnement"
+        description={pending?.subscription.establishmentName}
+      >
+        {pending?.kind === 'renew' && (
+          <div className="space-y-4">
+            <dl className="divide-y divide-slate-800 rounded-xl border border-slate-800 bg-slate-950 text-xs">
+              <InfoRow label="Formule" value={pending.subscription.planName} />
+              <InfoRow
+                label="Échéance actuelle"
+                value={
+                  pending.subscription.endDate
+                    ? formatDate(pending.subscription.endDate)
+                    : 'Permanente'
+                }
+              />
+              <InfoRow label="Temps restant" value={describeRemaining(pending.subscription.endDate)} />
+            </dl>
+
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-slate-300">
+                Prolonger de
+              </label>
+              <Select
+                value={renewMonths}
+                onChange={setRenewMonths}
+                options={MONTH_OPTIONS}
+              />
+            </div>
+
+            <p className="rounded-xl bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-400">
+              La prolongation part de l&apos;échéance en cours si elle est future, sinon
+              d&apos;aujourd&apos;hui. Aucune donnée n&apos;est supprimée, aucune configuration
+              n&apos;est perdue.
+            </p>
+
+            <div className="flex flex-col gap-2 sm:flex-row-reverse">
+              <Button
+                variant="secondary"
+                isLoading={isBusy}
+                className="w-full py-2.5 font-bold sm:w-auto sm:px-8"
+                onClick={() =>
+                  void run(
+                    () =>
+                      renewSubscription(pending.subscription.id, Number(renewMonths), user!.id),
+                    {
+                      action: 'subscription_renewed',
+                      entity: 'subscriptions',
+                      id: pending.subscription.id,
+                    },
+                  )
+                }
+              >
+                Prolonger
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setPending(null)}
+                className="w-full py-2.5 sm:w-auto sm:px-6"
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* --------------------------- Historique ---------------------------- */}
+      <Modal
+        isOpen={pending?.kind === 'history'}
+        onClose={() => setPending(null)}
+        title="Historique de l'abonnement"
+        description={pending?.subscription.establishmentName}
+        maxWidth="xl"
+      >
+        {pending?.kind === 'history' && (
+          <div className="space-y-3">
+            {history.length === 0 ? (
+              <p className="py-6 text-center text-xs text-slate-500">Aucun événement enregistré.</p>
+            ) : (
+              <ul className="divide-y divide-slate-800 rounded-xl border border-slate-800 bg-slate-950">
+                {history.map((entry) => (
+                  <li key={entry.id} className="p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-white">
+                        {EVENT_LABELS[entry.eventType] ?? entry.eventType}
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        {formatDate(entry.createdAt)}
+                      </span>
+                    </div>
+
+                    {entry.previousPlanName !== entry.newPlanName && (
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        {entry.previousPlanName ?? '—'} → {entry.newPlanName ?? '—'}
+                      </p>
+                    )}
+
+                    {entry.previousStatus !== entry.newStatus && (
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        Statut : {SUB_LABELS[entry.previousStatus ?? ''] ?? entry.previousStatus ?? '—'}{' '}
+                        → {SUB_LABELS[entry.newStatus ?? ''] ?? entry.newStatus ?? '—'}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-[11px] text-slate-500">
+              L&apos;historique est écrit automatiquement et ne peut être ni modifié ni supprimé.
+            </p>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
+
+const InfoRow: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div className="flex flex-wrap items-center justify-between gap-3 p-3">
+    <dt className="text-slate-400">{label}</dt>
+    <dd className="text-right font-semibold text-slate-200">{value}</dd>
+  </div>
+);

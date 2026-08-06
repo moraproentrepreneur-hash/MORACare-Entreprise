@@ -594,10 +594,40 @@ describe('Sécurité en base', () => {
               'phone_secondary','whatsapp','support_email','website','island',
               'latitude','longitude','currency','timezone','locale',
               'opening_hours','specialties','primary_color','secondary_color',
-              'pdf_header','pdf_footer','signature_url','signature_holder','stamp_url'
+              'pdf_template','document_templates','signature_url','signature_holder','stamp_url'
             )`,
       );
       expect(rows.rows).toHaveLength(28);
+    });
+
+    /*
+     * L'en-tête et le pied de page ne sont plus saisis : ils sont composés à
+     * partir de l'identité, des coordonnées et des informations légales.
+     * Conserver les colonnes aurait laissé subsister une seconde source de
+     * vérité, vouée à diverger.
+     */
+    it('ne conserve plus d’en-tête ni de pied de page saisis à la main', async () => {
+      const rows = await db.query<{ column_name: string }>(
+        `SELECT column_name FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'establishments'
+            AND column_name IN ('pdf_header', 'pdf_footer')`,
+      );
+      expect(rows.rows).toEqual([]);
+    });
+
+    it('n’accepte que les trois modèles documentaires officiels', async () => {
+      for (const template of ['premium_classic', 'premium_medical', 'premium_executive']) {
+        await db.query(`UPDATE public.establishments SET pdf_template = $1 WHERE id = $2`, [
+          template,
+          establishmentId,
+        ]);
+      }
+
+      await expect(
+        db.query(`UPDATE public.establishments SET pdf_template = 'maison' WHERE id = $1`, [
+          establishmentId,
+        ]),
+      ).rejects.toThrow();
     });
 
     it('applique KMF et le fuseau des Comores par défaut', async () => {

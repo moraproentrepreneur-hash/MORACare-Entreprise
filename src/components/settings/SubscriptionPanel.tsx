@@ -1,7 +1,23 @@
 'use client';
 
 import React from 'react';
-import { CreditCard, KeyRound, CalendarClock, Users, HardDrive, AlertTriangle } from 'lucide-react';
+import {
+  CreditCard,
+  KeyRound,
+  CalendarClock,
+  Hourglass,
+  Users,
+  HardDrive,
+  AlertTriangle,
+} from 'lucide-react';
+import {
+  HEALTH_LABELS,
+  HEALTH_TONES,
+  daysRemaining,
+  describeRemaining,
+  healthOf,
+  monthsRemaining,
+} from '@/services/subscription.service';
 import { usePermissions } from '@/hooks/usePermissions';
 import { formatDate } from '@/lib/utils';
 
@@ -14,14 +30,6 @@ import { formatDate } from '@/lib/utils';
  * Aucune référence documentaire interne n'apparaît à l'écran : ces repères
  * servent au développement, pas à l'utilisateur.
  */
-
-const SUBSCRIPTION_LABELS: Record<string, string> = {
-  pending: 'En attente',
-  active: 'Actif',
-  suspended: 'Suspendu',
-  expired: 'Expiré',
-  terminated: 'Résilié',
-};
 
 const LICENSE_LABELS: Record<string, string> = {
   active: 'Active',
@@ -52,26 +60,32 @@ export const SubscriptionPanel: React.FC = () => {
     );
   }
 
-  const daysLeft = subscription?.endDate
-    ? Math.ceil((new Date(subscription.endDate).getTime() - Date.now()) / 86_400_000)
-    : null;
+  /*
+   * L'état affiché est calculé par la même fonction que côté Super Admin.
+   * Les deux interfaces disent donc exactement la même chose : se contredire
+   * sur l'échéance d'un contrat serait le plus sûr moyen de perdre la confiance
+   * du client.
+   */
+  const health = subscription ? healthOf(subscription.status, subscription.endDate) : null;
+  const daysLeft = subscription ? daysRemaining(subscription.endDate) : null;
+  const monthsLeft = subscription ? monthsRemaining(subscription.endDate) : null;
 
   return (
     <div className="space-y-4">
-      {subscription && (
+      {subscription && health && (
         <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-mora-green" /> Abonnement
             </h3>
             <span
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${toneFor(subscription.status)}`}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${HEALTH_TONES[health]}`}
             >
-              {SUBSCRIPTION_LABELS[subscription.status] ?? subscription.status}
+              {HEALTH_LABELS[health]}
             </span>
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-4 text-xs">
+          <div className="grid gap-4 text-xs sm:grid-cols-2 lg:grid-cols-4">
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
               <p className="text-slate-400">Formule souscrite</p>
               <p className="text-white font-bold text-sm mt-1">{subscription.planName || '—'}</p>
@@ -88,16 +102,47 @@ export const SubscriptionPanel: React.FC = () => {
                 {subscription.endDate ? formatDate(subscription.endDate) : 'Permanent'}
               </p>
             </div>
+            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+              <p className="text-slate-400 flex items-center gap-1">
+                <Hourglass className="w-3 h-3" /> Temps restant
+              </p>
+              <p
+                className={`mt-1 text-sm font-bold ${
+                  health === 'expired'
+                    ? 'text-red-400'
+                    : health === 'expiring_soon'
+                      ? 'text-amber-400'
+                      : 'text-white'
+                }`}
+              >
+                {describeRemaining(subscription.endDate)}
+              </p>
+              {monthsLeft !== null && monthsLeft > 0 && daysLeft !== null && daysLeft > 30 && (
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  soit {monthsLeft} mois plein{monthsLeft > 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
           </div>
 
-          {daysLeft !== null && daysLeft <= 30 && (
+          {(health === 'expiring_soon' || health === 'expired') && (
             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2 text-[11px] text-amber-200/90">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
               <span>
-                {daysLeft > 0
-                  ? `Votre abonnement expire dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}.`
-                  : 'Votre abonnement est arrivé à échéance.'}{' '}
+                {health === 'expired'
+                  ? 'Votre abonnement est arrivé à échéance.'
+                  : `Votre abonnement expire dans ${daysLeft} jour${(daysLeft ?? 0) > 1 ? 's' : ''}.`}{' '}
                 Contactez MORA Shawiri pour le renouveler — aucune donnée n&apos;est supprimée.
+              </span>
+            </div>
+          )}
+
+          {health === 'suspended' && (
+            <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-start gap-2 text-[11px] text-orange-200/90">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-orange-400" />
+              <span>
+                Votre abonnement est suspendu. Vos données restent intactes : contactez MORA
+                Shawiri pour rétablir l&apos;accès.
               </span>
             </div>
           )}

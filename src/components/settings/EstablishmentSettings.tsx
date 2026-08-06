@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
+  Check,
   Clock,
   FileText,
   Globe2,
   ImagePlus,
   Landmark,
+  LayoutTemplate,
   Loader2,
   MapPin,
   Palette,
@@ -31,6 +33,14 @@ import {
   type DayKey,
   type EstablishmentProfile,
 } from '@/services/establishment.service';
+import { useBranding } from '@/context/BrandingContext';
+import {
+  DOCUMENT_KINDS,
+  TEMPLATES,
+  TEMPLATE_IDS,
+  buildFooterLines,
+  buildHeaderLines,
+} from '@/lib/documents/branding';
 import type { EstablishmentType } from '@/types';
 
 /**
@@ -91,6 +101,7 @@ const FIELD =
 export const EstablishmentSettings: React.FC = () => {
   const { user } = useAuth();
   const { canUpdate } = usePermissions();
+  const { refresh: refreshBranding } = useBranding();
 
   const [profile, setProfile] = useState<EstablishmentProfile | null>(null);
   const [draft, setDraft] = useState<EstablishmentProfile | null>(null);
@@ -130,6 +141,11 @@ export const EstablishmentSettings: React.FC = () => {
   const update = (patch: Partial<EstablishmentProfile>) =>
     setDraft((current) => (current ? { ...current, ...patch } : current));
 
+  // Aperçu composé à la volée : ce que l'on voit ici est exactement ce que le
+  // moteur documentaire imprimera, puisqu'il appelle les mêmes fonctions.
+  const headerPreview = useMemo(() => (draft ? buildHeaderLines(draft) : []), [draft]);
+  const footerPreview = useMemo(() => (draft ? buildFooterLines(draft) : []), [draft]);
+
   const handleSave = async () => {
     if (!draft || !user?.establishment_id) return;
 
@@ -150,6 +166,9 @@ export const EstablishmentSettings: React.FC = () => {
         user.id,
       );
       await load();
+      // Les couleurs de l'interface suivent immédiatement : sans cela, il
+      // faudrait recharger la page pour voir l'effet du réglage.
+      await refreshBranding();
       setNotice('Le profil de votre établissement est enregistré.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Enregistrement impossible.');
@@ -677,32 +696,120 @@ export const EstablishmentSettings: React.FC = () => {
       {section === 'documents' && (
         <>
           <Panel
-            title="Informations portées sur les PDF"
-            icon={FileText}
-            description="Reproduites en tête et en pied de chaque document généré."
+            title="Modèle de document"
+            icon={LayoutTemplate}
+            description="Trois présentations professionnelles. Le modèle choisi s'applique à tous vos documents."
           >
-            <Field label="En-tête" htmlFor="es-pdfh">
-              <textarea
-                id="es-pdfh"
-                rows={3}
-                className={FIELD}
-                disabled={!editable}
-                placeholder="Nom, autorisation, adresse…"
-                value={draft.pdfHeader}
-                onChange={(e) => update({ pdfHeader: e.target.value })}
-              />
-            </Field>
-            <Field label="Pied de page" htmlFor="es-pdff">
-              <textarea
-                id="es-pdff"
-                rows={3}
-                className={FIELD}
-                disabled={!editable}
-                placeholder="NIF, coordonnées bancaires, mentions…"
-                value={draft.pdfFooter}
-                onChange={(e) => update({ pdfFooter: e.target.value })}
-              />
-            </Field>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {TEMPLATE_IDS.map((id) => {
+                const template = TEMPLATES[id];
+                const selected = draft.pdfTemplate === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    disabled={!editable}
+                    onClick={() => update({ pdfTemplate: id })}
+                    aria-pressed={selected}
+                    className={`rounded-xl border p-4 text-left transition-all disabled:opacity-60 ${
+                      selected
+                        ? 'border-mora-green bg-slate-950 ring-1 ring-mora-green/40'
+                        : 'border-slate-800 bg-slate-950 hover:border-slate-700'
+                    }`}
+                  >
+                    <TemplatePreview
+                      templateId={id}
+                      primary={draft.primaryColor}
+                      secondary={draft.secondaryColor}
+                    />
+                    <p className="mt-3 flex items-center gap-1.5 text-xs font-bold text-white">
+                      {template.name}
+                      {selected && <Check className="h-3.5 w-3.5 text-mora-green" />}
+                    </p>
+                    <p className="text-[11px] text-slate-500">{template.style}</p>
+                    <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+                      {template.description}
+                    </p>
+                    <p className="mt-2 text-[10px] italic text-slate-500">{template.audience}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </Panel>
+
+          <Panel
+            title="Modèle par type de document"
+            description="Facultatif. Un type sans modèle propre utilise celui de l'établissement."
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(Object.keys(DOCUMENT_KINDS) as (keyof typeof DOCUMENT_KINDS)[]).map((kind) => (
+                <Field key={kind} label={DOCUMENT_KINDS[kind]} htmlFor={`es-tpl-${kind}`}>
+                  <Select
+                    id={`es-tpl-${kind}`}
+                    disabled={!editable}
+                    value={draft.documentTemplates?.[kind] ?? ''}
+                    onChange={(value) => {
+                      const next = { ...(draft.documentTemplates ?? {}) };
+                      if (value === '') delete next[kind];
+                      else next[kind] = value;
+                      update({
+                        documentTemplates: Object.keys(next).length > 0 ? next : null,
+                      });
+                    }}
+                    placeholder="Modèle de l'établissement"
+                    options={[
+                      { value: '', label: "Modèle de l'établissement" },
+                      ...TEMPLATE_IDS.map((id) => ({ value: id, label: TEMPLATES[id].name })),
+                    ]}
+                  />
+                </Field>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel
+            title="En-tête et pied de page"
+            icon={FileText}
+            description="Composés automatiquement à partir de l'identité, des coordonnées et des informations légales. Rien n'est saisi ici : corrigez la source."
+          >
+            <div className="space-y-3">
+              <div>
+                <p className="mb-1.5 text-xs font-semibold text-slate-300">En-tête généré</p>
+                <div className="space-y-1 rounded-xl border border-slate-800 bg-slate-950 p-3">
+                  <p className="text-sm font-bold text-white">
+                    {draft.legalName || draft.name || '—'}
+                  </p>
+                  {headerPreview.length === 0 ? (
+                    <p className="text-[11px] italic text-slate-500">
+                      Aucune coordonnée saisie : l&apos;en-tête ne portera que le nom.
+                    </p>
+                  ) : (
+                    headerPreview.map((line) => (
+                      <p key={line} className="text-[11px] text-slate-400">
+                        {line}
+                      </p>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-1.5 text-xs font-semibold text-slate-300">Pied de page généré</p>
+                <div className="space-y-1 rounded-xl border border-slate-800 bg-slate-950 p-3">
+                  {footerPreview.length === 0 ? (
+                    <p className="text-[11px] italic text-slate-500">
+                      Renseignez vos informations légales pour alimenter le pied de page.
+                    </p>
+                  ) : (
+                    footerPreview.map((line) => (
+                      <p key={line} className="text-[11px] text-slate-400">
+                        {line}
+                      </p>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </Panel>
 
           <Panel title="Signature et cachet" description="Apposés sur les documents officiels.">
@@ -839,6 +946,58 @@ const Field: React.FC<{
     </label>
     {children}
     {hint && <p className="mt-1 text-[11px] text-slate-500">{hint}</p>}
+  </div>
+);
+
+/**
+ * Vignette d'un modèle.
+ *
+ * Une miniature en HTML, et non une image : elle reprend les couleurs saisies,
+ * de sorte que le choix se fasse sur le rendu réel de l'établissement et non
+ * sur une capture générique.
+ */
+const TemplatePreview: React.FC<{
+  templateId: string;
+  primary: string;
+  secondary: string;
+}> = ({ templateId, primary, secondary }) => (
+  <div className="h-20 overflow-hidden rounded-lg border border-slate-800 bg-white">
+    {templateId === 'premium_classic' && (
+      <>
+        <div className="h-6" style={{ backgroundColor: primary }} />
+        <div className="space-y-1 p-1.5">
+          <div className="h-1 w-1/2 rounded-full bg-slate-300" />
+          <div className="h-1 w-full rounded-full bg-slate-200" />
+          <div className="h-1 w-4/5 rounded-full bg-slate-200" />
+        </div>
+      </>
+    )}
+
+    {templateId === 'premium_medical' && (
+      <>
+        <div className="h-5 bg-slate-100" />
+        <div className="h-0.5" style={{ backgroundColor: secondary }} />
+        <div className="space-y-1 p-1.5">
+          <div
+            className="h-3 w-full rounded"
+            style={{ backgroundColor: `${secondary}22` }}
+          />
+          <div className="h-1 w-full rounded-full bg-slate-200" />
+          <div className="h-1 w-3/5 rounded-full bg-slate-200" />
+        </div>
+      </>
+    )}
+
+    {templateId === 'premium_executive' && (
+      <div className="space-y-1 p-1.5">
+        <div className="h-1.5 w-2/3 rounded-full" style={{ backgroundColor: primary }} />
+        <div className="h-0.5 w-full" style={{ backgroundColor: primary }} />
+        <div className="h-px w-full" style={{ backgroundColor: secondary }} />
+        <div className="h-1 w-full rounded-full bg-slate-200" />
+        <div className="h-1 w-5/6 rounded-full bg-slate-200" />
+        <div className="h-1 w-2/3 rounded-full bg-slate-200" />
+      </div>
+    )}
   </div>
 );
 

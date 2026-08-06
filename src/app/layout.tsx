@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { AccessProvider } from '@/context/AccessContext';
+import { BrandingProvider } from '@/context/BrandingContext';
 import { DataProvider } from '@/context/DataContext';
 
 /**
@@ -55,7 +56,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* Les droits sont chargés avant les données : une interface ne doit
               jamais afficher un module sans savoir s'il est autorisé. */}
           <AccessProvider>
-            <DataProvider>{children}</DataProvider>
+            {/* L'identité visuelle de l'établissement s'applique aux couleurs
+                de l'interface et alimente le moteur documentaire. */}
+            <BrandingProvider>
+              <DataProvider>{children}</DataProvider>
+            </BrandingProvider>
           </AccessProvider>
         </AuthProvider>
       </body>

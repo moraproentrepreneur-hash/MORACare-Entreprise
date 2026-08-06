@@ -33,6 +33,17 @@
     --ring: 210 100% 20%;
 
     --radius: 0.75rem;
+
+    /*
+     * Couleurs de marque, en composantes RVB séparées par des espaces —
+     * la forme qu'attend rgb(var(--x) / <alpha-value>).
+     *
+     * Ce sont les valeurs de la charte MORACare. Un établissement qui définit
+     * les siennes dans ses Paramètres les remplace à l'exécution ; la vitrine,
+     * qui n'appartient à aucun établissement, conserve celles-ci.
+     */
+    --mora-blue: 0 51 102;
+    --mora-green: 0 168 89;
   }
 
   .dark {

@@ -26,8 +26,10 @@ module.exports = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         mora: {
-          blue: "#003366",
-          green: "#00A859",
+          // Pilotées à l'exécution par les couleurs de l'établissement.
+          // Voir src/context/BrandingContext.tsx et globals.css.
+          blue: "rgb(var(--mora-blue) / <alpha-value>)",
+          green: "rgb(var(--mora-green) / <alpha-value>)",
           light: "#F5F7FA",
           gold: "#FFD700",
           navy: "#0A192F",

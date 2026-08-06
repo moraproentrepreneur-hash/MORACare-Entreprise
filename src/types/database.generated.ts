@@ -770,6 +770,7 @@ export type Database = {
           created_by: string | null
           currency: string
           deleted_at: string | null
+          document_templates: Json | null
           email: string
           id: string
           is_active: boolean | null
@@ -783,8 +784,7 @@ export type Database = {
           max_users: number | null
           name: string
           opening_hours: Json | null
-          pdf_footer: string | null
-          pdf_header: string | null
+          pdf_template: string
           phone: string
           phone_secondary: string | null
           postal_code: string | null
@@ -819,6 +819,7 @@ export type Database = {
           created_by?: string | null
           currency?: string
           deleted_at?: string | null
+          document_templates?: Json | null
           email: string
           id?: string
           is_active?: boolean | null
@@ -832,8 +833,7 @@ export type Database = {
           max_users?: number | null
           name: string
           opening_hours?: Json | null
-          pdf_footer?: string | null
-          pdf_header?: string | null
+          pdf_template?: string
           phone: string
           phone_secondary?: string | null
           postal_code?: string | null
@@ -868,6 +868,7 @@ export type Database = {
           created_by?: string | null
           currency?: string
           deleted_at?: string | null
+          document_templates?: Json | null
           email?: string
           id?: string
           is_active?: boolean | null
@@ -881,8 +882,7 @@ export type Database = {
           max_users?: number | null
           name?: string
           opening_hours?: Json | null
-          pdf_footer?: string | null
-          pdf_header?: string | null
+          pdf_template?: string
           phone?: string
           phone_secondary?: string | null
           postal_code?: string | null
@@ -3029,6 +3029,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           deleted_at: string | null
+          duration_months: number | null
           end_date: string | null
           establishment_id: string
           id: string
@@ -3043,6 +3044,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          duration_months?: number | null
           end_date?: string | null
           establishment_id: string
           id?: string
@@ -3057,6 +3059,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          duration_months?: number | null
           end_date?: string | null
           establishment_id?: string
           id?: string
@@ -3202,6 +3205,13 @@ export type Database = {
           p_view: boolean
         }
         Returns: undefined
+      }
+      subscription_state_of: {
+        Args: {
+          end_date: string
+          status: Database["public"]["Enums"]["subscription_state"]
+        }
+        Returns: string
       }
     }
     Enums: {

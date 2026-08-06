@@ -1,17 +1,29 @@
 'use client';
 
 import React, { useState } from 'react';
-import { BedDouble, Plus } from 'lucide-react';
+import { BedDouble, FileText, LogOut, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { Patient } from '@/types';
+import { Hospitalization, Patient } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useData } from '@/context/DataContext';
 import { PatientSelect } from '@/components/ui/PatientSelect';
+import { ActionMenu } from '@/components/ui/ActionMenu';
+import { useDocument } from '@/hooks/useDocument';
 import { DoctorSelect } from '@/components/ui/DoctorSelect';
+
+/** États d'un séjour (BP16 §12). */
+const STATUS_LABELS: Record<string, string> = {
+  admitted: 'Admis',
+  active: 'En cours',
+  transferred: 'Transféré',
+  discharged: 'Sorti',
+  cancelled: 'Annulé',
+};
 
 export const HospitalizationsModule: React.FC = () => {
   const { patients, hospitalizations, addHospitalization } = useData();
+  const { print, error: documentError } = useDocument();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const [selectedPatientId, setSelectedPatientId] = useState('');
@@ -26,6 +38,91 @@ export const HospitalizationsModule: React.FC = () => {
 
   const handleSelectPatient = (p: Patient) => {
     setSelectedPatientId(p.id);
+  };
+
+  /** Durée du séjour, en jours révolus. */
+  const stayLength = (h: Hospitalization): number => {
+    const end = h.discharge_date ? new Date(h.discharge_date) : new Date();
+    const start = new Date(h.admission_date);
+    return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86_400_000));
+  };
+
+  /**
+   * Bulletin d'hospitalisation (BP28C §7).
+   *
+   * L'en-tête, le logo, la signature, le cachet et le modèle proviennent des
+   * Paramètres de l'établissement.
+   */
+  const printBulletin = (h: Hospitalization) => {
+    void print({
+      kind: 'hospitalization',
+      reference: h.business_reference,
+      title: "Bulletin d'hospitalisation",
+      subtitle: `Admission du ${formatDate(h.admission_date)}`,
+      highlight: [
+        { label: 'Patient', value: h.patient_name },
+        { label: 'Praticien référent', value: h.doctor_name || '—' },
+        { label: 'Chambre / lit', value: `${h.room_number} — ${h.bed_number}` },
+        { label: 'Statut', value: STATUS_LABELS[h.status] ?? h.status },
+      ],
+      sections: [
+        {
+          title: 'Séjour',
+          fields: [
+            { label: "Date d'admission", value: formatDate(h.admission_date) },
+            {
+              label: 'Date de sortie',
+              value: h.discharge_date ? formatDate(h.discharge_date) : 'Séjour en cours',
+            },
+            { label: 'Durée', value: `${stayLength(h)} jour(s)` },
+          ],
+        },
+        {
+          title: "Motif d'admission",
+          paragraphs: [h.admission_reason || 'Non renseigné'],
+        },
+      ],
+      note: h.discharge_date
+        ? undefined
+        : "Séjour en cours. Ce bulletin reflète la situation à la date d'édition.",
+    });
+  };
+
+  /** Lettre de sortie (BP16 §11, BP28C §7). */
+  const printDischarge = (h: Hospitalization) => {
+    void print({
+      kind: 'discharge',
+      reference: h.business_reference,
+      title: 'Lettre de sortie',
+      subtitle: h.discharge_date ? `Sortie du ${formatDate(h.discharge_date)}` : undefined,
+      highlight: [
+        { label: 'Patient', value: h.patient_name },
+        { label: 'Praticien référent', value: h.doctor_name || '—' },
+        { label: 'Admission', value: formatDate(h.admission_date) },
+        {
+          label: 'Sortie',
+          value: h.discharge_date ? formatDate(h.discharge_date) : '—',
+        },
+      ],
+      sections: [
+        {
+          title: 'Séjour',
+          fields: [
+            { label: 'Chambre / lit', value: `${h.room_number} — ${h.bed_number}` },
+            { label: 'Durée', value: `${stayLength(h)} jour(s)` },
+            { label: "Motif d'admission", value: h.admission_reason || '—' },
+          ],
+        },
+        {
+          title: 'Suites à donner',
+          paragraphs: [
+            h.discharge_summary?.trim()
+              ? h.discharge_summary
+              : 'Aucun compte rendu de sortie saisi.',
+          ],
+        },
+      ],
+    });
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -69,6 +166,12 @@ export const HospitalizationsModule: React.FC = () => {
         </Button>
       </div>
 
+      {documentError && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-400">
+          {documentError}
+        </div>
+      )}
+
       <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
         {hospitalizations.length === 0 ? (
           <div className="p-12 text-center space-y-3">
@@ -92,6 +195,7 @@ export const HospitalizationsModule: React.FC = () => {
                   <th className="p-4">Date d'admission</th>
                   <th className="p-4">Motif d'admission</th>
                   <th className="p-4">Statut</th>
+                  <th className="p-4">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
@@ -104,8 +208,26 @@ export const HospitalizationsModule: React.FC = () => {
                     <td className="p-4">{h.admission_reason}</td>
                     <td className="p-4">
                       <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] uppercase">
-                        {h.status}
+                        {STATUS_LABELS[h.status] ?? h.status}
                       </span>
+                    </td>
+                    <td className="p-4">
+                      <ActionMenu
+                        label={`Actions pour ${h.patient_name}`}
+                        items={[
+                          {
+                            label: "Bulletin d'hospitalisation",
+                            icon: FileText,
+                            onSelect: () => printBulletin(h),
+                          },
+                          {
+                            label: 'Lettre de sortie',
+                            icon: LogOut,
+                            disabled: !h.discharge_date,
+                            onSelect: () => printDischarge(h),
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}

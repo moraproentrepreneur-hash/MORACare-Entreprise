@@ -155,8 +155,10 @@ export interface EstablishmentProfile {
   // Documents et identité visuelle
   primaryColor: string;
   secondaryColor: string;
-  pdfHeader: string;
-  pdfFooter: string;
+  /** Modèle documentaire par défaut (BP28C §9). */
+  pdfTemplate: string;
+  /** Modèle attribué à certains types de documents. */
+  documentTemplates: Record<string, string> | null;
   signatureUrl: string;
   signatureHolder: string;
   stampUrl: string;
@@ -233,8 +235,11 @@ export const getEstablishmentProfile = async (
 
     primaryColor: data.primary_color,
     secondaryColor: data.secondary_color,
-    pdfHeader: data.pdf_header ?? '',
-    pdfFooter: data.pdf_footer ?? '',
+    pdfTemplate: data.pdf_template,
+    documentTemplates:
+      data.document_templates && typeof data.document_templates === 'object'
+        ? (data.document_templates as Record<string, string>)
+        : null,
     signatureUrl: data.signature_url ?? '',
     signatureHolder: data.signature_holder ?? '',
     stampUrl: data.stamp_url ?? '',
@@ -295,8 +300,8 @@ export const saveEstablishmentProfile = async (
 
       primary_color: profile.primaryColor,
       secondary_color: profile.secondaryColor,
-      pdf_header: trimmed(profile.pdfHeader),
-      pdf_footer: trimmed(profile.pdfFooter),
+      pdf_template: profile.pdfTemplate,
+      document_templates: (profile.documentTemplates ?? null) as Json,
       signature_url: trimmed(profile.signatureUrl),
       signature_holder: trimmed(profile.signatureHolder),
       stamp_url: trimmed(profile.stampUrl),
