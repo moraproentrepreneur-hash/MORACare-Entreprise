@@ -83,6 +83,7 @@ export const asTemplateId = (value: string | null | undefined): TemplateId =>
  * croire à une fonctionnalité absente.
  */
 export const DOCUMENT_KINDS = {
+  patient_record: 'Dossier patient',
   prescription: 'Ordonnance',
   consultation: 'Compte rendu de consultation',
   lab_result: 'Résultat de laboratoire',

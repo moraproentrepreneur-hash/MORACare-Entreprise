@@ -6,6 +6,7 @@ import {
   CODE_VALIDITY_MINUTES,
   consumeVerificationCode,
   describeVerificationFailure,
+  findValidCode,
   issueVerificationCode,
 } from '@/lib/security/verification.server';
 import { dispatchMessage } from '@/lib/messaging/outbox.server';
@@ -78,8 +79,18 @@ const establishmentName = async (
   return data?.name ?? 'MORACare';
 };
 
-/** Envoi ou renvoi du code. */
-export async function POST() {
+/**
+ * Envoi ou renvoi du code.
+ *
+ * Par défaut, un code encore valide n'est **pas** remplacé : l'écran
+ * d'activation appelle cette route à son affichage, et réémettre à chaque fois
+ * invalidait le code que l'utilisateur venait de recevoir — ou que MORA Shawiri
+ * venait de lui dicter.
+ *
+ * `{ "renew": true }` force l'émission d'un nouveau code. Cette demande est
+ * explicite : elle vient d'un clic sur « Demander un nouveau code ».
+ */
+export async function POST(request: Request) {
   const context = await requirePendingProfile();
   if ('error' in context) return context.error;
 
@@ -96,6 +107,22 @@ export async function POST() {
     );
   }
 
+  const body = (await request.json().catch(() => null)) as { renew?: boolean } | null;
+  const renew = body?.renew === true;
+
+  if (!renew) {
+    const existing = await findValidCode(admin, profile.id, 'account_activation');
+    if (existing) {
+      return NextResponse.json({
+        success: true,
+        reused: true,
+        expiresAt: existing.expiresAt,
+        email: profile.email.replace(/^(.).*(@.*)$/, '$1•••$2'),
+        validMinutes: CODE_VALIDITY_MINUTES,
+      });
+    }
+  }
+
   const { code, expiresAt } = await issueVerificationCode(
     admin,
     profile.id,
@@ -108,7 +135,7 @@ export async function POST() {
     firstName: profile.first_name,
     establishmentName: establishment,
     code,
-    validMinutes: CODE_VALIDITY_MINUTES,
+    validHours: CODE_VALIDITY_MINUTES / 60,
   });
 
   const delivery = await dispatchMessage(admin, {

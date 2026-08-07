@@ -111,6 +111,100 @@ export const DEFAULT_OPENING_HOURS: OpeningHours = {
   sunday: { closed: true, open: '08:00', close: '12:00' },
 };
 
+/**
+ * Réglages du module Hospitalisation (BP16).
+ *
+ * Ils appartiennent à l'établissement : le tarif journalier, les types de
+ * chambres et la durée de séjour surveillée ne sont pas les mêmes dans un
+ * cabinet et dans un hôpital.
+ */
+export interface HospitalizationSettings {
+  roomTypes: string[];
+  bedStates: string[];
+  /** Tarif journalier de référence, dans la devise de l'établissement. */
+  dailyRate: number;
+  /** Durée au-delà de laquelle un séjour est signalé. */
+  maxStayDays: number;
+  /** La sortie doit être validée par un praticien avant d'être enregistrée. */
+  requireDischargeValidation: boolean;
+  admissionServices: string[];
+}
+
+/** Réglages du module Pharmacie (BP19). */
+export interface PharmacySettings {
+  /** Seuil par défaut d'un nouveau produit. */
+  lowStockThreshold: number;
+  /** Nombre de jours avant péremption à partir duquel un produit est signalé. */
+  expiryWarningDays: number;
+  /** Interdit la délivrance d'un produit périmé (BP19 §15). */
+  blockExpiredDispensing: boolean;
+  /** Une prescription doit être validée par le pharmacien (BP19 §8). */
+  requirePharmacistValidation: boolean;
+  /** Suivi par numéro de lot (BP19 §14). */
+  trackLots: boolean;
+  categories: string[];
+}
+
+export interface ModuleSettings {
+  hospitalization: HospitalizationSettings;
+  pharmacy: PharmacySettings;
+}
+
+export const DEFAULT_MODULE_SETTINGS: ModuleSettings = {
+  hospitalization: {
+    roomTypes: ['Chambre individuelle', 'Chambre double', 'Salle commune', 'Soins intensifs'],
+    bedStates: ['Libre', 'Occupé', 'En nettoyage', 'Hors service'],
+    dailyRate: 0,
+    maxStayDays: 30,
+    requireDischargeValidation: true,
+    admissionServices: [
+      'Médecine générale',
+      'Maternité',
+      'Pédiatrie',
+      'Chirurgie',
+      'Urgences',
+    ],
+  },
+  pharmacy: {
+    lowStockThreshold: 10,
+    expiryWarningDays: 30,
+    blockExpiredDispensing: true,
+    requirePharmacistValidation: true,
+    trackLots: true,
+    categories: [
+      'Antibiotique',
+      'Antalgique',
+      'Anti-inflammatoire',
+      'Antipaludique',
+      'Antihypertenseur',
+      'Antidiabétique',
+      'Antiseptique',
+      'Vaccin',
+      'Vitamine et complément',
+      'Solution injectable',
+      'Dispositif médical',
+      'Autre',
+    ],
+  },
+};
+
+/** Complète les réglages absents : la base peut contenir un objet partiel. */
+const toModuleSettings = (value: unknown): ModuleSettings => {
+  if (!value || typeof value !== 'object') return structuredClone(DEFAULT_MODULE_SETTINGS);
+
+  const source = value as Partial<ModuleSettings>;
+  return {
+    hospitalization: {
+      ...DEFAULT_MODULE_SETTINGS.hospitalization,
+      ...(source.hospitalization ?? {}),
+    },
+    pharmacy: {
+      ...DEFAULT_MODULE_SETTINGS.pharmacy,
+      ...(source.pharmacy ?? {}),
+    },
+  };
+};
+
 export interface EstablishmentProfile {
   id: string;
   businessReference: string;
@@ -162,6 +256,9 @@ export interface EstablishmentProfile {
   signatureUrl: string;
   signatureHolder: string;
   stampUrl: string;
+
+  /** Réglages propres aux modules Hospitalisation et Pharmacie. */
+  moduleSettings: ModuleSettings;
 }
 
 /** Complète les jours manquants : la base peut contenir un objet partiel. */
@@ -243,6 +340,8 @@ export const getEstablishmentProfile = async (
     signatureUrl: data.signature_url ?? '',
     signatureHolder: data.signature_holder ?? '',
     stampUrl: data.stamp_url ?? '',
+
+    moduleSettings: toModuleSettings(data.module_settings),
   };
 };
 
@@ -305,6 +404,7 @@ export const saveEstablishmentProfile = async (
       signature_url: trimmed(profile.signatureUrl),
       signature_holder: trimmed(profile.signatureHolder),
       stamp_url: trimmed(profile.stampUrl),
+      module_settings: profile.moduleSettings as unknown as Json,
     })
     .eq('id', establishmentId);
 

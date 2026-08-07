@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { DEPARTMENTS } from '@/lib/reference-data';
 import { Select } from '@/components/ui/Select';
 import { Users, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -233,13 +234,12 @@ export const UserManagementModule: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Département *</label>
-              <input
-                type="text"
+              <Select
                 required
                 value={form.department}
-                onChange={(e) => setForm({ ...form, department: e.target.value })}
-                placeholder="Médecine Générale"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
+                onChange={(value) => setForm({ ...form, department: value })}
+                placeholder="— Sélectionner un service —"
+                options={DEPARTMENTS}
               />
             </div>
           </div>

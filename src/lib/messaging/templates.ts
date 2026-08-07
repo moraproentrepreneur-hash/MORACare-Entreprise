@@ -24,7 +24,7 @@ export const activationCodeMessage = (params: {
   firstName: string;
   establishmentName: string;
   code: string;
-  validMinutes: number;
+  validHours: number;
 }): RenderedMessage => ({
   template: 'account_activation_code',
   subject: `Code d'activation MORACare : ${params.code}`,
@@ -36,7 +36,7 @@ export const activationCodeMessage = (params: {
     '',
     `    ${params.code}`,
     '',
-    `Ce code est valable ${params.validMinutes} minutes et ne peut servir qu'une fois.`,
+    `Ce code est valable ${params.validHours} heures et ne peut servir qu'une fois.`,
     "Sans lui, le compte reste inactif et l'accès au tableau de bord est refusé.",
     '',
     "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message et",

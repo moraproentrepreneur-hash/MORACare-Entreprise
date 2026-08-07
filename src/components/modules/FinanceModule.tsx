@@ -464,7 +464,7 @@ export const FinanceModule: React.FC = () => {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold mb-1">Montant Actes (FC) *</label>
+              <label className="block text-xs font-semibold mb-1">Montant Actes (KMF) *</label>
               <input
                 type="number"
                 required
@@ -474,7 +474,7 @@ export const FinanceModule: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1">Montant Encaissé (FC) *</label>
+              <label className="block text-xs font-semibold mb-1">Montant Encaissé (KMF) *</label>
               <input
                 type="number"
                 required
@@ -526,7 +526,7 @@ export const FinanceModule: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1">Solde d'Ouverture (FC) *</label>
+            <label className="block text-xs font-semibold mb-1">Solde d'Ouverture (KMF) *</label>
             <input
               type="number"
               required
@@ -552,7 +552,7 @@ export const FinanceModule: React.FC = () => {
             </div>
           )}
           <div>
-            <label className="block text-xs font-semibold mb-1">Comptage Physique Espèces (FC) *</label>
+            <label className="block text-xs font-semibold mb-1">Comptage Physique Espèces (KMF) *</label>
             <input
               type="number"
               required

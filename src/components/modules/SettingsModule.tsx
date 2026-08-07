@@ -9,7 +9,9 @@ import {
   Lock,
   Database,
   History,
-  CreditCard
+  CreditCard,
+  BedDouble,
+  Pill
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -19,6 +21,7 @@ import { AuditLogPanel } from '@/components/settings/AuditLogPanel';
 import { EstablishmentSettings } from '@/components/settings/EstablishmentSettings';
 import { SubscriptionPanel } from '@/components/settings/SubscriptionPanel';
 import { SecurityPanel } from '@/components/settings/SecurityPanel';
+import { ModuleSettingsTab } from '@/components/settings/ModuleSettingsTab';
 import { BackupsPanel } from '@/components/settings/BackupsPanel';
 
 /**
@@ -32,6 +35,8 @@ type SettingsTab =
   | 'establishment'
   | 'subscription'
   | 'modules'
+  | 'hospitalization'
+  | 'pharmacy'
   | 'roles'
   | 'security'
   | 'backups'
@@ -43,6 +48,12 @@ interface TabDefinition {
   icon: React.ElementType;
   /** Onglets réservés au Super Admin. */
   superAdminOnly?: boolean;
+  /**
+   * Onglet lié à un module : masqué si ce module est désactivé pour
+   * l'établissement. Régler une pharmacie que l'on n'exploite pas n'a pas de
+   * sens, et BP28A §12 veut qu'un module désactivé disparaisse partout.
+   */
+  requiresModule?: string;
 }
 
 /**
@@ -59,6 +70,13 @@ const TABS: readonly TabDefinition[] = [
   { id: 'establishment', label: 'Établissement', icon: Building2 },
   { id: 'subscription', label: 'Abonnement & Licence', icon: CreditCard },
   { id: 'modules', label: 'Modules Applicatifs', icon: Boxes },
+  {
+    id: 'hospitalization',
+    label: 'Hospitalisation',
+    icon: BedDouble,
+    requiresModule: 'hospitalizations',
+  },
+  { id: 'pharmacy', label: 'Pharmacie', icon: Pill, requiresModule: 'pharmacy' },
   { id: 'roles', label: 'Rôles & Permissions', icon: ShieldCheck, superAdminOnly: true },
   { id: 'security', label: 'Sécurité', icon: Lock, superAdminOnly: true },
   { id: 'backups', label: 'Sauvegardes', icon: Database },
@@ -67,11 +85,21 @@ const TABS: readonly TabDefinition[] = [
 
 export const SettingsModule: React.FC = () => {
   const { user } = useAuth();
-  const { canUpdate } = usePermissions();
+  const { canUpdate, visibleModules } = usePermissions();
   const [activeTab, setActiveTab] = useState<SettingsTab>('establishment');
 
   const isSuperAdmin = user?.role === 'super_admin';
-  const visibleTabs = TABS.filter((tab) => !tab.superAdminOnly || isSuperAdmin);
+  const activeModuleCodes = new Set(visibleModules.map((module) => module.code));
+
+  const visibleTabs = TABS.filter((tab) => {
+    if (tab.superAdminOnly && !isSuperAdmin) return false;
+    // Le Super Admin règle la plateforme, pas les modules d'un établissement
+    // dont il n'exploite ni la pharmacie ni les lits.
+    if (tab.requiresModule) {
+      return !isSuperAdmin && activeModuleCodes.has(tab.requiresModule);
+    }
+    return true;
+  });
 
   // Un onglet masqué ne doit pas rester affiché parce qu'il était sélectionné.
   const currentTab = visibleTabs.some((tab) => tab.id === activeTab)
@@ -115,6 +143,10 @@ export const SettingsModule: React.FC = () => {
           );
         })}
       </div>
+
+      {(currentTab === 'hospitalization' || currentTab === 'pharmacy') && (
+        <ModuleSettingsTab module={currentTab} editable={canUpdate('settings')} />
+      )}
 
       {currentTab === 'establishment' && <EstablishmentSettings />}
       {currentTab === 'subscription' && <SubscriptionPanel />}

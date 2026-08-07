@@ -22,8 +22,16 @@ import type { AppDatabase, VerificationPurpose } from '@/types/database';
 
 type Client = SupabaseClient<AppDatabase>;
 
-/** Durée de validité. Assez long pour relever ses courriels, assez court pour limiter l'exposition. */
-export const CODE_VALIDITY_MINUTES = 30;
+/**
+ * Durée de validité : 24 heures.
+ *
+ * Un code d'activation n'est pas un second facteur de connexion : il est
+ * transmis par courriel, parfois relayé à la main par MORA Shawiri, et son
+ * destinataire n'est pas toujours devant son écran. Trente minutes obligeaient
+ * à en réémettre plusieurs par compte, chacun invalidant le précédent — au
+ * point que le code communiqué ne fonctionnait plus à l'arrivée.
+ */
+export const CODE_VALIDITY_MINUTES = 24 * 60;
 
 /** Au-delà, le code est brûlé : il faut en demander un nouveau. */
 const MAX_ATTEMPTS = 5;
@@ -47,10 +55,39 @@ const equals = (a: string, b: string): boolean => {
 };
 
 /**
+ * Indique s'il existe déjà un code valide pour ce motif.
+ *
+ * Le code lui-même n'est pas récupérable — seul son condensé est stocké — mais
+ * savoir qu'il est encore valide suffit à ne pas en émettre un second.
+ */
+export const findValidCode = async (
+  admin: Client,
+  profileId: string,
+  purpose: VerificationPurpose,
+): Promise<{ expiresAt: string } | null> => {
+  const { data } = await admin
+    .from('verification_codes')
+    .select('expires_at')
+    .eq('profile_id', profileId)
+    .eq('purpose', purpose)
+    .is('consumed_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return data ? { expiresAt: data.expires_at } : null;
+};
+
+/**
  * Émet un code et renvoie sa valeur en clair, à usage unique de l'appelant.
  *
  * Les codes précédents du même motif sont invalidés : deux codes valides
  * simultanément doubleraient la surface d'attaque sans rendre service.
+ *
+ * L'appelant doit donc vérifier `findValidCode` au préalable s'il ne veut pas
+ * révoquer un code encore en circulation — c'est ce que fait la route
+ * d'activation, sauf demande explicite de renouvellement.
  */
 export const issueVerificationCode = async (
   admin: Client,

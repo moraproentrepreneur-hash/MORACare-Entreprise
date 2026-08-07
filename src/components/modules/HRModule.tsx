@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { DEPARTMENTS, JOB_TITLES } from '@/lib/reference-data';
 import { Select } from '@/components/ui/Select';
 import { UserCheck, Plus, Clock, Calendar, FileText, Users } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -356,28 +357,28 @@ export const HRModule: React.FC = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Département *</label>
-              <input
-                type="text"
+              <Select
                 required
                 value={empForm.department}
-                onChange={(e) => setEmpForm({ ...empForm, department: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
+                onChange={(value) => setEmpForm({ ...empForm, department: value })}
+                placeholder="— Sélectionner un service —"
+                options={DEPARTMENTS}
               />
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Fonction *</label>
-              <input
-                type="text"
+              <Select
                 required
                 value={empForm.position}
-                onChange={(e) => setEmpForm({ ...empForm, position: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none"
+                onChange={(value) => setEmpForm({ ...empForm, position: value })}
+                placeholder="— Sélectionner une fonction —"
+                options={JOB_TITLES}
               />
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold mb-1">Salaire de Base (FC) *</label>
+              <label className="block text-xs font-semibold mb-1">Salaire de Base (KMF) *</label>
               <input
                 type="number"
                 required
@@ -517,7 +518,7 @@ export const HRModule: React.FC = () => {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-semibold mb-1">Salaire Base (FC)</label>
+              <label className="block text-xs font-semibold mb-1">Salaire Base (KMF)</label>
               <input
                 type="number"
                 required
@@ -527,7 +528,7 @@ export const HRModule: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1">Primes de Garde (FC)</label>
+              <label className="block text-xs font-semibold mb-1">Primes de Garde (KMF)</label>
               <input
                 type="number"
                 required

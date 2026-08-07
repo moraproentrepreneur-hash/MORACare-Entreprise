@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Select } from '@/components/ui/Select';
+import { CONSULTATION_REASONS } from '@/lib/reference-data';
 import { Stethoscope, Plus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -219,13 +221,12 @@ export const ConsultationsModule: React.FC = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-semibold mb-1">Motif principal</label>
-              <input
-                type="text"
+              <Select
                 required
                 value={form.chief_complaint}
-                onChange={(e) => setForm({ ...form, chief_complaint: e.target.value })}
-                placeholder="Céphalées intenses, fièvre"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
+                onChange={(value) => setForm({ ...form, chief_complaint: value })}
+                placeholder="— Sélectionner un motif —"
+                options={CONSULTATION_REASONS}
               />
             </div>
             <div>

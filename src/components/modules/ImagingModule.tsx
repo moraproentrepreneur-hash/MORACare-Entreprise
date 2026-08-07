@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { ANATOMICAL_REGIONS } from '@/lib/reference-data';
 import { Select } from '@/components/ui/Select';
 import { Binary, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -153,13 +154,12 @@ export const ImagingModule: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Région Anatomique</label>
-              <input
-                type="text"
+              <Select
                 required
                 value={form.body_part}
-                onChange={(e) => setForm({ ...form, body_part: e.target.value })}
-                placeholder="Thorax, Abdomen, Membre inférieur"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
+                onChange={(value) => setForm({ ...form, body_part: value })}
+                placeholder="— Sélectionner une région —"
+                options={ANATOMICAL_REGIONS}
               />
             </div>
           </div>

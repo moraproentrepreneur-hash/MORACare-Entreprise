@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Select } from '@/components/ui/Select';
+import { DEFAULT_MODULE_SETTINGS } from '@/services/establishment.service';
 import { FileText, Pill, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -13,13 +15,20 @@ import { useDocument } from '@/hooks/useDocument';
  *
  * Un médicament périmé ne doit pas se lire comme les autres : la date seule
  * oblige à la comparer mentalement à celle du jour, à chaque ligne.
+ *
+ * Le délai de surveillance vient des Paramètres de l'établissement : trente
+ * jours conviennent à une officine qui se réapprovisionne vite, pas à une
+ * structure qui commande au trimestre.
  */
-const expiryState = (date: string | null | undefined): { tone: string; note: string | null } => {
+const expiryState = (
+  date: string | null | undefined,
+  warningDays: number,
+): { tone: string; note: string | null } => {
   if (!date) return { tone: 'text-slate-400', note: null };
 
   const days = Math.round((new Date(date).getTime() - Date.now()) / 86_400_000);
   if (days < 0) return { tone: 'text-red-400', note: 'Périmé' };
-  if (days <= 30) return { tone: 'text-amber-400', note: `Périme dans ${days} j` };
+  if (days <= warningDays) return { tone: 'text-amber-400', note: `Périme dans ${days} j` };
   return { tone: 'text-slate-300', note: null };
 };
 
@@ -27,7 +36,16 @@ export const PharmacyModule: React.FC = () => {
   // Ce module conservait auparavant son stock dans un état local : rien n'était
   // jamais enregistré. Il lit désormais la base comme les autres modules.
   const { pharmacyItems: items, addPharmacyItem } = useData();
-  const { print, error: documentError } = useDocument();
+  const { print, error: documentError, profile } = useDocument();
+
+  // Réglages de l'établissement (BP19). Les valeurs par défaut couvrent le cas
+  // où le profil n'est pas encore chargé.
+  const pharmacySettings = profile?.moduleSettings.pharmacy ?? DEFAULT_MODULE_SETTINGS.pharmacy;
+
+  const categoryOptions = pharmacySettings.categories.map((category) => ({
+    value: category,
+    label: category,
+  }));
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -44,7 +62,7 @@ export const PharmacyModule: React.FC = () => {
       0,
     );
     const lowStock = items.filter((item) => item.stock_quantity <= (item.reorder_level ?? 0));
-    const expiring = items.filter((item) => expiryState(item.expiry_date).note !== null);
+    const expiring = items.filter((item) => expiryState(item.expiry_date, pharmacySettings.expiryWarningDays).note !== null);
 
     void print({
       kind: 'dispensation',
@@ -96,7 +114,7 @@ export const PharmacyModule: React.FC = () => {
                   rows: expiring.map((item) => [
                     item.name,
                     item.expiry_date ? formatDate(item.expiry_date) : '—',
-                    expiryState(item.expiry_date).note ?? '—',
+                    expiryState(item.expiry_date, pharmacySettings.expiryWarningDays).note ?? '—',
                   ]),
                 },
               },
@@ -114,7 +132,7 @@ export const PharmacyModule: React.FC = () => {
     stock_quantity: 0,
     unit_price: 0,
     expiry_date: '',
-    reorder_level: 10
+    reorder_level: DEFAULT_MODULE_SETTINGS.pharmacy.lowStockThreshold
   });
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -144,7 +162,7 @@ export const PharmacyModule: React.FC = () => {
       stock_quantity: 0,
       unit_price: 0,
       expiry_date: '',
-      reorder_level: 10
+      reorder_level: pharmacySettings.lowStockThreshold
     });
   };
 
@@ -203,7 +221,7 @@ export const PharmacyModule: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {items.map((i) => {
-                  const expiry = expiryState(i.expiry_date);
+                  const expiry = expiryState(i.expiry_date, pharmacySettings.expiryWarningDays);
                   const lowStock = i.stock_quantity <= (i.reorder_level ?? 0);
 
                   return (
@@ -281,12 +299,12 @@ export const PharmacyModule: React.FC = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Catégorie</label>
-              <input
-                type="text"
+              <Select
                 required
                 value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
+                onChange={(value) => setForm({ ...form, category: value })}
+                placeholder="— Sélectionner une catégorie —"
+                options={categoryOptions}
               />
             </div>
           </div>
@@ -302,7 +320,7 @@ export const PharmacyModule: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1">Prix Unitaire (FC)</label>
+              <label className="block text-xs font-semibold mb-1">Prix Unitaire (KMF)</label>
               <input
                 type="number"
                 required

@@ -223,7 +223,7 @@ export async function POST(request: Request) {
       firstName: input.first_name,
       establishmentName,
       code,
-      validMinutes: CODE_VALIDITY_MINUTES,
+      validHours: CODE_VALIDITY_MINUTES / 60,
     });
 
     const delivery = await dispatchMessage(admin, {

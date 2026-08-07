@@ -13,10 +13,15 @@ import {
   CreditCard,
   HeartPulse,
   ShieldAlert,
+  Download,
+  Eye,
 } from 'lucide-react';
 import { ModuleGuard } from '@/components/layouts/ModuleGuard';
 import { useData } from '@/context/DataContext';
 import { formatDate, formatDateTime, formatCurrency } from '@/lib/utils';
+import { Button } from '@/components/ui/Button';
+import { useDocument } from '@/hooks/useDocument';
+import type { DocumentPayload } from '@/lib/documents/pdf';
 
 /**
  * Dossier Médical Partagé d'un patient (UG03 §6).
@@ -79,6 +84,8 @@ function PatientRecord() {
     isLoading,
   } = useData();
 
+  const { print, preview, isGenerating, error: documentError } = useDocument();
+
   const patient = patients.find((p) => p.id === patientId);
 
   const related = useMemo(
@@ -91,6 +98,101 @@ function PatientRecord() {
       invoices: invoices.filter((i) => i.patient_id === patientId),
     }),
     [patientId, consultations, appointments, hospitalizations, labOrders, imagingOrders, invoices],
+  );
+
+  /**
+   * Contenu du dossier patient (BP28C §7).
+   *
+   * Composé avant les retours anticipés : un hook ne peut pas être appelé
+   * conditionnellement. Le contenu est vide tant que le patient n'est pas
+   * chargé, mais les boutons ne s'affichent de toute façon qu'ensuite.
+   */
+  const recordPayload = useMemo<DocumentPayload>(
+    () => ({
+      kind: 'patient_record',
+      reference: patient?.business_reference ?? '—',
+      title: 'Dossier patient',
+      subtitle: patient
+        ? `Édité le ${formatDate(new Date().toISOString())}`
+        : undefined,
+      highlight: patient
+        ? [
+            { label: 'Patient', value: `${patient.first_name} ${patient.last_name}` },
+            { label: 'Date de naissance', value: formatDate(patient.birth_date) },
+            { label: 'Sexe', value: patient.gender },
+            { label: 'Groupe sanguin', value: patient.blood_group || 'Non renseigné' },
+          ]
+        : [],
+      sections: patient
+        ? [
+            {
+              title: 'Coordonnées',
+              fields: [
+                { label: 'Téléphone', value: patient.phone || 'Non renseigné' },
+                { label: 'Adresse', value: patient.address || 'Non renseignée' },
+              ],
+            },
+            {
+              title: 'Informations médicales',
+              fields: [
+                {
+                  label: 'Allergies',
+                  value: patient.allergies?.length
+                    ? patient.allergies.join(', ')
+                    : 'Aucune allergie signalée',
+                },
+                {
+                  label: 'Antécédents',
+                  value: patient.chronic_conditions?.length
+                    ? patient.chronic_conditions.join(', ')
+                    : 'Aucun antécédent signalé',
+                },
+              ],
+            },
+            {
+              title: 'Historique des consultations',
+              table:
+                related.consultations.length > 0
+                  ? {
+                      columns: ['Date', 'Praticien', 'Motif', 'Diagnostic'],
+                      rows: related.consultations.map((c) => [
+                        formatDate(c.consultation_date),
+                        c.doctor_name || '—',
+                        c.chief_complaint || '—',
+                        c.diagnosis_summary || '—',
+                      ]),
+                    }
+                  : undefined,
+              paragraphs:
+                related.consultations.length === 0
+                  ? ['Aucune consultation enregistrée à ce jour.']
+                  : undefined,
+            },
+            {
+              title: 'Hospitalisations',
+              table:
+                related.hospitalizations.length > 0
+                  ? {
+                      columns: ['Admission', 'Sortie', 'Chambre', 'Motif'],
+                      rows: related.hospitalizations.map((h) => [
+                        formatDate(h.admission_date),
+                        h.discharge_date ? formatDate(h.discharge_date) : 'En cours',
+                        `${h.room_number} — ${h.bed_number}`,
+                        h.admission_reason || '—',
+                      ]),
+                    }
+                  : undefined,
+              paragraphs:
+                related.hospitalizations.length === 0
+                  ? ['Aucune hospitalisation enregistrée à ce jour.']
+                  : undefined,
+            },
+          ]
+        : [],
+      note:
+        'Document confidentiel. Sa communication est réservée au patient et aux professionnels de santé autorisés.',
+    }),
+    [patient, related],
   );
 
   if (isLoading) {
@@ -134,12 +236,40 @@ function PatientRecord() {
               {patient.gender} · Né(e) le {formatDate(patient.birth_date)} · {patient.phone}
             </p>
           </div>
-          {patient.blood_group && (
-            <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold">
-              Groupe {patient.blood_group}
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {patient.blood_group && (
+              <div className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold">
+                Groupe {patient.blood_group}
+              </div>
+            )}
+
+            {/* BP28C §6 : un document est visualisable avant téléchargement. */}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isGenerating}
+              onClick={() => void preview(recordPayload)}
+              className="gap-1.5"
+            >
+              <Eye className="w-3.5 h-3.5" /> Aperçu
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={isGenerating}
+              onClick={() => void print(recordPayload)}
+              className="gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5" /> Télécharger
+            </Button>
+          </div>
         </div>
+
+        {documentError && (
+          <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
+            {documentError}
+          </div>
+        )}
 
         {(patient.allergies?.length || patient.chronic_conditions?.length) && (
           <div className="mt-5 grid gap-4 sm:grid-cols-2">

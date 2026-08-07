@@ -366,10 +366,30 @@ export interface NotificationContext {
   license: EstablishmentLicense | null;
 }
 
+/**
+ * Émet les alertes d'échéance dues (J-7 et J-3).
+ *
+ * Appelée à l'ouverture du Centre : la fonction PostgreSQL est rejouable sans
+ * produire de doublon, ce qui évite de dépendre d'un ordonnanceur externe que
+ * l'hébergement ne garantit pas. L'échec est absorbé — ne pas pouvoir produire
+ * une alerte ne doit pas empêcher de consulter les notifications existantes.
+ */
+export const emitExpiryAlerts = async (): Promise<void> => {
+  await getClient().rpc('emit_subscription_expiry_alerts');
+};
+
 export const loadNotifications = async (
   context: NotificationContext,
   query: NotificationQuery = {},
 ): Promise<AppNotification[]> => {
+  // Les échéances franchies depuis la dernière consultation sont matérialisées
+  // avant la lecture, afin d'apparaître dans la liste qui suit.
+  try {
+    await emitExpiryAlerts();
+  } catch {
+    // Absorbé volontairement : voir ci-dessus.
+  }
+
   const stored = await loadStoredNotifications(query);
 
   const derived =

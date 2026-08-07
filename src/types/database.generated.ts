@@ -782,6 +782,7 @@ export type Database = {
           logo_url: string | null
           longitude: number | null
           max_users: number | null
+          module_settings: Json
           name: string
           opening_hours: Json | null
           pdf_template: string
@@ -831,6 +832,7 @@ export type Database = {
           logo_url?: string | null
           longitude?: number | null
           max_users?: number | null
+          module_settings?: Json
           name: string
           opening_hours?: Json | null
           pdf_template?: string
@@ -880,6 +882,7 @@ export type Database = {
           logo_url?: string | null
           longitude?: number | null
           max_users?: number | null
+          module_settings?: Json
           name?: string
           opening_hours?: Json | null
           pdf_template?: string
@@ -3192,6 +3195,7 @@ export type Database = {
     }
     Functions: {
       current_establishment_id: { Args: never; Returns: string }
+      emit_subscription_expiry_alerts: { Args: never; Returns: number }
       is_establishment_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       purge_expired_audit_logs: { Args: never; Returns: number }

@@ -1,6 +1,13 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { UserProfile } from '@/types';
 import {
   fetchCurrentProfile,
@@ -34,15 +41,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  /** Identité connue, pour ignorer les événements qui ne la changent pas. */
+  const currentUserId = useRef<string | null>(null);
+
   const refreshProfile = useCallback(async () => {
     const profile = await fetchCurrentProfile();
+    currentUserId.current = profile?.id ?? null;
     setUser(profile);
     setIsLoading(false);
   }, []);
 
   useEffect(() => {
     void refreshProfile();
-    return onAuthStateChange(() => {
+
+    /*
+     * Second garde-fou contre les rechargements inutiles.
+     *
+     * `onAuthStateChange` filtre déjà les rafraîchissements de jeton, mais
+     * Supabase émet aussi `SIGNED_IN` lorsqu'il restaure une session existante
+     * — au retour sur l'onglet, par exemple. Recharger le profil dans ce cas
+     * remplacerait l'objet `user` par un autre, identique au précédent, et
+     * ferait remonter tout l'arbre React pour rien.
+     *
+     * On ne relit donc que si l'identité a réellement changé.
+     */
+    return onAuthStateChange((userId) => {
+      if (userId === currentUserId.current) return;
+      currentUserId.current = userId;
       void refreshProfile();
     });
   }, [refreshProfile]);

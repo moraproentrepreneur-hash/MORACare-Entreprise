@@ -136,15 +136,45 @@ interface Assets {
 // Habillage par modèle
 // ---------------------------------------------------------------------------
 
+/**
+ * Habillage d'un modèle.
+ *
+ * La différence entre les trois ne peut pas se limiter au bandeau : il occupe
+ * un dixième de la page, et trois documents ne se distingueraient alors qu'à
+ * leur première ligne. Chaque modèle définit donc aussi sa typographie, le
+ * traitement de ses titres de section, le style de ses tableaux et la mise en
+ * avant de son bloc d'en-tête.
+ *
+ * La structure, elle, reste commune — BP28C §10 la déclare protégée « afin de
+ * garantir la conformité » du document.
+ */
 interface Skin {
   /** Hauteur du bandeau supérieur. */
   headerHeight: number;
   /** Dessine le bandeau et renvoie l'ordonnée du premier contenu. */
   header: (doc: jsPDF, b: DocumentBranding, p: DocumentPayload, a: Assets) => number;
+
+  /** Police des titres. Times donne un rendu nettement plus formel. */
+  titleFont: 'helvetica' | 'times';
+  /** Police du corps. */
+  bodyFont: 'helvetica' | 'times';
+  /** Titre du document en capitales, ou tel quel. */
+  uppercaseTitle: boolean;
+  /** Interlettrage des titres de section, en millimètres. */
+  sectionTracking: number;
+
+  /** Traitement d'un titre de section. */
+  sectionStyle: 'rule' | 'filled' | 'accent-bar';
+  /** Traitement d'un tableau. */
+  tableStyle: 'bordered' | 'zebra' | 'hairline';
+  /** Traitement du bloc mis en avant. */
+  highlightStyle: 'outline' | 'tinted' | 'sober';
+
   /** Fond des titres de section. `null` = pas de fond. */
   sectionFill: (b: DocumentBranding) => Rgb | null;
-  /** Fond de l'en-tête des tableaux. */
-  tableHeadFill: (b: DocumentBranding) => Rgb;
+  /** Fond de l'en-tête des tableaux. `null` = pas de fond. */
+  tableHeadFill: (b: DocumentBranding) => Rgb | null;
+
   showQr: boolean;
   showStamp: boolean;
   showLegalMentions: boolean;
@@ -189,6 +219,13 @@ const classic: Skin = {
 
     return classic.headerHeight + 12;
   },
+  titleFont: 'helvetica',
+  bodyFont: 'helvetica',
+  uppercaseTitle: true,
+  sectionTracking: 0,
+  sectionStyle: 'rule',
+  tableStyle: 'bordered',
+  highlightStyle: 'outline',
   sectionFill: () => null,
   tableHeadFill: (b) => rgbOr(b.primaryColor, [0, 51, 102]),
   showQr: false,
@@ -245,6 +282,13 @@ const medical: Skin = {
       Math.round(255 - (255 - rgb[2]) * 0.12),
     ];
   },
+  titleFont: 'helvetica',
+  bodyFont: 'helvetica',
+  uppercaseTitle: false,
+  sectionTracking: 0,
+  sectionStyle: 'accent-bar',
+  tableStyle: 'zebra',
+  highlightStyle: 'tinted',
   tableHeadFill: (b) => rgbOr(b.secondaryColor, [0, 168, 89]),
   showQr: true,
   showStamp: false,
@@ -300,8 +344,15 @@ const executive: Skin = {
 
     return executive.headerHeight + 10;
   },
-  sectionFill: () => [241, 245, 249],
-  tableHeadFill: (b) => rgbOr(b.primaryColor, [0, 51, 102]),
+  titleFont: 'times',
+  bodyFont: 'times',
+  uppercaseTitle: false,
+  sectionTracking: 0.6,
+  sectionStyle: 'rule',
+  tableStyle: 'hairline',
+  highlightStyle: 'sober',
+  sectionFill: () => null,
+  tableHeadFill: () => null,
   showQr: true,
   showStamp: true,
   showLegalMentions: true,
@@ -317,9 +368,18 @@ const SKINS: Record<TemplateId, Skin> = {
 // Génération
 // ---------------------------------------------------------------------------
 
+/**
+ * Ce que l'on fait du document une fois produit.
+ *
+ * BP28C §6 exige qu'il soit « visualisable avant téléchargement » : l'aperçu
+ * n'est donc pas un agrément, c'est une étape du circuit documentaire.
+ */
+export type DocumentOutput = 'download' | 'preview';
+
 export const generateDocument = async (
   profile: EstablishmentProfile,
   payload: DocumentPayload,
+  output: DocumentOutput = 'download',
 ): Promise<void> => {
   if (typeof window === 'undefined') return;
 
@@ -352,13 +412,13 @@ export const generateDocument = async (
 
   // ----- Titre du document -----
   doc.setTextColor(...primary);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
-  doc.text(payload.title.toUpperCase(), MARGIN, y);
-  y += 6;
+  doc.setFont(skin.titleFont, 'bold');
+  doc.setFontSize(skin.titleFont === 'times' ? 18 : 15);
+  doc.text(skin.uppercaseTitle ? payload.title.toUpperCase() : payload.title, MARGIN, y);
+  y += skin.titleFont === 'times' ? 7 : 6;
 
   if (payload.subtitle) {
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(skin.bodyFont, skin.titleFont === 'times' ? 'italic' : 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(100, 116, 139);
     doc.text(payload.subtitle, MARGIN, y);
@@ -372,25 +432,43 @@ export const generateDocument = async (
     const boxHeight = rows * 8 + 6;
     ensureSpace(boxHeight + 6);
 
-    const fill = skin.sectionFill(branding) ?? [241, 245, 249];
-    doc.setFillColor(...fill);
-    doc.roundedRect(MARGIN, y, CONTENT_WIDTH, boxHeight, 2, 2, 'F');
+    const secondary = rgbOr(branding.secondaryColor, [0, 168, 89]);
+
+    if (skin.highlightStyle === 'tinted') {
+      // Medical : le bloc patient est l'information la plus regardée d'un
+      // document de soins ; il est teinté et souligné d'un filet d'accent.
+      doc.setFillColor(...(skin.sectionFill(branding) ?? [241, 245, 249]));
+      doc.roundedRect(MARGIN, y, CONTENT_WIDTH, boxHeight, 2, 2, 'F');
+      doc.setFillColor(...secondary);
+      doc.rect(MARGIN, y, 1.6, boxHeight, 'F');
+    } else if (skin.highlightStyle === 'outline') {
+      // Classic : encadré, sans aplat — un formulaire administratif.
+      doc.setDrawColor(...primary);
+      doc.setLineWidth(0.4);
+      doc.rect(MARGIN, y, CONTENT_WIDTH, boxHeight, 'S');
+    } else {
+      // Executive : aucun cadre, deux filets fins qui laissent respirer.
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.2);
+      doc.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
+      doc.line(MARGIN, y + boxHeight, PAGE_WIDTH - MARGIN, y + boxHeight);
+    }
 
     payload.highlight.forEach((field, index) => {
       const column = index % 2;
       const row = Math.floor(index / 2);
-      const x = MARGIN + 5 + column * (CONTENT_WIDTH / 2);
+      const x = MARGIN + (skin.highlightStyle === 'tinted' ? 7 : 5) + column * (CONTENT_WIDTH / 2);
       const lineY = y + 7 + row * 8;
 
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(skin.bodyFont, 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(100, 116, 139);
       doc.text(field.label.toUpperCase(), x, lineY);
 
-      doc.setFont('helvetica', 'bold');
+      doc.setFont(skin.bodyFont, 'bold');
       doc.setFontSize(9.5);
       doc.setTextColor(15, 23, 42);
-      doc.text(field.value, x, lineY + 4, { maxWidth: CONTENT_WIDTH / 2 - 10 });
+      doc.text(field.value, x, lineY + 4, { maxWidth: CONTENT_WIDTH / 2 - 12 });
     });
 
     y += boxHeight + 8;
@@ -401,32 +479,55 @@ export const generateDocument = async (
     if (section.title) {
       ensureSpace(14);
       const fill = skin.sectionFill(branding);
+      const secondary = rgbOr(branding.secondaryColor, [0, 168, 89]);
 
-      if (fill) {
+      if (skin.sectionStyle === 'accent-bar') {
+        // Medical : bandeau teinté et barre d'accent à gauche.
+        if (fill) {
+          doc.setFillColor(...fill);
+          doc.rect(MARGIN, y - 4.5, CONTENT_WIDTH, 8, 'F');
+        }
+        doc.setFillColor(...secondary);
+        doc.rect(MARGIN, y - 4.5, 1.6, 8, 'F');
+      } else if (skin.sectionStyle === 'filled' && fill) {
         doc.setFillColor(...fill);
         doc.rect(MARGIN, y - 4.5, CONTENT_WIDTH, 8, 'F');
       }
 
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
+      doc.setFont(skin.titleFont, 'bold');
+      doc.setFontSize(skin.titleFont === 'times' ? 11 : 10);
       doc.setTextColor(...primary);
-      doc.text(section.title, MARGIN + (fill ? 3 : 0), y);
 
-      if (!fill) {
-        doc.setDrawColor(...primary);
-        doc.setLineWidth(0.3);
-        doc.line(MARGIN, y + 1.5, PAGE_WIDTH - MARGIN, y + 1.5);
+      const titleX = MARGIN + (skin.sectionStyle === 'accent-bar' ? 4.5 : 0);
+      if (skin.sectionTracking > 0) {
+        // Executive : petites capitales espacées, dessinées lettre à lettre —
+        // jsPDF n'expose pas d'interlettrage.
+        let cursor = titleX;
+        for (const letter of section.title.toUpperCase()) {
+          doc.text(letter, cursor, y);
+          cursor += doc.getTextWidth(letter) + skin.sectionTracking;
+        }
+      } else {
+        doc.text(section.title, titleX, y);
       }
-      y += 9;
+
+      if (skin.sectionStyle === 'rule') {
+        doc.setDrawColor(...primary);
+        doc.setLineWidth(skin.titleFont === 'times' ? 0.5 : 0.3);
+        doc.line(MARGIN, y + 1.8, PAGE_WIDTH - MARGIN, y + 1.8);
+      }
+
+      y += skin.titleFont === 'times' ? 10 : 9;
     }
 
     for (const field of section.fields ?? []) {
       ensureSpace(7);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(skin.bodyFont, 'normal');
       doc.setFontSize(9);
       doc.setTextColor(100, 116, 139);
       doc.text(`${field.label} :`, MARGIN, y);
 
+      doc.setFont(skin.bodyFont, skin.titleFont === 'times' ? 'bold' : 'normal');
       doc.setTextColor(15, 23, 42);
       const wrapped = doc.splitTextToSize(field.value, CONTENT_WIDTH - 52) as string[];
       doc.text(wrapped, MARGIN + 50, y);
@@ -436,7 +537,7 @@ export const generateDocument = async (
     for (const paragraph of section.paragraphs ?? []) {
       const wrapped = doc.splitTextToSize(paragraph, CONTENT_WIDTH) as string[];
       ensureSpace(wrapped.length * 5 + 3);
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(skin.bodyFont, 'normal');
       doc.setFontSize(9.5);
       doc.setTextColor(30, 41, 59);
       doc.text(wrapped, MARGIN, y);
@@ -550,8 +651,29 @@ export const generateDocument = async (
     });
   }
 
-  const slug = payload.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  doc.save(`${payload.reference}-${slug}.pdf`);
+  const slug = payload.title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const filename = `${payload.reference}-${slug}.pdf`;
+
+  if (output === 'preview') {
+    /*
+     * Aperçu dans un onglet.
+     *
+     * L'onglet est ouvert **avant** d'attendre quoi que ce soit d'asynchrone —
+     * ici tout est déjà résolu — sans quoi le navigateur le bloquerait comme
+     * une fenêtre surgissante non sollicitée. Si le blocage survient malgré
+     * tout, on retombe sur le téléchargement plutôt que de ne rien faire.
+     */
+    const url = doc.output('bloburl');
+    const opened = window.open(String(url), '_blank', 'noopener,noreferrer');
+    if (!opened) doc.save(filename);
+    return;
+  }
+
+  doc.save(filename);
 };
 
 /** Tableau. Les colonnes se partagent la largeur utile à parts égales. */
@@ -577,17 +699,28 @@ const drawTable = (
   const columnWidth = CONTENT_WIDTH / table.columns.length;
   const numeric = new Set(table.numericColumns ?? []);
 
+  const primary = rgbOr(branding.primaryColor, [0, 51, 102]);
+
   const drawHead = () => {
     const fill = skin.tableHeadFill(branding);
-    const text = readableTextOn(
-      `#${fill.map((c) => c.toString(16).padStart(2, '0')).join('')}`,
-    );
 
-    doc.setFillColor(...fill);
-    doc.rect(MARGIN, y, CONTENT_WIDTH, 8, 'F');
-    doc.setFont('helvetica', 'bold');
+    if (fill) {
+      const text = readableTextOn(
+        `#${fill.map((c) => c.toString(16).padStart(2, '0')).join('')}`,
+      );
+      doc.setFillColor(...fill);
+      doc.rect(MARGIN, y, CONTENT_WIDTH, 8, 'F');
+      doc.setTextColor(...text);
+    } else {
+      // Executive : pas d'aplat, un filet appuyé sous l'en-tête suffit.
+      doc.setTextColor(...primary);
+      doc.setDrawColor(...primary);
+      doc.setLineWidth(0.5);
+      doc.line(MARGIN, y + 7.6, PAGE_WIDTH - MARGIN, y + 7.6);
+    }
+
+    doc.setFont(skin.titleFont, 'bold');
     doc.setFontSize(8);
-    doc.setTextColor(...text);
 
     table.columns.forEach((column, index) => {
       const x = MARGIN + index * columnWidth;
@@ -601,24 +734,32 @@ const drawTable = (
   };
 
   ensureSpace(20);
+  const tableTop = y;
   drawHead();
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(skin.bodyFont, 'normal');
   doc.setFontSize(8.5);
 
   table.rows.forEach((row, rowIndex) => {
     if (y + 7 > PAGE_HEIGHT - 26) {
       ensureSpace(20);
       drawHead();
-      doc.setFont('helvetica', 'normal');
+      doc.setFont(skin.bodyFont, 'normal');
       doc.setFontSize(8.5);
     }
 
-    // Alternance discrète : suivre une ligne sur toute la largeur est pénible
-    // sans repère.
-    if (rowIndex % 2 === 1) {
+    if (skin.tableStyle === 'zebra' && rowIndex % 2 === 1) {
+      // Medical : alternance discrète — suivre une ligne sur toute la largeur
+      // est pénible sans repère.
       doc.setFillColor(248, 250, 252);
       doc.rect(MARGIN, y, CONTENT_WIDTH, 7, 'F');
+    }
+
+    if (skin.tableStyle === 'hairline') {
+      // Executive : un filet très clair entre les lignes, rien d'autre.
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.1);
+      doc.line(MARGIN, y + 7, PAGE_WIDTH - MARGIN, y + 7);
     }
 
     doc.setTextColor(30, 41, 59);
@@ -632,6 +773,21 @@ const drawTable = (
 
     y += 7;
   });
+
+  if (skin.tableStyle === 'bordered') {
+    // Classic : grille complète, comme un imprimé administratif.
+    doc.setDrawColor(148, 163, 184);
+    doc.setLineWidth(0.2);
+    doc.rect(MARGIN, tableTop, CONTENT_WIDTH, y - tableTop, 'S');
+
+    for (let row = tableTop + 8; row < y; row += 7) {
+      doc.line(MARGIN, row, PAGE_WIDTH - MARGIN, row);
+    }
+    for (let column = 1; column < table.columns.length; column += 1) {
+      const x = MARGIN + column * columnWidth;
+      doc.line(x, tableTop, x, y);
+    }
+  }
 
   return y + 2;
 };

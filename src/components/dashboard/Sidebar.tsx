@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut, Activity, X } from 'lucide-react';
+import { LogOut, Activity, BellRing, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { getModuleRoute } from '@/lib/navigation';
@@ -37,7 +37,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       return route ? [{ label: module.name, href: route.href, icon: route.icon }] : [];
     });
 
-  const menu = extraItems && extraItems.length > 0 ? extraItems : items;
+  /*
+   * Centre de notifications de l'établissement.
+   *
+   * Réservé au responsable : les échéances d'abonnement, les incidents et les
+   * alertes système relèvent de la gestion de la structure, pas du soin. Ce
+   * n'est pas un module du référentiel — l'y ajouter obligerait à lui inventer
+   * des permissions pour tous les rôles — mais une entrée propre à l'espace.
+   */
+  const establishmentExtras =
+    workspace === 'establishment' && user?.role === 'establishment_admin'
+      ? [{ label: 'Notifications', href: '/notifications', icon: BellRing }]
+      : [];
+
+  const menu =
+    extraItems && extraItems.length > 0 ? extraItems : [...items, ...establishmentExtras];
 
   const isActive = (href: string): boolean =>
     pathname === href || (href !== '/admin' && pathname.startsWith(`${href}/`));

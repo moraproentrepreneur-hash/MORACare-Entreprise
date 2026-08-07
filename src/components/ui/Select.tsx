@@ -68,7 +68,13 @@ export function Select<T extends string = string>({
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [openUpwards, setOpenUpwards] = useState(false);
+  const [position, setPosition] = useState<{
+    left: number;
+    width: number;
+    top?: number;
+    bottom?: number;
+    maxHeight: number;
+  } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -92,20 +98,42 @@ export function Select<T extends string = string>({
     [options],
   );
 
+  /**
+   * Calcule la position de la liste.
+   *
+   * La liste est rendue en position **fixe**, hors du flux. En `absolute`, elle
+   * était découpée par le premier ancêtre qui masque son débordement — le corps
+   * défilant d'une fenêtre modale, typiquement : le champ « Type
+   * d'établissement » de la création d'un établissement voyait ainsi sa liste
+   * coupée sur ordinateur, sans rapport avec la taille de l'écran.
+   *
+   * La hauteur disponible est mesurée des deux côtés du champ : la liste
+   * s'ouvre vers le haut si le bas manque de place, et se borne à ce qui reste
+   * afin de rester entièrement visible dans tous les cas.
+   */
+  const place = useCallback(() => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const below = window.innerHeight - rect.bottom - 8;
+    const above = rect.top - 8;
+    const upwards = below < Math.min(MAX_LIST_HEIGHT, 180) && above > below;
+
+    setPosition({
+      left: rect.left,
+      width: rect.width,
+      top: upwards ? undefined : rect.bottom + 4,
+      bottom: upwards ? window.innerHeight - rect.top + 4 : undefined,
+      maxHeight: Math.max(120, Math.min(MAX_LIST_HEIGHT, upwards ? above : below)),
+    });
+  }, []);
+
   const open = useCallback(() => {
     if (disabled) return;
-
-    // La liste s'ouvre vers le haut si le bas de l'écran ne peut pas la
-    // contenir : sinon elle serait tronquée par le bord de la fenêtre.
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (rect) {
-      const below = window.innerHeight - rect.bottom;
-      setOpenUpwards(below < Math.min(MAX_LIST_HEIGHT, 200) && rect.top > below);
-    }
-
+    place();
     setActiveIndex(selectedIndex >= 0 ? selectedIndex : firstEnabled(0, 1));
     setIsOpen(true);
-  }, [disabled, selectedIndex, firstEnabled]);
+  }, [disabled, place, selectedIndex, firstEnabled]);
 
   const close = useCallback((refocus = true) => {
     setIsOpen(false);
@@ -130,17 +158,29 @@ export function Select<T extends string = string>({
     if (!isOpen) return;
 
     const onPointerDown = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      // La liste étant hors du conteneur depuis qu'elle est en position fixe,
+      // il faut la tester séparément : sinon un clic sur une option compterait
+      // comme un clic extérieur et refermerait avant de sélectionner.
+      if (
+        !containerRef.current?.contains(target) &&
+        !listRef.current?.contains(target)
+      ) {
         close(false);
       }
     };
-    const onResize = () => close(false);
+    const onMove = () => close(false);
 
     document.addEventListener('mousedown', onPointerDown);
-    window.addEventListener('resize', onResize);
+    window.addEventListener('resize', onMove);
+    // `true` : capte aussi le défilement d'un conteneur interne, celui d'une
+    // fenêtre modale par exemple.
+    window.addEventListener('scroll', onMove, true);
+
     return () => {
       document.removeEventListener('mousedown', onPointerDown);
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener('resize', onMove);
+      window.removeEventListener('scroll', onMove, true);
     };
   }, [isOpen, close]);
 
@@ -254,16 +294,21 @@ export function Select<T extends string = string>({
         />
       </button>
 
-      {isOpen && (
+      {isOpen && position && (
         <ul
           ref={listRef}
           id={listId}
           role="listbox"
           aria-activedescendant={activeIndex >= 0 ? `${controlId}-opt-${activeIndex}` : undefined}
           tabIndex={-1}
-          className={`absolute z-50 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-2xl ${
-            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
-          }`}
+          style={{
+            left: position.left,
+            width: position.width,
+            top: position.top,
+            bottom: position.bottom,
+            maxHeight: position.maxHeight,
+          }}
+          className="fixed z-[60] overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-2xl"
         >
           {options.length === 0 && (
             <li className="px-3 py-2.5 text-xs text-slate-500">Aucune option disponible.</li>

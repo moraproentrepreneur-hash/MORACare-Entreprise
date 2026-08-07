@@ -2,7 +2,11 @@
 
 import { useCallback, useState } from 'react';
 import { useBranding } from '@/context/BrandingContext';
-import { generateDocument, type DocumentPayload } from '@/lib/documents/pdf';
+import {
+  generateDocument,
+  type DocumentOutput,
+  type DocumentPayload,
+} from '@/lib/documents/pdf';
 
 /**
  * Production d'un document PDF depuis un module.
@@ -22,7 +26,7 @@ export const useDocument = () => {
   const [error, setError] = useState<string | null>(null);
 
   const print = useCallback(
-    async (payload: DocumentPayload): Promise<boolean> => {
+    async (payload: DocumentPayload, output: DocumentOutput = 'download'): Promise<boolean> => {
       if (!profile) {
         setError(
           "Aucun établissement n'est rattaché à votre compte : le document ne peut pas être émis.",
@@ -33,7 +37,7 @@ export const useDocument = () => {
       setIsGenerating(true);
       setError(null);
       try {
-        await generateDocument(profile, payload);
+        await generateDocument(profile, payload, output);
         return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Génération du document impossible.');
@@ -45,5 +49,11 @@ export const useDocument = () => {
     [profile],
   );
 
-  return { print, isGenerating, error, clearError: () => setError(null), profile };
+  /** Ouvre le document dans un onglet, sans l'enregistrer (BP28C §6). */
+  const preview = useCallback(
+    (payload: DocumentPayload) => print(payload, 'preview'),
+    [print],
+  );
+
+  return { print, preview, isGenerating, error, clearError: () => setError(null), profile };
 };

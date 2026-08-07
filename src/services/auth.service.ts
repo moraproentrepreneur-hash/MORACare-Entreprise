@@ -154,20 +154,40 @@ export interface ActivationDispatch {
   /** Adresse partiellement masquée, pour confirmer la destination sans la révéler. */
   email: string;
   validMinutes: number;
+  /** Vrai lorsqu'un code encore valide a été conservé au lieu d'en émettre un. */
+  reused: boolean;
+  expiresAt?: string;
 }
 
-/** Demande l'envoi (ou le renvoi) du code d'activation. */
-export const sendActivationCode = async (): Promise<ActivationDispatch> => {
-  const response = await fetch('/api/auth/activation', { method: 'POST' });
+/**
+ * Demande l'envoi du code d'activation.
+ *
+ * Sans `renew`, le serveur conserve un code encore valide plutôt que d'en
+ * émettre un nouveau : celui déjà reçu par l'utilisateur — ou dicté par MORA
+ * Shawiri — doit continuer de fonctionner.
+ */
+export const sendActivationCode = async (renew = false): Promise<ActivationDispatch> => {
+  const response = await fetch('/api/auth/activation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ renew }),
+  });
+
   const payload = (await response.json().catch(() => null)) as
-    | (ActivationDispatch & { error?: string })
+    | (ActivationDispatch & { error?: string; reused?: boolean; expiresAt?: string })
     | null;
 
   if (!response.ok || !payload) {
     throw new Error(payload?.error ?? "Le code n'a pas pu être envoyé.");
   }
 
-  return { delivered: payload.delivered, email: payload.email, validMinutes: payload.validMinutes };
+  return {
+    delivered: payload.delivered,
+    email: payload.email,
+    validMinutes: payload.validMinutes,
+    reused: payload.reused === true,
+    expiresAt: payload.expiresAt,
+  };
 };
 
 /** Vérifie le code d'activation et débloque le compte. */
@@ -185,16 +205,31 @@ export const verifyActivationCode = async (code: string): Promise<void> => {
 };
 
 /**
- * S'abonne aux changements d'état d'authentification (connexion, déconnexion,
- * expiration du jeton) pour que l'interface reste synchronisée avec la session.
+ * S'abonne aux changements d'identité de l'utilisateur.
+ *
+ * Volontairement pas à tous les événements de Supabase Auth. Le client
+ * rafraîchit son jeton dès que l'onglet reprend le focus et émet alors
+ * `TOKEN_REFRESHED`. Réagir à cet événement provoquait un rechargement du
+ * profil à chaque retour sur l'onglet : l'arbre React se reconstruisait, les
+ * écrans perdaient leur état, et un code d'activation affiché à l'écran était
+ * réémis — invalidant celui que l'utilisateur venait de recevoir.
+ *
+ * Seuls les événements qui changent réellement qui est connecté sont relayés.
  */
-export const onAuthStateChange = (callback: () => void): (() => void) => {
+const IDENTITY_EVENTS = new Set(['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED']);
+
+export const onAuthStateChange = (
+  callback: (userId: string | null) => void,
+): (() => void) => {
   if (!isSupabaseConfigured()) return () => undefined;
 
   const supabase = createBrowserSupabaseClient();
   const {
     data: { subscription },
-  } = supabase.auth.onAuthStateChange(() => callback());
+  } = supabase.auth.onAuthStateChange((event, session) => {
+    if (!IDENTITY_EVENTS.has(event)) return;
+    callback(session?.user?.id ?? null);
+  });
 
   return () => subscription.unsubscribe();
 };

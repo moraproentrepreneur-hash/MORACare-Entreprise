@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, Check, KeyRound, MailCheck, ShieldAlert, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
@@ -100,11 +100,11 @@ const ActivationStep: React.FC<{ onDone: () => Promise<void>; onCancel: () => vo
   const [isSending, setIsSending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  const send = useCallback(async () => {
+  const send = useCallback(async (renew = false) => {
     setIsSending(true);
     setError(null);
     try {
-      setDispatch(await sendActivationCode());
+      setDispatch(await sendActivationCode(renew));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Le code n'a pas pu être envoyé.");
     } finally {
@@ -112,9 +112,18 @@ const ActivationStep: React.FC<{ onDone: () => Promise<void>; onCancel: () => vo
     }
   }, []);
 
-  // Un code est émis dès l'affichage : demander à l'utilisateur de cliquer pour
-  // recevoir ce qu'il attend de toute façon n'apporte rien.
+  /*
+   * Le code est demandé une seule fois, à la première ouverture de l'écran.
+   *
+   * `useRef` plutôt qu'une dépendance de `useEffect` : en développement, React
+   * exécute les effets deux fois, et un remontage du composant relancerait
+   * l'appel. Le serveur conserve de toute façon un code encore valide, mais
+   * mieux vaut ne pas lui demander deux fois la même chose.
+   */
+  const requested = useRef(false);
   useEffect(() => {
+    if (requested.current) return;
+    requested.current = true;
     void send();
   }, [send]);
 
@@ -139,7 +148,9 @@ const ActivationStep: React.FC<{ onDone: () => Promise<void>; onCancel: () => vo
       title="Activez votre compte"
       description={
         dispatch
-          ? `Un code à six chiffres a été envoyé à ${dispatch.email}. Il est valable ${dispatch.validMinutes} minutes.`
+          ? dispatch.reused
+            ? `Un code vous a déjà été adressé à ${dispatch.email}. Il reste valable : utilisez-le.`
+            : `Un code à six chiffres a été envoyé à ${dispatch.email}. Il est valable 24 heures.`
           : 'Un code à six chiffres vous est envoyé par e-mail.'
       }
       onCancel={onCancel}
@@ -198,14 +209,22 @@ const ActivationStep: React.FC<{ onDone: () => Promise<void>; onCancel: () => vo
         </Button>
       </form>
 
+      {/*
+        Le renouvellement est explicite et annoncé : il invalide le code déjà
+        reçu. L'utilisateur qui attend encore son courriel ne doit pas cliquer
+        ici sans savoir ce qu'il perd.
+      */}
       <button
         type="button"
-        onClick={() => void send()}
+        onClick={() => void send(true)}
         disabled={isSending}
         className="mt-4 w-full text-center text-xs text-mora-green transition-colors hover:underline disabled:opacity-50"
       >
-        {isSending ? 'Envoi en cours…' : 'Renvoyer un code'}
+        {isSending ? 'Envoi en cours…' : 'Demander un nouveau code'}
       </button>
+      <p className="mt-1 text-center text-[11px] text-slate-500">
+        Le code précédent cessera alors de fonctionner.
+      </p>
     </Shell>
   );
 };

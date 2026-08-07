@@ -8,6 +8,8 @@ import { Hospitalization, Patient } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useData } from '@/context/DataContext';
 import { PatientSelect } from '@/components/ui/PatientSelect';
+import { Select } from '@/components/ui/Select';
+import { DEFAULT_MODULE_SETTINGS } from '@/services/establishment.service';
 import { ActionMenu } from '@/components/ui/ActionMenu';
 import { useDocument } from '@/hooks/useDocument';
 import { DoctorSelect } from '@/components/ui/DoctorSelect';
@@ -23,7 +25,12 @@ const STATUS_LABELS: Record<string, string> = {
 
 export const HospitalizationsModule: React.FC = () => {
   const { patients, hospitalizations, addHospitalization } = useData();
-  const { print, error: documentError } = useDocument();
+  const { print, error: documentError, profile } = useDocument();
+
+  // Réglages de l'établissement (BP16) : types de chambres et services
+  // d'admission ne sont pas les mêmes d'une structure à l'autre.
+  const hospitalizationSettings =
+    profile?.moduleSettings.hospitalization ?? DEFAULT_MODULE_SETTINGS.hospitalization;
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const [selectedPatientId, setSelectedPatientId] = useState('');
@@ -31,6 +38,8 @@ export const HospitalizationsModule: React.FC = () => {
 
   const [form, setForm] = useState({
     doctor_id: '',
+    service: '',
+    room_type: '',
     room_number: '',
     bed_number: '',
     admission_reason: ''
@@ -149,7 +158,14 @@ export const HospitalizationsModule: React.FC = () => {
 
     setIsAddModalOpen(false);
     setSelectedPatientId('');
-    setForm({ doctor_id: '', room_number: '', bed_number: '', admission_reason: '' });
+    setForm({
+      doctor_id: '',
+      service: '',
+      room_type: '',
+      room_number: '',
+      bed_number: '',
+      admission_reason: '',
+    });
   };
 
   return (
@@ -255,7 +271,34 @@ export const HospitalizationsModule: React.FC = () => {
             value={form.doctor_id}
             onChange={(doctorId) => setForm({ ...form, doctor_id: doctorId })}
           />
+          <div>
+            <label className="block text-xs font-semibold mb-1">Service d&apos;admission</label>
+            <Select
+              required
+              value={form.service}
+              onChange={(value) => setForm({ ...form, service: value })}
+              placeholder="— Sélectionner un service —"
+              options={hospitalizationSettings.admissionServices.map((service) => ({
+                value: service,
+                label: service,
+              }))}
+            />
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-semibold mb-1">Type de chambre</label>
+              <Select
+                required
+                value={form.room_type}
+                onChange={(value) => setForm({ ...form, room_type: value })}
+                placeholder="— Sélectionner —"
+                options={hospitalizationSettings.roomTypes.map((type) => ({
+                  value: type,
+                  label: type,
+                }))}
+              />
+            </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Numéro de Chambre</label>
               <input
