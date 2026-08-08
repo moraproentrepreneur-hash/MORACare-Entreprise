@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { BedDouble, Pill, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import type {
   HospitalizationSettings,
   ModuleSettings,
@@ -172,20 +173,38 @@ export const HospitalizationSettingsPanel: React.FC<{
           onChange={(roomTypes) => update({ roomTypes })}
         />
         <TagList
-          label="États possibles d'un lit"
-          hint="Un lit qui n'est pas « Libre » ne peut pas recevoir d'admission."
-          placeholder="Libre, Occupé, En nettoyage…"
-          values={settings.bedStates}
-          editable={editable}
-          onChange={(bedStates) => update({ bedStates })}
-        />
-        <TagList
           label="Services d'admission"
+          hint="Repris par les chambres, les admissions et les transferts."
           placeholder="Maternité, Chirurgie…"
           values={settings.admissionServices}
           editable={editable}
           onChange={(admissionServices) => update({ admissionServices })}
         />
+        <TagList
+          label="Natures de soin"
+          hint="Proposées à la saisie quotidienne dans le dossier de séjour."
+          placeholder="Constantes vitales, Soins infirmiers…"
+          values={settings.careTypes}
+          editable={editable}
+          onChange={(careTypes) => update({ careTypes })}
+        />
+        <TagList
+          label="Motifs de sortie"
+          hint="Proposés au moment d'enregistrer la sortie du patient."
+          placeholder="Guérison, Transfert externe…"
+          values={settings.dischargeReasons}
+          editable={editable}
+          onChange={(dischargeReasons) => update({ dischargeReasons })}
+        />
+
+        {/* Les états d'un lit ne sont pas configurables : BP16 §7 les fixe, et
+            la base les porte comme type énuméré. Les laisser saisir laissait
+            croire à un choix qui n'existe pas. */}
+        <p className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] text-slate-500">
+          Les états d&apos;un lit — disponible, occupé, réservé, en nettoyage, hors service — sont
+          fixés par le module et ne se paramètrent pas. L&apos;état « occupé » découle de
+          l&apos;affectation d&apos;un patient.
+        </p>
       </Panel>
 
       <Panel
@@ -330,16 +349,59 @@ export const PharmacySettingsPanel: React.FC<{
 
       <Panel
         title="Catalogue"
-        description="Catégories proposées à l'enregistrement d'un médicament."
+        description="Listes proposées à l'enregistrement d'un médicament (BP19 §5)."
         icon={Pill}
       >
         <TagList
-          label="Catégories de médicaments"
+          label="Catégories thérapeutiques"
           placeholder="Antibiotique, Antalgique…"
           values={settings.categories}
           editable={editable}
           onChange={(categories) => update({ categories })}
         />
+        <TagList
+          label="Formes pharmaceutiques"
+          placeholder="Comprimé, Sirop, Solution injectable…"
+          values={settings.forms}
+          editable={editable}
+          onChange={(forms) => update({ forms })}
+        />
+        <TagList
+          label="Voies d'administration"
+          placeholder="Orale, Intraveineuse…"
+          values={settings.administrationRoutes}
+          editable={editable}
+          onChange={(administrationRoutes) => update({ administrationRoutes })}
+        />
+
+        <div>
+          <p className="mb-1.5 text-xs font-semibold text-slate-300">Règle de sortie par défaut</p>
+          <Select<'FEFO' | 'FIFO' | 'LIFO'>
+            disabled={!editable}
+            value={settings.defaultIssueRule}
+            onChange={(defaultIssueRule) => update({ defaultIssueRule })}
+            options={[
+              {
+                value: 'FEFO',
+                label: 'FEFO — premier périmé, premier sorti',
+                hint: 'Recommandé : limite les pertes par péremption.',
+              },
+              {
+                value: 'FIFO',
+                label: 'FIFO — premier entré, premier sorti',
+                hint: "Suit l'ordre d'arrivée en stock.",
+              },
+              {
+                value: 'LIFO',
+                label: 'LIFO — dernier entré, premier sorti',
+                hint: 'Réservé aux produits sans péremption.',
+              },
+            ]}
+          />
+          <p className="mt-1 text-[11px] text-slate-500">
+            Appliquée aux nouveaux produits. Chaque produit peut ensuite porter la sienne.
+          </p>
+        </div>
       </Panel>
     </div>
   );

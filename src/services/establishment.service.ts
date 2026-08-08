@@ -118,16 +118,29 @@ export const DEFAULT_OPENING_HOURS: OpeningHours = {
  * chambres et la durée de séjour surveillée ne sont pas les mêmes dans un
  * cabinet et dans un hôpital.
  */
+/**
+ * Réglages du module Hospitalisation (BP16).
+ *
+ * Les états d'un lit n'y figurent pas : BP16 §7 les fixe — disponible, occupé,
+ * réservé, en nettoyage, hors service — et ils sont un type énuméré de la base.
+ * Les laisser saisir librement laissait croire à un choix qui n'existe pas, et
+ * aucune valeur ajoutée n'aurait été reconnue par le module.
+ */
 export interface HospitalizationSettings {
+  /** Catégories de chambres proposées à la création (BP16 §6). */
   roomTypes: string[];
-  bedStates: string[];
+  /** Services d'admission, repris par les chambres et les transferts. */
+  admissionServices: string[];
+  /** Natures de soin proposées à la saisie quotidienne (BP16 §8). */
+  careTypes: string[];
+  /** Motifs de sortie proposés au moment de la clôture (BP16 §11). */
+  dischargeReasons: string[];
   /** Tarif journalier de référence, dans la devise de l'établissement. */
   dailyRate: number;
   /** Durée au-delà de laquelle un séjour est signalé. */
   maxStayDays: number;
   /** La sortie doit être validée par un praticien avant d'être enregistrée. */
   requireDischargeValidation: boolean;
-  admissionServices: string[];
 }
 
 /** Réglages du module Pharmacie (BP19). */
@@ -142,7 +155,13 @@ export interface PharmacySettings {
   requirePharmacistValidation: boolean;
   /** Suivi par numéro de lot (BP19 §14). */
   trackLots: boolean;
+  /** Règle de sortie appliquée par défaut aux nouveaux produits (BP18 §14). */
+  defaultIssueRule: 'FEFO' | 'FIFO' | 'LIFO';
   categories: string[];
+  /** Formes pharmaceutiques proposées au catalogue (BP19 §5). */
+  forms: string[];
+  /** Voies d'administration proposées au catalogue (BP19 §5). */
+  administrationRoutes: string[];
 }
 
 export interface ModuleSettings {
@@ -152,11 +171,16 @@ export interface ModuleSettings {
 
 export const DEFAULT_MODULE_SETTINGS: ModuleSettings = {
   hospitalization: {
-    roomTypes: ['Chambre individuelle', 'Chambre double', 'Salle commune', 'Soins intensifs'],
-    bedStates: ['Libre', 'Occupé', 'En nettoyage', 'Hors service'],
-    dailyRate: 0,
-    maxStayDays: 30,
-    requireDischargeValidation: true,
+    roomTypes: [
+      'Chambre individuelle',
+      'Chambre double',
+      'Salle commune',
+      'Soins intensifs',
+      'Réanimation',
+      'Isolement',
+      'Maternité',
+      'Pédiatrie',
+    ],
     admissionServices: [
       'Médecine générale',
       'Maternité',
@@ -164,6 +188,25 @@ export const DEFAULT_MODULE_SETTINGS: ModuleSettings = {
       'Chirurgie',
       'Urgences',
     ],
+    careTypes: [
+      'Constantes vitales',
+      'Soins infirmiers',
+      'Administration de médicament',
+      'Observation',
+      'Incident',
+      'Alimentation',
+      'Évolution clinique',
+    ],
+    dischargeReasons: [
+      'Guérison',
+      'Amélioration',
+      'Sortie contre avis médical',
+      'Transfert externe',
+      'Décès',
+    ],
+    dailyRate: 0,
+    maxStayDays: 30,
+    requireDischargeValidation: true,
   },
   pharmacy: {
     lowStockThreshold: 10,
@@ -171,6 +214,33 @@ export const DEFAULT_MODULE_SETTINGS: ModuleSettings = {
     blockExpiredDispensing: true,
     requirePharmacistValidation: true,
     trackLots: true,
+    defaultIssueRule: 'FEFO',
+    forms: [
+      'Comprimé',
+      'Gélule',
+      'Sirop',
+      'Suspension buvable',
+      'Solution injectable',
+      'Poudre pour injection',
+      'Suppositoire',
+      'Pommade',
+      'Crème',
+      'Collyre',
+      'Solution pour perfusion',
+      'Patch',
+    ],
+    administrationRoutes: [
+      'Orale',
+      'Intraveineuse',
+      'Intramusculaire',
+      'Sous-cutanée',
+      'Rectale',
+      'Cutanée',
+      'Oculaire',
+      'Nasale',
+      'Inhalée',
+      'Vaginale',
+    ],
     categories: [
       'Antibiotique',
       'Antalgique',

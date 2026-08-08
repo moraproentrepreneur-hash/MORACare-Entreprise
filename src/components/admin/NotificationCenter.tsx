@@ -14,7 +14,6 @@ import {
   Phone,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useAccess } from '@/context/AccessContext';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
@@ -45,9 +44,11 @@ import {
  * le détail. Un écran par type de demande obligeait à en faire le tour pour
  * savoir s'il restait quelque chose à traiter.
  *
- * Les échéances d'abonnement et de licence y figurent aussi, mais sans action
- * de lecture ni d'archivage : ce sont des situations, pas des événements. Les
- * archiver ne changerait rien à l'échéance.
+ * Le même composant sert la console éditeur et l'espace établissement. Ce
+ * n'est pas lui qui décide de ce que chacun voit : les politiques RLS le font,
+ * et lui offre les mêmes actions sur tout ce qu'elles lui renvoient. Les
+ * échéances d'abonnement et de licence sont des notifications comme les
+ * autres, marquables et archivables.
  */
 
 type Scope = 'active' | 'archived';
@@ -60,7 +61,6 @@ const SEVERITY_LABELS: Record<NotificationSeverity, string> = {
 
 export const NotificationCenter: React.FC = () => {
   const { user } = useAuth();
-  const { snapshot } = useAccess();
   const router = useRouter();
 
   const [items, setItems] = useState<AppNotification[]>([]);
@@ -75,25 +75,17 @@ export const NotificationCenter: React.FC = () => {
   const [severity, setSeverity] = useState<NotificationSeverity | 'all'>('all');
   const [readState, setReadState] = useState<'all' | 'unread' | 'read'>('all');
 
-  const subscription = snapshot?.subscription ?? null;
-  const license = snapshot?.license ?? null;
-
   const load = useCallback(async () => {
     if (!user) return;
     try {
-      setItems(
-        await loadNotifications(
-          { role: user.role, subscription, license },
-          { includeArchived: scope === 'archived' },
-        ),
-      );
+      setItems(await loadNotifications({ includeArchived: scope === 'archived' }));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chargement impossible.');
     } finally {
       setIsLoading(false);
     }
-  }, [user, subscription, license, scope]);
+  }, [user, scope]);
 
   useEffect(() => {
     void load();
@@ -253,7 +245,6 @@ export const NotificationCenter: React.FC = () => {
         <ul className="divide-y divide-slate-800">
           {visible.map((item) => {
             const Icon = CATEGORY_ICONS[item.category];
-            const isDerived = !item.rowId;
 
             return (
               <li key={item.id} className="flex items-start gap-3 p-4">
@@ -274,7 +265,7 @@ export const NotificationCenter: React.FC = () => {
                     >
                       {item.title}
                     </span>
-                    {!item.isRead && !isDerived && (
+                    {!item.isRead && (
                       <span className="h-2 w-2 shrink-0 rounded-full bg-mora-green" />
                     )}
                   </span>
@@ -310,22 +301,20 @@ export const NotificationCenter: React.FC = () => {
                       {
                         label: item.isRead ? 'Marquer comme non lue' : 'Marquer comme lue',
                         icon: Check,
-                        disabled: isDerived,
                         onSelect: () =>
                           void run(
                             item,
-                            () => markNotificationRead(item.rowId as string, !item.isRead),
+                            () => markNotificationRead(item.rowId, !item.isRead),
                             item.isRead ? 'Marquée comme non lue.' : 'Marquée comme lue.',
                           ),
                       },
                       {
                         label: item.isArchived ? 'Désarchiver' : 'Archiver',
                         icon: item.isArchived ? ArchiveRestore : Archive,
-                        disabled: isDerived,
                         onSelect: () =>
                           void run(
                             item,
-                            () => archiveNotification(item.rowId as string, !item.isArchived),
+                            () => archiveNotification(item.rowId, !item.isArchived),
                             item.isArchived ? 'Notification restaurée.' : 'Notification archivée.',
                           ),
                       },

@@ -117,6 +117,41 @@ export type MessageOutboxRow = Row<'message_outbox'>;
 export type PaymentMethodRow = Row<'payment_methods'>;
 export type NotificationCategoryRow = Row<'notifications'>['category'];
 
+// --- Hospitalisation (BP16) ---
+export type RoomRow = Row<'rooms'>;
+export type BedRow = Row<'beds'>;
+export type HospitalizationTransferRow = Row<'hospitalization_transfers'>;
+export type HospitalizationCareRow = Row<'hospitalization_care'>;
+export type HospitalizationVisitRow = Row<'hospitalization_visits'>;
+
+// --- Pharmacie, stock et achats (BP17, BP18, BP19) ---
+export type StockLocationRow = Row<'stock_locations'>;
+export type PharmacyRow = Row<'pharmacies'>;
+export type SupplierRow = Row<'suppliers'>;
+export type MedicationLotRow = Row<'medication_lots'>;
+export type StockMovementRow = Row<'stock_movements'>;
+export type PurchaseOrderRow = Row<'purchase_orders'>;
+export type PurchaseOrderLineRow = Row<'purchase_order_lines'>;
+export type DispensationRow = Row<'dispensations'>;
+export type DispensationLineRow = Row<'dispensation_lines'>;
+export type StockInventoryRow = Row<'stock_inventories'>;
+export type StockInventoryLineRow = Row<'stock_inventory_lines'>;
+
+// --- Facturation des abonnements (BP30) ---
+export type SubscriptionInvoiceRow = Row<'subscription_invoices'>;
+export type SubscriptionPaymentRow = Row<'subscription_payments'>;
+
+/**
+ * Vues de synthèse.
+ *
+ * Le générateur les expose sous `Views` et non sous `Tables` : leurs lignes
+ * n'ont ni `Insert` ni `Update`, ce qui reflète exactement leur nature — on les
+ * lit, on n'y écrit pas.
+ */
+export type BedAvailabilityRow = Database['public']['Views']['bed_availability']['Row'];
+export type PharmacyStockStateRow =
+  Database['public']['Views']['pharmacy_stock_state']['Row'];
+
 /** Motif d'un code de vérification à six chiffres. */
 export type VerificationPurpose =
   | 'account_activation'

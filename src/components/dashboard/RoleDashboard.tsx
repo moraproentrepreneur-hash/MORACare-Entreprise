@@ -21,6 +21,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { StatCard } from './StatCard';
 import { formatCurrency } from '@/lib/utils';
+import { isActiveStay } from '@/services/hospitalization.service';
 
 /**
  * Tableau de bord propre à chaque rôle.
@@ -63,7 +64,7 @@ export const RoleDashboard: React.FC = () => {
   const stats = useMemo(() => {
     const today = new Date();
 
-    const activeHospitalizations = hospitalizations.filter((h) => h.status === 'active');
+    const activeHospitalizations = hospitalizations.filter((h) => isActiveStay(h.status));
     const todayConsultations = consultations.filter((c) => isSameDay(c.consultation_date, today));
     const todayAppointments = appointments.filter((a) => isSameDay(a.appointment_date, today));
     const upcomingAppointments = appointments.filter(

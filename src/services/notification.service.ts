@@ -1,24 +1,25 @@
 import { failIf, getClient } from './base.service';
-import type { UserRole } from '@/types';
 import type { Json } from '@/types/database';
-import type { EstablishmentLicense, EstablishmentSubscription } from './access.service';
 
 /**
  * Centre de notifications.
  *
- * Deux natures de notifications coexistent, et la distinction est structurante :
+ * Toutes les notifications sont des lignes de la table `notifications` : elles
+ * se marquent lues, s'archivent et se restaurent de la même façon, quel que
+ * soit le destinataire. La portée est décidée par les seules politiques RLS —
+ * le Super Admin voit la plateforme entière, le responsable d'établissement sa
+ * structure, chacun ses notifications nominatives.
  *
- *   - les **événements**, enregistrés en base au moment où ils se produisent :
- *     une demande déposée, un code émis, un compte créé. Ils ont eu lieu une
- *     fois, à un instant donné ; on peut donc les marquer lus et les archiver.
+ * Il en allait autrement jusqu'ici. Les échéances d'abonnement et de licence
+ * étaient recalculées à chaque lecture et présentées comme des notifications
+ * sans exister en base. N'ayant pas de ligne, elles n'étaient ni marquables ni
+ * archivables : le menu d'actions se réduisait à « consulter », et le filtre
+ * « Archivées » ne pouvait rien montrer puisque rien n'était archivable.
  *
- *   - les **états**, recalculés à chaque lecture : un abonnement qui arrive à
- *     échéance, une licence expirée. Les archiver n'aurait aucun sens — la
- *     situation, elle, persisterait. Ils disparaissent d'eux-mêmes quand la
- *     situation est résolue.
- *
- * Le Centre les présente ensemble, mais n'offre les actions de lecture et
- * d'archivage que sur les premiers.
+ * Le défaut ne se voyait que côté Super Admin : sa liste est presque
+ * entièrement faite d'échéances, là où celle d'un responsable est surtout faite
+ * d'événements réels. Les échéances sont désormais émises et persistées par la
+ * base, aux paliers 30, 7, 3 jours puis à l'expiration.
  */
 
 export type NotificationCategory =
@@ -48,8 +49,8 @@ export interface AppNotification {
   metadata: Record<string, unknown> | null;
   isRead: boolean;
   isArchived: boolean;
-  /** Ligne de `notifications` : absente pour un état recalculé. */
-  rowId?: string;
+  /** Identifiant de la ligne en base. */
+  rowId: string;
 }
 
 export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
@@ -63,18 +64,6 @@ export const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   subscription_expiry: 'Abonnement',
   license_expiry: 'Licence',
   critical_error: 'Erreur critique',
-};
-
-const DAY = 86_400_000;
-/** Seuil d'alerte avant échéance : un mois pour renouveler sans urgence. */
-const EXPIRY_WARNING_DAYS = 30;
-
-const daysUntil = (date: string): number => Math.ceil((new Date(date).getTime() - Date.now()) / DAY);
-
-const expiryPhrase = (days: number): string => {
-  if (days < 0) return `échéance dépassée depuis ${Math.abs(days)} jour${Math.abs(days) > 1 ? 's' : ''}`;
-  if (days === 0) return "échéance aujourd'hui";
-  return `échéance dans ${days} jour${days > 1 ? 's' : ''}`;
 };
 
 const asCategory = (value: string): NotificationCategory =>
@@ -201,205 +190,44 @@ export const publishPlatformNotification = async (input: {
 };
 
 // ---------------------------------------------------------------------------
-// États recalculés
-// ---------------------------------------------------------------------------
-
-const loadPlatformExpiries = async (): Promise<AppNotification[]> => {
-  const client = getClient();
-
-  const [subscriptions, licenses] = await Promise.all([
-    client
-      .from('subscriptions')
-      .select('id, end_date, status, establishment:establishments(name)')
-      .not('end_date', 'is', null)
-      .in('status', ['active', 'pending'])
-      .is('deleted_at', null)
-      .order('end_date')
-      .limit(50),
-    client
-      .from('licenses')
-      .select('id, license_number, expires_at, status, establishment:establishments(name)')
-      .not('expires_at', 'is', null)
-      .eq('status', 'active')
-      .is('deleted_at', null)
-      .order('expires_at')
-      .limit(50),
-  ]);
-
-  failIf(subscriptions.error, 'Chargement des abonnements');
-  failIf(licenses.error, 'Chargement des licences');
-
-  const alerts: AppNotification[] = [];
-
-  for (const row of subscriptions.data ?? []) {
-    if (!row.end_date) continue;
-    const days = daysUntil(row.end_date);
-    if (days > EXPIRY_WARNING_DAYS) continue;
-
-    const joined = row as unknown as { establishment?: { name: string } | null };
-    alerts.push({
-      id: `subscription:${row.id}`,
-      reference: null,
-      title: days < 0 ? 'Abonnement expiré' : 'Abonnement bientôt expiré',
-      message: `${joined.establishment?.name ?? 'Établissement'} — ${expiryPhrase(days)}`,
-      category: 'subscription_expiry',
-      severity: days < 0 ? 'critical' : 'warning',
-      createdAt: row.end_date,
-      expiresAt: null,
-      href: '/admin/abonnements',
-      metadata: null,
-      isRead: false,
-      isArchived: false,
-    });
-  }
-
-  for (const row of licenses.data ?? []) {
-    if (!row.expires_at) continue;
-    const days = daysUntil(row.expires_at);
-    if (days > EXPIRY_WARNING_DAYS) continue;
-
-    const joined = row as unknown as { establishment?: { name: string } | null };
-    alerts.push({
-      id: `license:${row.id}`,
-      reference: row.license_number,
-      title: days < 0 ? 'Licence expirée' : 'Licence bientôt expirée',
-      message: `${joined.establishment?.name ?? 'Établissement'} — ${expiryPhrase(days)}`,
-      category: 'license_expiry',
-      severity: days < 0 ? 'critical' : 'warning',
-      createdAt: row.expires_at,
-      expiresAt: null,
-      href: '/admin/abonnements',
-      metadata: null,
-      isRead: false,
-      isArchived: false,
-    });
-  }
-
-  return alerts;
-};
-
-/**
- * Alertes de l'établissement, déduites de son contrat.
- *
- * Elles s'appuient sur le snapshot déjà chargé par `AccessContext` : aucune
- * requête supplémentaire, et surtout aucune lecture d'une table que le rôle
- * n'a pas le droit de consulter.
- */
-const buildEstablishmentAlerts = (
-  subscription: EstablishmentSubscription | null,
-  license: EstablishmentLicense | null,
-): AppNotification[] => {
-  const alerts: AppNotification[] = [];
-
-  const push = (
-    id: string,
-    title: string,
-    message: string,
-    severity: NotificationSeverity,
-    createdAt: string,
-    category: NotificationCategory,
-  ) =>
-    alerts.push({
-      id,
-      reference: null,
-      title,
-      message,
-      category,
-      severity,
-      createdAt,
-      expiresAt: null,
-      href: '/settings',
-      metadata: null,
-      isRead: false,
-      isArchived: false,
-    });
-
-  if (subscription?.endDate) {
-    const days = daysUntil(subscription.endDate);
-    if (days <= EXPIRY_WARNING_DAYS) {
-      push(
-        'subscription:self',
-        days < 0 ? 'Votre abonnement a expiré' : 'Votre abonnement arrive à échéance',
-        `Formule ${subscription.planName} — ${expiryPhrase(days)}. Aucune donnée n'est supprimée.`,
-        days < 0 ? 'critical' : 'warning',
-        subscription.endDate,
-        'subscription_expiry',
-      );
-    }
-  }
-
-  if (license?.expiresAt) {
-    const days = daysUntil(license.expiresAt);
-    if (days <= EXPIRY_WARNING_DAYS) {
-      push(
-        'license:self',
-        days < 0 ? 'Votre licence a expiré' : 'Votre licence arrive à échéance',
-        `Licence ${license.licenseNumber} — ${expiryPhrase(days)}.`,
-        days < 0 ? 'critical' : 'warning',
-        license.expiresAt,
-        'license_expiry',
-      );
-    }
-  }
-
-  if (subscription && subscription.status !== 'active') {
-    push(
-      'subscription:status',
-      "L'abonnement n'est pas actif",
-      `Statut actuel : ${subscription.status}. Contactez MORA Shawiri.`,
-      'warning',
-      subscription.startDate,
-      'subscription_expiry',
-    );
-  }
-
-  return alerts;
-};
-
-// ---------------------------------------------------------------------------
 // Composition
 // ---------------------------------------------------------------------------
 
-export interface NotificationContext {
-  role: UserRole;
-  subscription: EstablishmentSubscription | null;
-  license: EstablishmentLicense | null;
-}
-
 /**
- * Émet les alertes d'échéance dues (J-7 et J-3).
+ * Émet les alertes d'échéance dues.
  *
  * Appelée à l'ouverture du Centre : la fonction PostgreSQL est rejouable sans
  * produire de doublon, ce qui évite de dépendre d'un ordonnanceur externe que
- * l'hébergement ne garantit pas. L'échec est absorbé — ne pas pouvoir produire
- * une alerte ne doit pas empêcher de consulter les notifications existantes.
+ * l'hébergement ne garantit pas. Elle couvre les paliers 30, 7 et 3 jours, le
+ * jour de l'échéance, puis l'expiration constatée — pour les abonnements comme
+ * pour les licences.
  */
 export const emitExpiryAlerts = async (): Promise<void> => {
   await getClient().rpc('emit_subscription_expiry_alerts');
 };
 
+/**
+ * Charge les notifications visibles par l'utilisateur courant.
+ *
+ * Aucun filtrage par rôle ici : les politiques RLS s'en chargent, et les
+ * dupliquer côté client ferait diverger les deux au premier changement. Le
+ * Super Admin et le responsable d'établissement exécutent donc exactement la
+ * même requête, et disposent des mêmes actions sur ce qu'elle leur renvoie.
+ */
 export const loadNotifications = async (
-  context: NotificationContext,
   query: NotificationQuery = {},
 ): Promise<AppNotification[]> => {
   // Les échéances franchies depuis la dernière consultation sont matérialisées
-  // avant la lecture, afin d'apparaître dans la liste qui suit.
+  // avant la lecture, afin d'apparaître dans la liste qui suit. L'échec est
+  // absorbé : ne pas pouvoir produire une alerte ne doit pas empêcher de
+  // consulter les notifications existantes.
   try {
     await emitExpiryAlerts();
   } catch {
     // Absorbé volontairement : voir ci-dessus.
   }
 
-  const stored = await loadStoredNotifications(query);
-
-  const derived =
-    context.role === 'super_admin'
-      ? await loadPlatformExpiries()
-      : buildEstablishmentAlerts(context.subscription, context.license);
-
-  return [...stored, ...derived].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  return loadStoredNotifications(query);
 };
 
 export const unreadCount = (notifications: readonly AppNotification[]): number =>

@@ -93,7 +93,10 @@ export const DOCUMENT_KINDS = {
   invoice: 'Facture',
   receipt: 'Reçu',
   quote: 'Devis',
-  dispensation: 'Bon de dispensation',
+  dispensation: 'Bon de délivrance',
+  stock_state: 'État du stock',
+  inventory_sheet: "Feuille d'inventaire",
+  bed_occupancy: "État d'occupation des lits",
 } as const;
 
 export type DocumentKind = keyof typeof DOCUMENT_KINDS;

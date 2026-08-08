@@ -20,6 +20,7 @@ import { PermissionsMatrix } from '@/components/settings/PermissionsMatrix';
 import { AuditLogPanel } from '@/components/settings/AuditLogPanel';
 import { EstablishmentSettings } from '@/components/settings/EstablishmentSettings';
 import { SubscriptionPanel } from '@/components/settings/SubscriptionPanel';
+import { EstablishmentInvoices } from '@/components/settings/EstablishmentInvoices';
 import { SecurityPanel } from '@/components/settings/SecurityPanel';
 import { ModuleSettingsTab } from '@/components/settings/ModuleSettingsTab';
 import { BackupsPanel } from '@/components/settings/BackupsPanel';
@@ -149,7 +150,16 @@ export const SettingsModule: React.FC = () => {
       )}
 
       {currentTab === 'establishment' && <EstablishmentSettings />}
-      {currentTab === 'subscription' && <SubscriptionPanel />}
+
+      {currentTab === 'subscription' && (
+        <div className="space-y-6">
+          <SubscriptionPanel />
+          {/* Le contrat sans son historique de facturation ne dit pas ce qui a
+              été payé : les deux appartiennent au même onglet. Le Super Admin
+              dispose de sa propre console, tous établissements confondus. */}
+          {!isSuperAdmin && <EstablishmentInvoices />}
+        </div>
+      )}
       {currentTab === 'modules' && <ModulesSettings />}
       {currentTab === 'roles' && <PermissionsMatrix />}
       {currentTab === 'security' && <SecurityPanel />}

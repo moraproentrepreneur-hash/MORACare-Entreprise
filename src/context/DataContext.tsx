@@ -5,7 +5,6 @@ import type {
   Patient,
   Appointment,
   Consultation,
-  Hospitalization,
   PharmacyItem,
   LabOrder,
   ImagingOrder,
@@ -22,6 +21,7 @@ import { useAuth } from './AuthContext';
 import { ServiceError, type WriteContext } from '@/services/base.service';
 import * as patientService from '@/services/patient.service';
 import * as clinicalService from '@/services/clinical.service';
+import * as hospitalizationService from '@/services/hospitalization.service';
 import * as diagnosticsService from '@/services/diagnostics.service';
 import * as pharmacyService from '@/services/pharmacy.service';
 import * as financeService from '@/services/finance.service';
@@ -71,11 +71,15 @@ interface DataContextType {
   consultations: Consultation[];
   addConsultation: (input: clinicalService.ConsultationInput) => Promise<void>;
 
-  hospitalizations: Hospitalization[];
-  addHospitalization: (input: clinicalService.HospitalizationInput) => Promise<void>;
+  hospitalizations: hospitalizationService.Stay[];
+  addHospitalization: (input: hospitalizationService.AdmissionInput) => Promise<void>;
 
+  /**
+   * Catalogue pharmaceutique réduit, pour le tableau de bord et la fiche
+   * patient. La création et la modification passent par le module Pharmacie,
+   * qui manipule le modèle complet du BP19 §5.
+   */
   pharmacyItems: PharmacyItem[];
-  addPharmacyItem: (input: pharmacyService.PharmacyItemInput) => Promise<void>;
 
   labOrders: LabOrder[];
   addLabOrder: (input: diagnosticsService.LabOrderInput) => Promise<void>;
@@ -133,7 +137,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
-  const [hospitalizations, setHospitalizations] = useState<Hospitalization[]>([]);
+  const [hospitalizations, setHospitalizations] = useState<hospitalizationService.Stay[]>([]);
   const [pharmacyItems, setPharmacyItems] = useState<PharmacyItem[]>([]);
   const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
   const [imagingOrders, setImagingOrders] = useState<ImagingOrder[]>([]);
@@ -171,7 +175,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         patientService.listPatients(),
         clinicalService.listAppointments(),
         clinicalService.listConsultations(),
-        clinicalService.listHospitalizations(),
+        hospitalizationService.listStays(),
         pharmacyService.listPharmacyItems(),
         diagnosticsService.listLabOrders(),
         diagnosticsService.listImagingOrders(),
@@ -324,9 +328,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     consultations,
     addConsultation: (input) => mutate((ctx) => clinicalService.createConsultation(input, ctx)),
     hospitalizations,
-    addHospitalization: (input) => mutate((ctx) => clinicalService.createHospitalization(input, ctx)),
+    addHospitalization: (input) => mutate((ctx) => hospitalizationService.admitPatient(input, ctx)),
     pharmacyItems,
-    addPharmacyItem: (input) => mutate((ctx) => pharmacyService.createPharmacyItem(input, ctx)),
     labOrders,
     addLabOrder: (input) => mutate((ctx) => diagnosticsService.createLabOrder(input, ctx)),
     imagingOrders,

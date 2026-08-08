@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, CheckCheck, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useAccess } from '@/context/AccessContext';
 import {
   loadNotifications,
   markAllNotificationsRead,
@@ -31,7 +30,6 @@ const PREVIEW_LIMIT = 8;
 
 export const NotificationBell: React.FC = () => {
   const { user } = useAuth();
-  const { snapshot } = useAccess();
   const router = useRouter();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -40,21 +38,18 @@ export const NotificationBell: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const subscription = snapshot?.subscription ?? null;
-  const license = snapshot?.license ?? null;
-
   const load = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
     try {
-      setItems(await loadNotifications({ role: user.role, subscription, license }));
+      setItems(await loadNotifications());
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chargement impossible.');
     } finally {
       setIsLoading(false);
     }
-  }, [user, subscription, license]);
+  }, [user]);
 
   // Premier chargement : la pastille doit être juste avant toute ouverture.
   useEffect(() => {
@@ -99,7 +94,13 @@ export const NotificationBell: React.FC = () => {
       }
     }
     setIsOpen(false);
-    router.push(item.href ?? '/admin/notifications');
+    // À défaut d'écran concerné, on renvoie vers le Centre de l'espace où l'on
+    // se trouve : celui de l'éditeur n'est pas accessible à un responsable
+    // d'établissement, et le lien y menait quel que soit le rôle.
+    router.push(
+      item.href ??
+        (user?.role === 'super_admin' ? '/admin/notifications' : '/notifications'),
+    );
   };
 
   const handleMarkAll = async () => {

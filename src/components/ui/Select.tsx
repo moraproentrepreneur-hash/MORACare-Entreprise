@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
+import { useAnchoredPanel } from '@/hooks/useAnchoredPanel';
 
 /**
  * Liste déroulante de MORACare.
@@ -151,43 +152,42 @@ export function Select<T extends string = string>({
     [options, onChange, close],
   );
 
-  // Fermeture au clic extérieur, au défilement d'un conteneur et au
-  // redimensionnement : la liste est positionnée par rapport au bouton, elle
-  // ne doit pas rester ouverte loin de lui.
-  useEffect(() => {
-    if (!isOpen) return;
+  /**
+   * La liste ne se ferme que sur un geste volontaire.
+   *
+   * Elle est testée comme intérieure au même titre que le champ : rendue en
+   * position fixe, elle n'est plus dans le conteneur. Sans cela, saisir sa
+   * barre de défilement comptait comme un appui extérieur — c'est ce qui la
+   * refermait dès qu'on cherchait à parcourir les options.
+   */
+  const dismiss = useCallback(() => close(false), [close]);
 
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      // La liste étant hors du conteneur depuis qu'elle est en position fixe,
-      // il faut la tester séparément : sinon un clic sur une option compterait
-      // comme un clic extérieur et refermerait avant de sélectionner.
-      if (
-        !containerRef.current?.contains(target) &&
-        !listRef.current?.contains(target)
-      ) {
-        close(false);
-      }
-    };
-    const onMove = () => close(false);
+  useAnchoredPanel({
+    isOpen,
+    anchorRef: containerRef,
+    insideRefs: [listRef],
+    place,
+    onDismiss: dismiss,
+  });
 
-    document.addEventListener('mousedown', onPointerDown);
-    window.addEventListener('resize', onMove);
-    // `true` : capte aussi le défilement d'un conteneur interne, celui d'une
-    // fenêtre modale par exemple.
-    window.addEventListener('scroll', onMove, true);
-
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      window.removeEventListener('resize', onMove);
-      window.removeEventListener('scroll', onMove, true);
-    };
-  }, [isOpen, close]);
-
-  // L'option active reste visible pendant la navigation au clavier.
+  /**
+   * L'option active reste visible pendant la navigation au clavier.
+   *
+   * Le défilement est appliqué à la liste seule. `scrollIntoView` remonte la
+   * chaîne des ancêtres et déplaçait aussi la page derrière la liste.
+   */
   useEffect(() => {
     if (!isOpen || activeIndex < 0) return;
-    listRef.current?.children[activeIndex]?.scrollIntoView({ block: 'nearest' });
+
+    const list = listRef.current;
+    const option = list?.children[activeIndex] as HTMLElement | undefined;
+    if (!list || !option) return;
+
+    if (option.offsetTop < list.scrollTop) {
+      list.scrollTop = option.offsetTop;
+    } else if (option.offsetTop + option.offsetHeight > list.scrollTop + list.clientHeight) {
+      list.scrollTop = option.offsetTop + option.offsetHeight - list.clientHeight;
+    }
   }, [isOpen, activeIndex]);
 
   /** Sélection par saisie des premières lettres, comme un `<select>` natif. */
@@ -308,7 +308,9 @@ export function Select<T extends string = string>({
             bottom: position.bottom,
             maxHeight: position.maxHeight,
           }}
-          className="fixed z-[60] overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-2xl"
+          // `overscroll-contain` : arrivé en bout de liste, le geste ne se
+          // propage pas à la page derrière.
+          className="fixed z-[60] overflow-y-auto overscroll-contain rounded-xl border border-slate-700 bg-slate-900 py-1 shadow-2xl"
         >
           {options.length === 0 && (
             <li className="px-3 py-2.5 text-xs text-slate-500">Aucune option disponible.</li>
@@ -325,12 +327,13 @@ export function Select<T extends string = string>({
                 role="option"
                 aria-selected={isSelected}
                 aria-disabled={option.disabled}
-                // `mousedown` plutôt que `click` : le bouton perdrait le focus
-                // avant que le clic ne se termine, refermant la liste trop tôt.
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  commit(index);
-                }}
+                // La sélection est validée au relâchement, comme sur un
+                // `<select>` natif : glisser depuis une option pour faire
+                // défiler la liste ne sélectionne donc rien. `mousedown` se
+                // contente d'empêcher le champ de perdre le focus, pour que la
+                // navigation au clavier reprenne après le choix.
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => commit(index)}
                 onMouseEnter={() => !option.disabled && setActiveIndex(index)}
                 className={`flex cursor-pointer items-start gap-2 px-3 py-2.5 text-sm transition-colors ${
                   option.disabled

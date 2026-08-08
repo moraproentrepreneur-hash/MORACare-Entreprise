@@ -1,343 +1,400 @@
 'use client';
 
-import React, { useState } from 'react';
-import { BedDouble, FileText, LogOut, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { Hospitalization, Patient } from '@/types';
-import { formatDate } from '@/lib/utils';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowRightLeft, BedDouble, DoorOpen, LayoutGrid } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
-import { PatientSelect } from '@/components/ui/PatientSelect';
-import { Select } from '@/components/ui/Select';
-import { DEFAULT_MODULE_SETTINGS } from '@/services/establishment.service';
-import { ActionMenu } from '@/components/ui/ActionMenu';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useDocument } from '@/hooks/useDocument';
-import { DoctorSelect } from '@/components/ui/DoctorSelect';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { DEFAULT_MODULE_SETTINGS } from '@/services/establishment.service';
+import type { WriteContext } from '@/services/base.service';
+import {
+  ADMISSION_ORIGINS,
+  STAY_STATE_LABELS,
+  buildOccupancy,
+  listBeds,
+  listRooms,
+  listStays,
+  type Bed,
+  type Room,
+  type Stay,
+} from '@/services/hospitalization.service';
+import { RoomsPanel } from '@/components/hospitalization/RoomsPanel';
+import { BedsPanel } from '@/components/hospitalization/BedsPanel';
+import { StaysPanel } from '@/components/hospitalization/StaysPanel';
+import { StayDetail } from '@/components/hospitalization/StayDetail';
+import { Metric, Notice } from '@/components/hospitalization/shared';
 
-/** États d'un séjour (BP16 §12). */
-const STATUS_LABELS: Record<string, string> = {
-  admitted: 'Admis',
-  active: 'En cours',
-  transferred: 'Transféré',
-  discharged: 'Sorti',
-  cancelled: 'Annulé',
-};
+/**
+ * Module Hospitalisation (BP16).
+ *
+ * Quatre onglets, dans l'ordre où les données se construisent : les chambres
+ * portent les lits, les lits reçoivent les admissions, l'occupation se déduit
+ * des deux. Cet ordre n'est pas cosmétique — un établissement qui commence par
+ * l'admission ne trouve rien à sélectionner, et le module paraît cassé.
+ */
+
+type Tab = 'stays' | 'rooms' | 'beds' | 'occupancy';
+
+const TABS: readonly { id: Tab; label: string; icon: React.ElementType }[] = [
+  { id: 'stays', label: 'Séjours', icon: BedDouble },
+  { id: 'rooms', label: 'Chambres', icon: DoorOpen },
+  { id: 'beds', label: 'Lits', icon: ArrowRightLeft },
+  { id: 'occupancy', label: 'Occupation', icon: LayoutGrid },
+];
 
 export const HospitalizationsModule: React.FC = () => {
-  const { patients, hospitalizations, addHospitalization } = useData();
+  const { user } = useAuth();
+  const { patients, refresh } = useData();
+  const { canCreate, canUpdate } = usePermissions();
   const { print, error: documentError, profile } = useDocument();
 
-  // Réglages de l'établissement (BP16) : types de chambres et services
-  // d'admission ne sont pas les mêmes d'une structure à l'autre.
-  const hospitalizationSettings =
-    profile?.moduleSettings.hospitalization ?? DEFAULT_MODULE_SETTINGS.hospitalization;
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [tab, setTab] = useState<Tab>('stays');
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [beds, setBeds] = useState<Bed[]>([]);
+  const [stays, setStays] = useState<Stay[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [opened, setOpened] = useState<Stay | null>(null);
 
-  const [selectedPatientId, setSelectedPatientId] = useState('');
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const settings = profile?.moduleSettings.hospitalization ?? DEFAULT_MODULE_SETTINGS.hospitalization;
+  const currency = profile?.currency ?? 'KMF';
 
-  const [form, setForm] = useState({
-    doctor_id: '',
-    service: '',
-    room_type: '',
-    room_number: '',
-    bed_number: '',
-    admission_reason: ''
-  });
+  const canManage = canUpdate('hospitalizations');
+  const canAdmit = canCreate('hospitalizations');
 
-  const handleSelectPatient = (p: Patient) => {
-    setSelectedPatientId(p.id);
-  };
+  const ctx: WriteContext | null = useMemo(
+    () =>
+      user?.establishment_id && user.id
+        ? { establishmentId: user.establishment_id, userId: user.id }
+        : null,
+    [user],
+  );
 
-  /** Durée du séjour, en jours révolus. */
-  const stayLength = (h: Hospitalization): number => {
-    const end = h.discharge_date ? new Date(h.discharge_date) : new Date();
-    const start = new Date(h.admission_date);
-    return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86_400_000));
-  };
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [loadedRooms, loadedBeds, loadedStays] = await Promise.all([
+        listRooms(),
+        listBeds(),
+        listStays(),
+      ]);
+      setRooms(loadedRooms);
+      setBeds(loadedBeds);
+      setStays(loadedStays);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chargement impossible.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   /**
-   * Bulletin d'hospitalisation (BP28C §7).
+   * Rechargement après écriture.
    *
-   * L'en-tête, le logo, la signature, le cachet et le modèle proviennent des
-   * Paramètres de l'établissement.
+   * `refresh` du contexte partagé est appelé en plus : le tableau de bord et la
+   * fiche patient comptent les séjours en cours, et resteraient sinon sur une
+   * situation périmée.
    */
-  const printBulletin = (h: Hospitalization) => {
+  const reload = useCallback(async () => {
+    await load();
+    await refresh();
+  }, [load, refresh]);
+
+  // Le dossier ouvert doit suivre les écritures qu'on y fait : sans cela, la
+  // durée de séjour et l'état affichés en tête resteraient ceux de l'ouverture.
+  const openedStay = opened ? (stays.find((stay) => stay.id === opened.id) ?? opened) : null;
+
+  const occupancy = useMemo(() => buildOccupancy(beds, stays), [beds, stays]);
+
+  const originLabel = (value: string | null): string =>
+    ADMISSION_ORIGINS.find((entry) => entry.value === value)?.label ?? 'Non précisée';
+
+  /** Bulletin d'hospitalisation (BP16, BP28C §7). */
+  const printBulletin = (stay: Stay) => {
     void print({
       kind: 'hospitalization',
-      reference: h.business_reference,
+      reference: stay.reference,
       title: "Bulletin d'hospitalisation",
-      subtitle: `Admission du ${formatDate(h.admission_date)}`,
+      subtitle: `Admission du ${formatDate(stay.admissionDate)}`,
       highlight: [
-        { label: 'Patient', value: h.patient_name },
-        { label: 'Praticien référent', value: h.doctor_name || '—' },
-        { label: 'Chambre / lit', value: `${h.room_number} — ${h.bed_number}` },
-        { label: 'Statut', value: STATUS_LABELS[h.status] ?? h.status },
+        { label: 'Patient', value: stay.patientName },
+        { label: 'Praticien référent', value: stay.doctorName || '—' },
+        {
+          label: 'Chambre / lit',
+          value: [stay.roomCode, stay.bedCode].filter(Boolean).join(' — ') || 'Non affecté',
+        },
+        { label: 'Statut', value: STAY_STATE_LABELS[stay.status] },
       ],
       sections: [
         {
           title: 'Séjour',
           fields: [
-            { label: "Date d'admission", value: formatDate(h.admission_date) },
+            { label: 'Service', value: stay.service ?? '—' },
+            { label: "Origine de l'admission", value: originLabel(stay.admissionOrigin) },
+            { label: "Date d'admission", value: formatDate(stay.admissionDate) },
             {
               label: 'Date de sortie',
-              value: h.discharge_date ? formatDate(h.discharge_date) : 'Séjour en cours',
+              value: stay.dischargeDate ? formatDate(stay.dischargeDate) : 'Séjour en cours',
             },
-            { label: 'Durée', value: `${stayLength(h)} jour(s)` },
+            { label: 'Durée', value: `${stay.lengthOfStay} jour(s)` },
+            {
+              label: 'Tarif journalier',
+              value: stay.dailyRate > 0 ? formatCurrency(stay.dailyRate, currency) : 'Non facturé',
+            },
+            {
+              label: 'Coût du séjour à ce jour',
+              value:
+                stay.dailyRate > 0
+                  ? formatCurrency(stay.dailyRate * stay.lengthOfStay, currency)
+                  : '—',
+            },
           ],
         },
         {
           title: "Motif d'admission",
-          paragraphs: [h.admission_reason || 'Non renseigné'],
+          paragraphs: [stay.admissionReason || 'Non renseigné'],
         },
       ],
-      note: h.discharge_date
+      note: stay.dischargeDate
         ? undefined
         : "Séjour en cours. Ce bulletin reflète la situation à la date d'édition.",
     });
   };
 
   /** Lettre de sortie (BP16 §11, BP28C §7). */
-  const printDischarge = (h: Hospitalization) => {
+  const printDischarge = (stay: Stay) => {
     void print({
       kind: 'discharge',
-      reference: h.business_reference,
+      reference: stay.reference,
       title: 'Lettre de sortie',
-      subtitle: h.discharge_date ? `Sortie du ${formatDate(h.discharge_date)}` : undefined,
+      subtitle: stay.dischargeDate ? `Sortie du ${formatDate(stay.dischargeDate)}` : undefined,
       highlight: [
-        { label: 'Patient', value: h.patient_name },
-        { label: 'Praticien référent', value: h.doctor_name || '—' },
-        { label: 'Admission', value: formatDate(h.admission_date) },
+        { label: 'Patient', value: stay.patientName },
+        { label: 'Praticien référent', value: stay.doctorName || '—' },
+        { label: 'Admission', value: formatDate(stay.admissionDate) },
         {
           label: 'Sortie',
-          value: h.discharge_date ? formatDate(h.discharge_date) : '—',
+          value: stay.dischargeDate ? formatDate(stay.dischargeDate) : '—',
         },
       ],
       sections: [
         {
           title: 'Séjour',
           fields: [
-            { label: 'Chambre / lit', value: `${h.room_number} — ${h.bed_number}` },
-            { label: 'Durée', value: `${stayLength(h)} jour(s)` },
-            { label: "Motif d'admission", value: h.admission_reason || '—' },
+            {
+              label: 'Chambre / lit',
+              value: [stay.roomCode, stay.bedCode].filter(Boolean).join(' — ') || '—',
+            },
+            { label: 'Service', value: stay.service ?? '—' },
+            { label: 'Durée', value: `${stay.lengthOfStay} jour(s)` },
+            { label: "Motif d'admission", value: stay.admissionReason || '—' },
+            { label: 'Motif de sortie', value: stay.dischargeReason ?? '—' },
+            { label: 'État du patient', value: stay.patientCondition ?? '—' },
           ],
         },
         {
-          title: 'Suites à donner',
+          title: 'Compte rendu de sortie',
           paragraphs: [
-            h.discharge_summary?.trim()
-              ? h.discharge_summary
-              : 'Aucun compte rendu de sortie saisi.',
+            stay.dischargeSummary?.trim() || 'Aucun compte rendu de sortie saisi.',
           ],
         },
+        ...(stay.recommendations?.trim()
+          ? [{ title: 'Recommandations', paragraphs: [stay.recommendations] }]
+          : []),
+        ...(stay.nextAppointmentDate
+          ? [
+              {
+                title: 'Suivi',
+                fields: [
+                  {
+                    label: 'Prochain rendez-vous',
+                    value: formatDate(stay.nextAppointmentDate),
+                  },
+                ],
+              },
+            ]
+          : []),
       ],
-    });
-  };
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError(null);
-
-    if (!selectedPatientId || !form.doctor_id) {
-      setSubmitError('Sélectionnez un patient et un praticien enregistrés dans la base.');
-      return;
-    }
-
-    try {
-      await addHospitalization({
-        patient_id: selectedPatientId,
-        doctor_id: form.doctor_id,
-        room_number: form.room_number,
-        bed_number: form.bed_number,
-        admission_reason: form.admission_reason
-      });
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Échec de l'enregistrement.");
-      return;
-    }
-
-    setIsAddModalOpen(false);
-    setSelectedPatientId('');
-    setForm({
-      doctor_id: '',
-      service: '',
-      room_type: '',
-      room_number: '',
-      bed_number: '',
-      admission_reason: '',
     });
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
-        <div>
-          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-            <BedDouble className="w-5 h-5 text-mora-green" /> Module Hospitalisation & Lits
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">Gestion du parc de lits, des admissions et du séjour des patients.</p>
-        </div>
-        <Button variant="secondary" onClick={() => setIsAddModalOpen(true)} className="gap-2 shrink-0">
-          <Plus className="w-4 h-4" /> Admettre un Patient
-        </Button>
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-6">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-white sm:text-xl">
+          <BedDouble className="h-5 w-5 shrink-0 text-mora-green" /> Hospitalisation
+        </h2>
+        <p className="mt-1 text-xs text-slate-400">
+          Chambres, lits, admissions, soins, transferts et sorties.
+        </p>
       </div>
 
-      {documentError && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-400">
-          {documentError}
-        </div>
+      {(error || documentError) && <Notice tone="error">{error ?? documentError}</Notice>}
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Metric
+          label="Patients hospitalisés"
+          value={occupancy.currentStays}
+          tone={occupancy.currentStays > 0 ? 'good' : 'neutral'}
+        />
+        <Metric
+          label="Lits disponibles"
+          value={occupancy.availableBeds}
+          hint={`${occupancy.totalBeds} lit(s) au total`}
+          tone={occupancy.availableBeds === 0 ? 'bad' : 'good'}
+        />
+        <Metric
+          label="Taux d'occupation"
+          value={`${occupancy.occupancyRate} %`}
+          tone={occupancy.occupancyRate >= 90 ? 'warn' : 'neutral'}
+        />
+        <Metric
+          label="Durée moyenne de séjour"
+          value={occupancy.averageLengthOfStay > 0 ? `${occupancy.averageLengthOfStay} j` : '—'}
+          hint="Sur les séjours terminés"
+        />
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto border-b border-slate-800 pb-2">
+        {TABS.map((entry) => {
+          const Icon = entry.icon;
+          return (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => setTab(entry.id)}
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+                tab === entry.id
+                  ? 'bg-mora-blue text-white shadow-md'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span>{entry.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {isLoading ? (
+        <div className="h-64 animate-pulse rounded-2xl border border-slate-800 bg-slate-900" />
+      ) : (
+        <>
+          {tab === 'stays' && (
+            <StaysPanel
+              stays={stays}
+              beds={beds}
+              patients={patients}
+              settings={settings}
+              canCreate={canAdmit}
+              canEdit={canManage}
+              ctx={ctx}
+              onOpenStay={setOpened}
+              onPrintBulletin={printBulletin}
+              onPrintDischarge={printDischarge}
+              onChanged={reload}
+            />
+          )}
+
+          {tab === 'rooms' && (
+            <RoomsPanel
+              rooms={rooms}
+              settings={settings}
+              currency={currency}
+              canManage={canManage}
+              ctx={ctx}
+              onChanged={reload}
+            />
+          )}
+
+          {tab === 'beds' && (
+            <BedsPanel
+              beds={beds}
+              rooms={rooms}
+              canManage={canManage}
+              ctx={ctx}
+              onChanged={reload}
+            />
+          )}
+
+          {tab === 'occupancy' && <OccupancyPanel report={occupancy} />}
+        </>
       )}
 
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
-        {hospitalizations.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
-            <BedDouble className="w-12 h-12 text-slate-600 mx-auto" />
-            <h4 className="text-base font-bold text-slate-300">Aucun patient hospitalisé</h4>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Toutes les chambres sont disponibles. Cliquez ci-dessous pour procéder à une admission.
-            </p>
-            <Button variant="secondary" onClick={() => setIsAddModalOpen(true)} className="gap-2 mt-2">
-              <Plus className="w-4 h-4" /> Admettre en hospitalisation
-            </Button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-bold">
-                <tr>
-                  <th className="p-4">Réf. Hospitalisation</th>
-                  <th className="p-4">Patient</th>
-                  <th className="p-4">Chambre / Lit</th>
-                  <th className="p-4">Date d'admission</th>
-                  <th className="p-4">Motif d'admission</th>
-                  <th className="p-4">Statut</th>
-                  <th className="p-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {hospitalizations.map((h) => (
-                  <tr key={h.id} className="hover:bg-slate-800/50 transition-colors">
-                    <td className="p-4 font-mono text-mora-green font-bold">{h.business_reference}</td>
-                    <td className="p-4 font-bold text-white">{h.patient_name}</td>
-                    <td className="p-4 font-semibold text-mora-gold">{h.room_number} - {h.bed_number}</td>
-                    <td className="p-4">{formatDate(h.admission_date)}</td>
-                    <td className="p-4">{h.admission_reason}</td>
-                    <td className="p-4">
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] uppercase">
-                        {STATUS_LABELS[h.status] ?? h.status}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <ActionMenu
-                        label={`Actions pour ${h.patient_name}`}
-                        items={[
-                          {
-                            label: "Bulletin d'hospitalisation",
-                            icon: FileText,
-                            onSelect: () => printBulletin(h),
-                          },
-                          {
-                            label: 'Lettre de sortie',
-                            icon: LogOut,
-                            disabled: !h.discharge_date,
-                            onSelect: () => printDischarge(h),
-                          },
-                        ]}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Admission en Hospitalisation">
-        <form onSubmit={handleCreate} className="space-y-4 text-slate-900 dark:text-slate-100">
-          {submitError && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
-              {submitError}
-            </div>
-          )}
-          <div>
-            <PatientSelect
-              patients={patients}
-              selectedPatientId={selectedPatientId}
-              onSelectPatient={handleSelectPatient}
-            />
-          </div>
-          <DoctorSelect
-            value={form.doctor_id}
-            onChange={(doctorId) => setForm({ ...form, doctor_id: doctorId })}
-          />
-          <div>
-            <label className="block text-xs font-semibold mb-1">Service d&apos;admission</label>
-            <Select
-              required
-              value={form.service}
-              onChange={(value) => setForm({ ...form, service: value })}
-              placeholder="— Sélectionner un service —"
-              options={hospitalizationSettings.admissionServices.map((service) => ({
-                value: service,
-                label: service,
-              }))}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-semibold mb-1">Type de chambre</label>
-              <Select
-                required
-                value={form.room_type}
-                onChange={(value) => setForm({ ...form, room_type: value })}
-                placeholder="— Sélectionner —"
-                options={hospitalizationSettings.roomTypes.map((type) => ({
-                  value: type,
-                  label: type,
-                }))}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1">Numéro de Chambre</label>
-              <input
-                type="text"
-                required
-                value={form.room_number}
-                onChange={(e) => setForm({ ...form, room_number: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1">Numéro de Lit</label>
-              <input
-                type="text"
-                required
-                value={form.bed_number}
-                onChange={(e) => setForm({ ...form, bed_number: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold mb-1">Motif d'admission</label>
-            <textarea
-              required
-              rows={2}
-              value={form.admission_reason}
-              onChange={(e) => setForm({ ...form, admission_reason: e.target.value })}
-              placeholder="Surveillance post-opératoire..."
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-            />
-          </div>
-          <div className="pt-2">
-            <Button type="submit" variant="secondary" className="w-full py-2.5 font-bold">
-              Valider l'Admission
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {openedStay && (
+        <StayDetail
+          stay={openedStay}
+          beds={beds}
+          settings={settings}
+          canEdit={canManage}
+          ctx={ctx}
+          doctorId={user?.role === 'doctor' ? user.id : ''}
+          onClose={() => setOpened(null)}
+          onChanged={reload}
+        />
+      )}
     </div>
   );
 };
+
+/** Taux d'occupation par service (BP16 §15). */
+const OccupancyPanel: React.FC<{ report: ReturnType<typeof buildOccupancy> }> = ({ report }) => (
+  <div className="space-y-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Metric label="Chambres" value={report.totalRooms} hint={`${report.availableRooms} avec un lit libre`} />
+      <Metric label="Lits occupés" value={report.occupiedBeds} tone="warn" />
+      <Metric label="Lits disponibles" value={report.availableBeds} tone="good" />
+      <Metric
+        label="Indisponibles"
+        value={report.outOfServiceBeds}
+        hint="Nettoyage ou hors service"
+        tone={report.outOfServiceBeds > 0 ? 'warn' : 'neutral'}
+      />
+    </div>
+
+    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+      <div className="border-b border-slate-800 p-4">
+        <h3 className="text-sm font-bold text-white">Occupation par service</h3>
+        <p className="mt-1 text-xs text-slate-400">
+          Répartition des lits selon le service de leur chambre.
+        </p>
+      </div>
+
+      {report.byService.length === 0 ? (
+        <p className="p-8 text-center text-xs text-slate-500">
+          Aucun lit enregistré : le taux d&apos;occupation sera calculé dès la création des chambres
+          et des lits.
+        </p>
+      ) : (
+        <ul className="divide-y divide-slate-800">
+          {report.byService.map((entry) => {
+            const rate = entry.beds === 0 ? 0 : Math.round((entry.occupied / entry.beds) * 100);
+            return (
+              <li key={entry.service} className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-slate-200">{entry.service}</span>
+                  <span className="text-xs text-slate-400">
+                    {entry.occupied} / {entry.beds} · {rate} %
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+                  <div
+                    className={`h-full rounded-full ${rate >= 90 ? 'bg-amber-500' : 'bg-mora-green'}`}
+                    style={{ width: `${rate}%` }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  </div>
+);

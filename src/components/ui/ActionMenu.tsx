@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { MoreVertical } from 'lucide-react';
+import { useAnchoredPanel } from '@/hooks/useAnchoredPanel';
 
 /**
  * Menu d'actions d'une ligne de tableau.
@@ -83,34 +84,25 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        !menuRef.current?.contains(target) &&
-        !buttonRef.current?.contains(target)
-      ) {
-        close(false);
-      }
-    };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') close();
     };
-    // Le menu est positionné une fois : il doit se refermer si la page bouge
-    // sous lui plutôt que de flotter à côté de sa ligne.
-    const onScrollOrResize = () => close(false);
 
-    document.addEventListener('mousedown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
-    window.addEventListener('scroll', onScrollOrResize, true);
-    window.addEventListener('resize', onScrollOrResize);
-
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('scroll', onScrollOrResize, true);
-      window.removeEventListener('resize', onScrollOrResize);
-    };
+    return () => document.removeEventListener('keydown', onKeyDown);
   }, [isOpen, close]);
+
+  // Appui extérieur, défilement de la page, redimensionnement : le menu suit
+  // sa ligne et ne se ferme que sur un geste volontaire.
+  const dismiss = useCallback(() => close(false), [close]);
+
+  useAnchoredPanel({
+    isOpen,
+    anchorRef: buttonRef,
+    insideRefs: [menuRef],
+    place,
+    onDismiss: dismiss,
+  });
 
   if (available.length === 0) {
     return <span className="text-slate-600">—</span>;

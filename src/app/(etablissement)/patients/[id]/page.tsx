@@ -21,6 +21,7 @@ import { useData } from '@/context/DataContext';
 import { formatDate, formatDateTime, formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { useDocument } from '@/hooks/useDocument';
+import { STAY_STATE_LABELS } from '@/services/hospitalization.service';
 import type { DocumentPayload } from '@/lib/documents/pdf';
 
 /**
@@ -92,7 +93,7 @@ function PatientRecord() {
     () => ({
       consultations: consultations.filter((c) => c.patient_id === patientId),
       appointments: appointments.filter((a) => a.patient_id === patientId),
-      hospitalizations: hospitalizations.filter((h) => h.patient_id === patientId),
+      hospitalizations: hospitalizations.filter((h) => h.patientId === patientId),
       labOrders: labOrders.filter((o) => o.patient_id === patientId),
       imagingOrders: imagingOrders.filter((o) => o.patient_id === patientId),
       invoices: invoices.filter((i) => i.patient_id === patientId),
@@ -175,10 +176,10 @@ function PatientRecord() {
                   ? {
                       columns: ['Admission', 'Sortie', 'Chambre', 'Motif'],
                       rows: related.hospitalizations.map((h) => [
-                        formatDate(h.admission_date),
-                        h.discharge_date ? formatDate(h.discharge_date) : 'En cours',
-                        `${h.room_number} — ${h.bed_number}`,
-                        h.admission_reason || '—',
+                        formatDate(h.admissionDate),
+                        h.dischargeDate ? formatDate(h.dischargeDate) : 'En cours',
+                        [h.roomCode, h.bedCode].filter(Boolean).join(' — ') || 'Non affectée',
+                        h.admissionReason || '—',
                       ]),
                     }
                   : undefined,
@@ -322,9 +323,11 @@ function PatientRecord() {
           {related.hospitalizations.map((h) => (
             <Row
               key={h.id}
-              primary={h.admission_reason}
-              secondary={`Chambre ${h.room_number} · ${h.bed_number} · ${h.status}`}
-              meta={formatDate(h.admission_date)}
+              primary={h.admissionReason}
+              secondary={`${
+                h.roomCode ? `Chambre ${h.roomCode}` : 'Chambre non affectée'
+              } · Lit ${h.bedCode ?? '—'} · ${STAY_STATE_LABELS[h.status]}`}
+              meta={formatDate(h.admissionDate)}
             />
           ))}
         </Section>

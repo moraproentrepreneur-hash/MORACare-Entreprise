@@ -1,352 +1,594 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Select } from '@/components/ui/Select';
-import { DEFAULT_MODULE_SETTINGS } from '@/services/establishment.service';
-import { FileText, Pill, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  AlertTriangle,
+  Building,
+  ClipboardList,
+  FileText,
+  HandCoins,
+  History,
+  Layers,
+  Package,
+  Pill,
+} from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useDocument } from '@/hooks/useDocument';
+import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
+import { DEFAULT_MODULE_SETTINGS } from '@/services/establishment.service';
+import type { WriteContext } from '@/services/base.service';
+import {
+  MOVEMENT_LABELS,
+  buildAlerts,
+  listDispensations,
+  listInventories,
+  listLocations,
+  listLots,
+  listMedications,
+  listMovements,
+  listPharmacies,
+  listPrescriptionsForPharmacy,
+  listSuppliers,
+  loadStockState,
+  type Dispensation,
+  type Inventory,
+  type Lot,
+  type Medication,
+  type Movement,
+  type MovementKind,
+  type PendingPrescription,
+  type Pharmacy,
+  type StockLocation,
+  type StockState,
+  type Supplier,
+} from '@/services/pharmacy.service';
+import { CataloguePanel } from '@/components/pharmacy/CataloguePanel';
+import { LotsPanel } from '@/components/pharmacy/LotsPanel';
+import { DispensationPanel } from '@/components/pharmacy/DispensationPanel';
+import { InventoryPanel } from '@/components/pharmacy/InventoryPanel';
+import { OrganisationPanel } from '@/components/pharmacy/OrganisationPanel';
+import {
+  Badge,
+  EmptyState,
+  Metric,
+  Notice,
+  ScrollTable,
+} from '@/components/hospitalization/shared';
 
 /**
- * Signalement des péremptions (BP19 §15).
+ * Module Pharmacie (BP17, BP18, BP19).
  *
- * Un médicament périmé ne doit pas se lire comme les autres : la date seule
- * oblige à la comparer mentalement à celle du jour, à chaque ligne.
+ * Les onglets suivent le circuit du médicament : le catalogue décrit les
+ * produits, les lots les font entrer, la délivrance les fait sortir,
+ * l'inventaire vérifie, l'historique explique. L'organisation — pharmacies,
+ * emplacements, fournisseurs — vient en dernier : on la règle une fois.
  *
- * Le délai de surveillance vient des Paramètres de l'établissement : trente
- * jours conviennent à une officine qui se réapprovisionne vite, pas à une
- * structure qui commande au trimestre.
+ * Les rôles sans droit de gestion n'ont accès qu'au stock : BP19 §23 leur
+ * reconnaît la consultation, pour vérifier la disponibilité d'un produit avant
+ * de le prescrire, mais aucune écriture.
  */
-const expiryState = (
-  date: string | null | undefined,
-  warningDays: number,
-): { tone: string; note: string | null } => {
-  if (!date) return { tone: 'text-slate-400', note: null };
 
-  const days = Math.round((new Date(date).getTime() - Date.now()) / 86_400_000);
-  if (days < 0) return { tone: 'text-red-400', note: 'Périmé' };
-  if (days <= warningDays) return { tone: 'text-amber-400', note: `Périme dans ${days} j` };
-  return { tone: 'text-slate-300', note: null };
-};
+type Tab = 'stock' | 'lots' | 'dispensation' | 'inventory' | 'movements' | 'organisation';
+
+const ALL_TABS: readonly {
+  id: Tab;
+  label: string;
+  icon: React.ElementType;
+  managerOnly: boolean;
+}[] = [
+  { id: 'stock', label: 'Stock', icon: Package, managerOnly: false },
+  { id: 'lots', label: 'Lots', icon: Layers, managerOnly: false },
+  { id: 'dispensation', label: 'Délivrance', icon: HandCoins, managerOnly: true },
+  { id: 'inventory', label: 'Inventaires', icon: ClipboardList, managerOnly: true },
+  { id: 'movements', label: 'Mouvements', icon: History, managerOnly: false },
+  { id: 'organisation', label: 'Organisation', icon: Building, managerOnly: true },
+];
 
 export const PharmacyModule: React.FC = () => {
-  // Ce module conservait auparavant son stock dans un état local : rien n'était
-  // jamais enregistré. Il lit désormais la base comme les autres modules.
-  const { pharmacyItems: items, addPharmacyItem } = useData();
+  const { user } = useAuth();
+  const { patients, refresh } = useData();
+  const { canUpdate } = usePermissions();
   const { print, error: documentError, profile } = useDocument();
 
-  // Réglages de l'établissement (BP19). Les valeurs par défaut couvrent le cas
-  // où le profil n'est pas encore chargé.
-  const pharmacySettings = profile?.moduleSettings.pharmacy ?? DEFAULT_MODULE_SETTINGS.pharmacy;
+  const [tab, setTab] = useState<Tab>('stock');
+  const [stock, setStock] = useState<StockState[]>([]);
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [lots, setLots] = useState<Lot[]>([]);
+  const [movements, setMovements] = useState<Movement[]>([]);
+  const [dispensations, setDispensations] = useState<Dispensation[]>([]);
+  const [prescriptions, setPrescriptions] = useState<PendingPrescription[]>([]);
+  const [inventories, setInventories] = useState<Inventory[]>([]);
+  const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
+  const [locations, setLocations] = useState<StockLocation[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [focusItemId, setFocusItemId] = useState<string | null>(null);
 
-  const categoryOptions = pharmacySettings.categories.map((category) => ({
-    value: category,
-    label: category,
-  }));
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const settings = profile?.moduleSettings.pharmacy ?? DEFAULT_MODULE_SETTINGS.pharmacy;
+  const hospitalizationSettings =
+    profile?.moduleSettings.hospitalization ?? DEFAULT_MODULE_SETTINGS.hospitalization;
+  const currency = profile?.currency ?? 'KMF';
+
+  const canManage = canUpdate('pharmacy');
+
+  const tabs = useMemo(
+    () => ALL_TABS.filter((entry) => !entry.managerOnly || canManage),
+    [canManage],
+  );
+
+  const ctx: WriteContext | null = useMemo(
+    () =>
+      user?.establishment_id && user.id
+        ? { establishmentId: user.establishment_id, userId: user.id }
+        : null,
+    [user],
+  );
 
   /**
-   * État du stock (BP19 §19).
+   * Chargement du module.
    *
-   * L'identité de l'établissement, ses couleurs et son modèle documentaire
-   * viennent de ses Paramètres : cet état est un document officiel, pas un
-   * export technique.
+   * Les écrans réservés au pharmacien ne sont pas chargés pour les autres
+   * rôles : ramener des délivrances nominatives pour un écran qu'ils ne verront
+   * pas serait une collecte sans objet.
    */
-  const printStockReport = () => {
-    const valuation = items.reduce(
-      (total, item) => total + item.stock_quantity * item.unit_price,
-      0,
-    );
-    const lowStock = items.filter((item) => item.stock_quantity <= (item.reorder_level ?? 0));
-    const expiring = items.filter((item) => expiryState(item.expiry_date, pharmacySettings.expiryWarningDays).note !== null);
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [loadedStock, loadedMedications, loadedLots, loadedMovements, loadedPharmacies] =
+        await Promise.all([
+          loadStockState(),
+          listMedications(),
+          listLots(),
+          listMovements(200),
+          listPharmacies(),
+        ]);
 
+      setStock(loadedStock);
+      setMedications(loadedMedications);
+      setLots(loadedLots);
+      setMovements(loadedMovements);
+      setPharmacies(loadedPharmacies);
+
+      if (canManage) {
+        const [
+          loadedDispensations,
+          loadedPrescriptions,
+          loadedInventories,
+          loadedLocations,
+          loadedSuppliers,
+        ] = await Promise.all([
+          listDispensations(),
+          listPrescriptionsForPharmacy(),
+          listInventories(),
+          listLocations(),
+          listSuppliers(),
+        ]);
+
+        setDispensations(loadedDispensations);
+        setPrescriptions(loadedPrescriptions);
+        setInventories(loadedInventories);
+        setLocations(loadedLocations);
+        setSuppliers(loadedSuppliers);
+      }
+
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chargement impossible.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [canManage]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const reload = useCallback(async () => {
+    await load();
+    await refresh();
+  }, [load, refresh]);
+
+  // Un onglet réservé ne doit pas rester affiché si le rôle change.
+  const currentTab = tabs.some((entry) => entry.id === tab) ? tab : tabs[0].id;
+
+  const alerts = useMemo(() => buildAlerts(stock), [stock]);
+
+  const openLots = (itemId: string) => {
+    setFocusItemId(itemId);
+    setTab('lots');
+  };
+
+  /** État du stock (BP18 §19, BP19 §22). */
+  const printStockState = () => {
     void print({
-      kind: 'dispensation',
-      reference: `STOCK-${new Date().toISOString().slice(0, 10)}`,
+      kind: 'stock_state',
+      reference: `ETAT-${new Date().toISOString().slice(0, 10)}`,
       title: 'État du stock pharmaceutique',
-      subtitle: `Arrêté au ${formatDate(new Date().toISOString())}`,
+      subtitle: `Situation au ${formatDate(new Date().toISOString())}`,
       highlight: [
-        { label: 'Références', value: String(items.length) },
-        { label: 'Valorisation', value: formatCurrency(valuation) },
-        { label: 'Sous le seuil', value: String(lowStock.length) },
-        { label: 'Péremptions à surveiller', value: String(expiring.length) },
+        { label: 'Références', value: String(stock.length) },
+        { label: 'Valeur du stock', value: formatCurrency(alerts.totalValue, currency) },
+        { label: 'Sous le seuil', value: String(alerts.lowStock.length) },
+        { label: 'Ruptures', value: String(alerts.outOfStock.length) },
       ],
       sections: [
         {
-          title: 'Inventaire',
+          title: 'Inventaire valorisé',
           table: {
-            columns: ['Référence', 'Médicament', 'Quantité', 'Valeur'],
-            rows: items.map((item) => [
-              item.business_reference,
-              item.name,
-              String(item.stock_quantity),
-              formatCurrency(item.stock_quantity * item.unit_price),
+            columns: ['Médicament', 'Catégorie', 'Quantité', 'Valeur'],
+            rows: stock.map((line) => [
+              line.name,
+              line.category,
+              `${line.quantity} ${line.unit}`,
+              formatCurrency(line.stockValue, currency),
             ]),
-            numericColumns: [2, 3],
           },
         },
-        ...(lowStock.length > 0
+        ...(alerts.lowStock.length > 0
           ? [
               {
-                title: 'À réapprovisionner',
+                title: 'Produits sous le seuil de réapprovisionnement',
                 table: {
                   columns: ['Médicament', 'Stock', 'Seuil'],
-                  rows: lowStock.map((item) => [
-                    item.name,
-                    String(item.stock_quantity),
-                    String(item.reorder_level ?? 0),
+                  rows: alerts.lowStock.map((line) => [
+                    line.name,
+                    String(line.quantity),
+                    String(line.reorderLevel),
                   ]),
-                  numericColumns: [1, 2],
                 },
               },
             ]
           : []),
-        ...(expiring.length > 0
+        ...(alerts.expiring.length > 0 || alerts.expired.length > 0
           ? [
               {
-                title: 'Péremptions',
+                title: 'Péremptions à surveiller',
                 table: {
-                  columns: ['Médicament', 'Péremption', 'État'],
-                  rows: expiring.map((item) => [
-                    item.name,
-                    item.expiry_date ? formatDate(item.expiry_date) : '—',
-                    expiryState(item.expiry_date, pharmacySettings.expiryWarningDays).note ?? '—',
-                  ]),
+                  columns: ['Médicament', 'Prochaine péremption', 'Périmé', 'À surveiller'],
+                  rows: [...alerts.expired, ...alerts.expiring]
+                    // Un produit à la fois périmé et proche de péremption ne
+                    // doit apparaître qu'une seule fois.
+                    .filter(
+                      (line, index, all) =>
+                        all.findIndex((entry) => entry.itemId === line.itemId) === index,
+                    )
+                    .map((line) => [
+                      line.name,
+                      line.nextExpiry ? formatDate(line.nextExpiry) : '—',
+                      String(line.expiredQuantity),
+                      String(line.expiringQuantity),
+                    ]),
                 },
               },
             ]
           : []),
       ],
-      total: { label: 'Valorisation du stock', value: formatCurrency(valuation) },
+      note: `Seuil de réapprovisionnement par défaut : ${settings.lowStockThreshold}. Péremption signalée ${settings.expiryWarningDays} jours à l'avance.`,
     });
   };
 
-  const [form, setForm] = useState({
-    name: '',
-    generic_name: '',
-    category: 'Antibiotique',
-    stock_quantity: 0,
-    unit_price: 0,
-    expiry_date: '',
-    reorder_level: DEFAULT_MODULE_SETTINGS.pharmacy.lowStockThreshold
-  });
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError(null);
-
-    try {
-      await addPharmacyItem({
-        name: form.name,
-        generic_name: form.generic_name || undefined,
-        category: form.category,
-        stock_quantity: form.stock_quantity,
-        unit_price: form.unit_price,
-        expiry_date: form.expiry_date || undefined,
-        reorder_level: form.reorder_level
-      });
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Échec de l'enregistrement.");
-      return;
-    }
-
-    setIsAddModalOpen(false);
-    setForm({
-      name: '',
-      generic_name: '',
-      category: 'Antibiotique',
-      stock_quantity: 0,
-      unit_price: 0,
-      expiry_date: '',
-      reorder_level: pharmacySettings.lowStockThreshold
+  /** Bon de délivrance nominatif (BP19 §10). */
+  const printDispensation = (dispensation: Dispensation) => {
+    void print({
+      kind: 'dispensation',
+      reference: dispensation.reference,
+      title: 'Bon de délivrance',
+      subtitle: `Délivré le ${formatDate(dispensation.dispensedAt)}`,
+      highlight: [
+        { label: 'Patient', value: dispensation.patientName ?? 'Délivrance au comptoir' },
+        { label: 'Pharmacie', value: dispensation.pharmacyName ?? '—' },
+        { label: 'Pharmacien', value: dispensation.dispensedByName ?? '—' },
+        { label: 'Montant', value: formatCurrency(dispensation.totalAmount, currency) },
+      ],
+      sections: [
+        {
+          title: 'Produits délivrés',
+          table: {
+            columns: ['Médicament', 'Lot', 'Quantité', 'Prix unitaire', 'Total'],
+            rows: dispensation.lines.map((line) => [
+              line.itemName,
+              line.lotNumber ?? '—',
+              String(line.quantity),
+              formatCurrency(line.unitPrice, currency),
+              formatCurrency(line.quantity * line.unitPrice, currency),
+            ]),
+          },
+        },
+        ...(dispensation.lines.some((line) => line.posology)
+          ? [
+              {
+                title: 'Posologie',
+                fields: dispensation.lines
+                  .filter((line) => line.posology)
+                  .map((line) => ({ label: line.itemName, value: line.posology as string })),
+              },
+            ]
+          : []),
+        ...(dispensation.notes
+          ? [{ title: 'Observations', paragraphs: [dispensation.notes] }]
+          : []),
+      ],
+      note: 'Conservez ce bon : il atteste des lots qui vous ont été remis.',
     });
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-2xl bg-slate-900 border border-slate-800">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div>
-          <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-            <Pill className="w-5 h-5 text-mora-green" /> Gestion Pharmacie & Stocks
+          <h2 className="flex items-center gap-2 text-lg font-bold text-white sm:text-xl">
+            <Pill className="h-5 w-5 shrink-0 text-mora-green" /> Pharmacie
           </h2>
-          <p className="text-xs text-slate-400 mt-1">Catalogue de médicaments, inventaire, réapprovisionnement et délivrance.</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {canManage
+              ? 'Catalogue, lots, mouvements, délivrance, inventaires et fournisseurs.'
+              : 'Consultation du stock disponible avant prescription.'}
+          </p>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          {items.length > 0 && (
-            <Button variant="outline" onClick={printStockReport} className="gap-2">
-              <FileText className="w-4 h-4" /> État du stock
-            </Button>
-          )}
-          <Button variant="secondary" onClick={() => setIsAddModalOpen(true)} className="gap-2 shrink-0">
-            <Plus className="w-4 h-4" /> Ajouter un Médicament
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          onClick={printStockState}
+          disabled={stock.length === 0}
+          className="shrink-0 gap-2"
+        >
+          <FileText className="h-4 w-4" /> État du stock
+        </Button>
       </div>
 
-      {documentError && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-400">
-          {documentError}
-        </div>
+      {(error || documentError) && <Notice tone="error">{error ?? documentError}</Notice>}
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Metric label="Références" value={stock.length} hint={`${lots.length} lot(s) suivi(s)`} />
+        <Metric
+          label="Valeur du stock"
+          value={formatCurrency(alerts.totalValue, currency)}
+          hint="Au prix d'achat"
+        />
+        <Metric
+          label="Sous le seuil"
+          value={alerts.lowStock.length + alerts.outOfStock.length}
+          hint={`dont ${alerts.outOfStock.length} en rupture`}
+          tone={alerts.outOfStock.length > 0 ? 'bad' : alerts.lowStock.length > 0 ? 'warn' : 'good'}
+        />
+        <Metric
+          label="Péremptions"
+          value={alerts.expiring.length + alerts.expired.length}
+          hint={`dont ${alerts.expired.length} périmé(s)`}
+          tone={alerts.expired.length > 0 ? 'bad' : alerts.expiring.length > 0 ? 'warn' : 'good'}
+        />
+      </div>
+
+      {(alerts.outOfStock.length > 0 || alerts.expired.length > 0) && (
+        <Notice tone="error">
+          <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />
+          {alerts.outOfStock.length > 0 && (
+            <>
+              {alerts.outOfStock.length} produit(s) en rupture
+              {alerts.expired.length > 0 && ', '}
+            </>
+          )}
+          {alerts.expired.length > 0 && <>{alerts.expired.length} produit(s) périmé(s) en stock</>}
+          .{' '}
+          {settings.blockExpiredDispensing
+            ? 'Les produits périmés ne peuvent pas être délivrés.'
+            : 'Le blocage des périmés est désactivé dans les Paramètres.'}
+        </Notice>
       )}
 
-      <div className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden">
-        {items.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
-            <Pill className="w-12 h-12 text-slate-600 mx-auto" />
-            <h4 className="text-base font-bold text-slate-300">Aucun produit en stock</h4>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              La pharmacie est vide. Cliquez sur "Ajouter un Médicament" pour renseigner votre catalogue pharmaceutique.
-            </p>
-            <Button variant="secondary" onClick={() => setIsAddModalOpen(true)} className="gap-2 mt-2">
-              <Plus className="w-4 h-4" /> Entrer un médicament
-            </Button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[46rem] text-left text-xs text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-bold">
-                <tr>
-                  <th className="p-4">Réf. Produit</th>
-                  <th className="p-4">Nom Produit</th>
-                  <th className="p-4">DCI / Générique</th>
-                  <th className="p-4">Catégorie</th>
-                  <th className="p-4">Stock</th>
-                  <th className="p-4">Prix Unitaire</th>
-                  <th className="p-4">Péremption</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {items.map((i) => {
-                  const expiry = expiryState(i.expiry_date, pharmacySettings.expiryWarningDays);
-                  const lowStock = i.stock_quantity <= (i.reorder_level ?? 0);
-
-                  return (
-                    <tr key={i.id} className="hover:bg-slate-800/50 transition-colors">
-                      <td className="p-4 font-mono text-mora-green font-bold">
-                        {i.business_reference}
-                      </td>
-                      <td className="p-4 font-bold text-white">{i.name}</td>
-                      <td className="p-4">{i.generic_name || '-'}</td>
-                      <td className="p-4">{i.category}</td>
-                      <td className="p-4">
-                        {/* BP19 §13 : le seuil de réapprovisionnement doit se
-                            voir sur la ligne, pas dans un rapport séparé. */}
-                        <span
-                          className={`font-bold ${lowStock ? 'text-amber-400' : 'text-emerald-400'}`}
-                        >
-                          {i.stock_quantity} unités
-                        </span>
-                        {lowStock && (
-                          <span className="mt-0.5 block text-[10px] text-amber-400">
-                            Seuil de réapprovisionnement atteint
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-4 font-mono text-slate-200">
-                        {formatCurrency(i.unit_price)}
-                      </td>
-                      <td className="p-4">
-                        <span className={expiry.tone}>
-                          {i.expiry_date ? formatDate(i.expiry_date) : '—'}
-                        </span>
-                        {expiry.note && (
-                          <span className={`mt-0.5 block text-[10px] ${expiry.tone}`}>
-                            {expiry.note}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div className="flex gap-2 overflow-x-auto border-b border-slate-800 pb-2">
+        {tabs.map((entry) => {
+          const Icon = entry.icon;
+          return (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => setTab(entry.id)}
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+                currentTab === entry.id
+                  ? 'bg-mora-blue text-white shadow-md'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span>{entry.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Nouveau Produit Pharmaceutique">
-        <form onSubmit={handleCreate} className="space-y-4 text-slate-900 dark:text-slate-100">
-          {submitError && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
-              {submitError}
-            </div>
-          )}
-          <div>
-            <label className="block text-xs font-semibold mb-1">Nom Commercial du Médicament</label>
-            <input
-              type="text"
-              required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="Paracétamol 1000mg"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
+      {isLoading ? (
+        <div className="h-64 animate-pulse rounded-2xl border border-slate-800 bg-slate-900" />
+      ) : (
+        <>
+          {currentTab === 'stock' && (
+            <CataloguePanel
+              stock={stock}
+              medications={medications}
+              settings={settings}
+              currency={currency}
+              canManage={canManage}
+              ctx={ctx}
+              onOpenLots={openLots}
+              onChanged={reload}
             />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-semibold mb-1">Nom Générique (DCI)</label>
-              <input
-                type="text"
-                value={form.generic_name}
-                onChange={(e) => setForm({ ...form, generic_name: e.target.value })}
-                placeholder="Paracetamol"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1">Catégorie</label>
-              <Select
-                required
-                value={form.category}
-                onChange={(value) => setForm({ ...form, category: value })}
-                placeholder="— Sélectionner une catégorie —"
-                options={categoryOptions}
-              />
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label className="block text-xs font-semibold mb-1">Quantité Stock</label>
-              <input
-                type="number"
-                required
-                value={form.stock_quantity}
-                onChange={(e) => setForm({ ...form, stock_quantity: parseInt(e.target.value) })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1">Prix Unitaire (KMF)</label>
-              <input
-                type="number"
-                required
-                value={form.unit_price}
-                onChange={(e) => setForm({ ...form, unit_price: parseFloat(e.target.value) })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold mb-1">Date Péremption</label>
-              <input
-                type="date"
-                required
-                value={form.expiry_date}
-                onChange={(e) => setForm({ ...form, expiry_date: e.target.value })}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-mora-blue outline-none"
-              />
-            </div>
-          </div>
-          <div className="pt-2">
-            <Button type="submit" variant="secondary" className="w-full py-2.5 font-bold">
-              Enregistrer le produit
-            </Button>
-          </div>
-        </form>
-      </Modal>
+          )}
+
+          {currentTab === 'lots' && (
+            <LotsPanel
+              lots={lots}
+              medications={medications}
+              pharmacies={pharmacies}
+              suppliers={suppliers}
+              settings={settings}
+              currency={currency}
+              canManage={canManage}
+              ctx={ctx}
+              focusItemId={focusItemId}
+              onClearFocus={() => setFocusItemId(null)}
+              onChanged={reload}
+            />
+          )}
+
+          {currentTab === 'dispensation' && (
+            <DispensationPanel
+              dispensations={dispensations}
+              prescriptions={prescriptions}
+              stock={stock}
+              pharmacies={pharmacies}
+              patients={patients}
+              settings={settings}
+              currency={currency}
+              canDispense={canManage}
+              ctx={ctx}
+              onPrint={printDispensation}
+              onChanged={reload}
+            />
+          )}
+
+          {currentTab === 'inventory' && (
+            <InventoryPanel
+              inventories={inventories}
+              stock={stock}
+              pharmacies={pharmacies}
+              canManage={canManage}
+              ctx={ctx}
+              onChanged={reload}
+            />
+          )}
+
+          {currentTab === 'movements' && (
+            <MovementsPanel movements={movements} currency={currency} />
+          )}
+
+          {currentTab === 'organisation' && (
+            <OrganisationPanel
+              pharmacies={pharmacies}
+              locations={locations}
+              suppliers={suppliers}
+              hospitalizationSettings={hospitalizationSettings}
+              canManage={canManage}
+              ctx={ctx}
+              onChanged={reload}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+/** Historique des mouvements (BP18 §11, §19). */
+const MovementsPanel: React.FC<{ movements: readonly Movement[]; currency: string }> = ({
+  movements,
+  currency,
+}) => {
+  const [kind, setKind] = useState<MovementKind | 'all'>('all');
+  const [search, setSearch] = useState('');
+
+  const visible = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return movements
+      .filter((entry) => (kind === 'all' ? true : entry.kind === kind))
+      .filter((entry) =>
+        needle === ''
+          ? true
+          : `${entry.reference} ${entry.itemName} ${entry.lotNumber ?? ''} ${entry.reason ?? ''}`
+              .toLowerCase()
+              .includes(needle),
+      );
+  }, [movements, kind, search]);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <input
+          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:ring-2 focus:ring-mora-green"
+          placeholder="Rechercher un mouvement, un produit, un lot…"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <Select
+          aria-label="Filtrer par nature"
+          value={kind}
+          onChange={(value) => setKind(value as MovementKind | 'all')}
+          options={[
+            { value: 'all', label: 'Toutes les natures' },
+            ...(Object.keys(MOVEMENT_LABELS) as MovementKind[]).map((entry) => ({
+              value: entry,
+              label: MOVEMENT_LABELS[entry],
+            })),
+          ]}
+        />
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+        {visible.length === 0 ? (
+          <EmptyState
+            icon={History}
+            title={movements.length === 0 ? 'Aucun mouvement' : 'Aucun résultat'}
+            description="Le registre est immuable : chaque entrée, sortie, délivrance ou écart d’inventaire y laisse une trace définitive."
+          />
+        ) : (
+          <ScrollTable minWidth="min-w-[56rem]">
+            <thead className="bg-slate-950 font-bold uppercase tracking-wider text-slate-400">
+              <tr>
+                <th className="p-4">Référence</th>
+                <th className="p-4">Date</th>
+                <th className="p-4">Nature</th>
+                <th className="p-4">Médicament</th>
+                <th className="p-4">Lot</th>
+                <th className="p-4">Quantité</th>
+                <th className="p-4">Motif</th>
+                <th className="p-4">Opérateur</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {visible.map((entry) => (
+                <tr key={entry.id} className="transition-colors hover:bg-slate-800/50">
+                  <td className="p-4 font-mono font-bold text-mora-green">{entry.reference}</td>
+                  <td className="p-4">{formatDateTime(entry.occurredAt)}</td>
+                  <td className="p-4">
+                    <Badge
+                      label={MOVEMENT_LABELS[entry.kind]}
+                      tone={entry.quantity > 0 ? 'good' : 'warn'}
+                    />
+                  </td>
+                  <td className="p-4 font-semibold text-white">{entry.itemName}</td>
+                  <td className="p-4 font-mono text-[11px] text-slate-400">
+                    {entry.lotNumber ?? '—'}
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className={`font-bold ${
+                        entry.quantity > 0 ? 'text-mora-green' : 'text-red-400'
+                      }`}
+                    >
+                      {entry.quantity > 0 ? `+${entry.quantity}` : entry.quantity}
+                    </span>
+                    {entry.unitCost > 0 && (
+                      <span className="block text-[11px] text-slate-500">
+                        {formatCurrency(Math.abs(entry.quantity) * entry.unitCost, currency)}
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    {entry.reason ?? '—'}
+                    {entry.patientName && (
+                      <span className="block text-[11px] text-slate-500">{entry.patientName}</span>
+                    )}
+                  </td>
+                  <td className="p-4">{entry.performedByName ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </ScrollTable>
+        )}
+      </div>
     </div>
   );
 };

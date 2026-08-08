@@ -23,62 +23,11 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.join(HERE, '..', 'supabase', 'migrations');
 
-/** Environnement Supabase minimal requis par les migrations. */
-const SUPABASE_STUB = `
-CREATE SCHEMA IF NOT EXISTS auth;
-
-CREATE TABLE IF NOT EXISTS auth.users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  instance_id UUID,
-  aud VARCHAR(255),
-  role VARCHAR(255),
-  email VARCHAR(255) UNIQUE,
-  encrypted_password VARCHAR(255),
-  email_confirmed_at TIMESTAMPTZ,
-  raw_app_meta_data JSONB,
-  raw_user_meta_data JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+/** Simulation de Supabase, partagée avec les autres harnais PGlite. */
+const SUPABASE_STUB = fs.readFileSync(
+  path.join(HERE, '..', 'supabase', 'testing', 'supabase-stub.sql'),
+  'utf8',
 );
-
-CREATE OR REPLACE FUNCTION auth.uid() RETURNS UUID
-LANGUAGE sql STABLE AS $fn$
-  SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid;
-$fn$;
-
-DO $r$ BEGIN CREATE ROLE authenticated; EXCEPTION WHEN duplicate_object THEN NULL; END $r$;
-DO $r$ BEGIN CREATE ROLE anon;          EXCEPTION WHEN duplicate_object THEN NULL; END $r$;
-
--- Supabase Storage. Reproduit ce dont les migrations ont besoin : déclarer un
--- compartiment et poser des politiques sur les objets. La fonction foldername
--- renvoie les segments du chemin, ce qui permet de cloisonner par dossier.
-CREATE SCHEMA IF NOT EXISTS storage;
-
-CREATE TABLE IF NOT EXISTS storage.buckets (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  public BOOLEAN DEFAULT FALSE,
-  file_size_limit BIGINT,
-  allowed_mime_types TEXT[],
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS storage.objects (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  bucket_id TEXT REFERENCES storage.buckets(id),
-  name TEXT,
-  owner UUID,
-  metadata JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
-CREATE OR REPLACE FUNCTION storage.foldername(name TEXT) RETURNS TEXT[]
-LANGUAGE sql IMMUTABLE AS $fn$
-  SELECT string_to_array(regexp_replace(name, '/[^/]*$', ''), '/');
-$fn$;
-`;
 
 const main = async () => {
   const db = await PGlite.create({ extensions: { uuid_ossp, pgcrypto } });

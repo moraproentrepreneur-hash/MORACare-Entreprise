@@ -1,5 +1,5 @@
 import { auditColumns, failIf, getClient, type WriteContext } from './base.service';
-import type { Appointment, Consultation, Hospitalization } from '@/types';
+import type { Appointment, Consultation } from '@/types';
 
 /**
  * Rendez-vous, consultations et hospitalisations (BP14, BP15, BP16).
@@ -148,54 +148,6 @@ export const createConsultation = async (
   failIf(error, 'Création de la consultation');
 };
 
-// ----------------------------------------------------------- Hospitalisations
-
-export interface HospitalizationInput {
-  patient_id: string;
-  doctor_id: string;
-  room_number: string;
-  bed_number: string;
-  admission_reason: string;
-}
-
-export const listHospitalizations = async (): Promise<Hospitalization[]> => {
-  const { data, error } = await getClient()
-    .from('hospitalizations')
-    .select(`*, ${PATIENT_JOIN}, ${DOCTOR_JOIN}`)
-    .is('deleted_at', null)
-    .order('admission_date', { ascending: false });
-
-  failIf(error, 'Chargement des hospitalisations');
-
-  return (data ?? []).map((row) => {
-    const joined = row as unknown as Joined;
-    return {
-      id: row.id,
-      business_reference: row.business_reference,
-      establishment_id: row.establishment_id ?? '',
-      patient_id: row.patient_id,
-      patient_name: fullName(joined.patient),
-      doctor_id: row.doctor_id,
-      doctor_name: fullName(joined.doctor),
-      room_number: row.room_number,
-      bed_number: row.bed_number,
-      admission_date: row.admission_date ?? row.created_at,
-      discharge_date: row.discharge_date ?? undefined,
-      admission_reason: row.admission_reason,
-      discharge_summary: row.discharge_summary ?? undefined,
-      status: (row.status ?? 'active') as Hospitalization['status'],
-      created_at: row.created_at,
-    };
-  });
-};
-
-export const createHospitalization = async (
-  input: HospitalizationInput,
-  ctx: WriteContext,
-): Promise<void> => {
-  const { error } = await getClient()
-    .from('hospitalizations')
-    .insert({ ...auditColumns(ctx), ...input, status: 'active' });
-
-  failIf(error, "Création de l'hospitalisation");
-};
+// Les hospitalisations relèvent désormais de hospitalization.service.ts : le
+// module BP16 manipule des chambres, des lits et un cycle de vie complet que
+// ce service clinique n’a pas vocation à porter.

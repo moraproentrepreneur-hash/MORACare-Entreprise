@@ -24,21 +24,11 @@ const ROOT = path.join(HERE, '..');
 const MIGRATIONS_DIR = path.join(ROOT, 'supabase', 'migrations');
 const TYPES_FILE = path.join(ROOT, 'src', 'types', 'database.ts');
 
-const SUPABASE_STUB = `
-CREATE SCHEMA IF NOT EXISTS auth;
-CREATE TABLE IF NOT EXISTS auth.users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  instance_id UUID, aud VARCHAR(255), role VARCHAR(255),
-  email VARCHAR(255) UNIQUE, encrypted_password VARCHAR(255),
-  email_confirmed_at TIMESTAMPTZ, raw_app_meta_data JSONB, raw_user_meta_data JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
+/** Simulation de Supabase, partagée avec les autres harnais PGlite. */
+const SUPABASE_STUB = fs.readFileSync(
+  path.join(ROOT, 'supabase', 'testing', 'supabase-stub.sql'),
+  'utf8',
 );
-CREATE OR REPLACE FUNCTION auth.uid() RETURNS UUID LANGUAGE sql STABLE AS $fn$
-  SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid;
-$fn$;
-DO $r$ BEGIN CREATE ROLE authenticated; EXCEPTION WHEN duplicate_object THEN NULL; END $r$;
-DO $r$ BEGIN CREATE ROLE anon; EXCEPTION WHEN duplicate_object THEN NULL; END $r$;
-`;
 
 /**
  * Tables couvertes par un alias `export type XxxRow = Row<'table'>`.
@@ -50,9 +40,18 @@ DO $r$ BEGIN CREATE ROLE anon; EXCEPTION WHEN duplicate_object THEN NULL; END $r
  */
 const parseAliasedTables = (source) => {
   const set = new Set();
-  const re = /export type \w+ = Row<'(\w+)'>/g;
+
+  // Alias de table : `export type XxxRow = Row<'table'>`.
+  const table = /export type \w+ = Row<'(\w+)'>/g;
   let m;
-  while ((m = re.exec(source)) !== null) set.add(m[1]);
+  while ((m = table.exec(source)) !== null) set.add(m[1]);
+
+  // Alias de vue. Les vues n'ont ni Insert ni Update — le générateur les place
+  // sous `Views` — et ne peuvent donc pas passer par `Row<…>`. Les ignorer
+  // ferait signaler comme non couvertes des vues qui le sont.
+  const view = /Database\['public'\]\['Views'\]\['(\w+)'\]\['Row'\]/g;
+  while ((m = view.exec(source)) !== null) set.add(m[1]);
+
   return set;
 };
 

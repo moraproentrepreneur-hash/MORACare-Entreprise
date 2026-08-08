@@ -15,6 +15,7 @@ import {
   BellRing,
   KeyRound,
   UserPlus,
+  Receipt,
   LayoutDashboard,
   BarChart3,
   HeartPulse,
@@ -81,6 +82,9 @@ export const ADMIN_SECTIONS: readonly { label: string; href: string; icon: Lucid
   { label: 'Centre de notifications', href: '/admin/notifications', icon: BellRing },
   { label: 'Demandes de réinitialisation', href: '/admin/reinitialisations', icon: KeyRound },
   { label: 'Abonnements & Licences', href: '/admin/abonnements', icon: CreditCard },
+  // Le contrat et son règlement sont deux métiers : on ouvre un abonnement une
+  // fois, on suit son encaissement tous les mois.
+  { label: 'Finances des abonnements', href: '/admin/finances', icon: Receipt },
   { label: 'Paramètres Globaux', href: '/admin/parametres', icon: Settings },
 ];
 
