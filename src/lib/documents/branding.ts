@@ -1,7 +1,5 @@
-import type { EstablishmentProfile } from '@/services/establishment.service';
-
 /**
- * Identité documentaire d'un établissement.
+ * Identité documentaire d'un émetteur.
  *
  * L'en-tête et le pied de page ne sont plus saisis : ils sont composés à partir
  * de l'identité, des coordonnées et des informations légales. Recopier à la
@@ -12,6 +10,52 @@ import type { EstablishmentProfile } from '@/services/establishment.service';
  * Ce module ne dépend ni de React ni de jsPDF : il est utilisable pour
  * l'aperçu à l'écran comme pour la génération du document.
  */
+
+/**
+ * Ce dont un document a besoin pour désigner son émetteur.
+ *
+ * Deux entités le satisfont : l'établissement, pour ses documents de soin, et
+ * MORA Shawiri, pour ceux qu'émet la plateforme — au premier rang desquels les
+ * factures d'abonnement.
+ *
+ * Le moteur exigeait auparavant un `EstablishmentProfile`. Le Super Admin
+ * n'appartenant à aucun établissement, toute génération depuis sa console
+ * échouait : c'est ce qui empêchait le téléchargement des factures. Décrire ce
+ * dont le document a réellement besoin, plutôt que d'où il vient, lève la
+ * contrainte sans rien relâcher.
+ */
+export interface DocumentIssuer {
+  name: string;
+  legalName: string;
+  slogan: string;
+  logoUrl: string;
+
+  authorizationNumber: string;
+  tradeRegister: string;
+  taxId: string;
+  legalMentions: string;
+
+  phone: string;
+  phoneSecondary: string;
+  whatsapp: string;
+  email: string;
+  supportEmail: string;
+  website: string;
+  address: string;
+  postalCode: string;
+  city: string;
+  island: string;
+  country: string;
+
+  primaryColor: string;
+  secondaryColor: string;
+  signatureUrl: string;
+  signatureHolder: string;
+  stampUrl: string;
+  currency: string;
+  pdfTemplate: string;
+  documentTemplates: Record<string, string> | null;
+}
 
 export type TemplateId = 'premium_classic' | 'premium_medical' | 'premium_executive';
 
@@ -133,26 +177,26 @@ const compact = (values: (string | null | undefined)[], separator = ' · '): str
  * comment le contacter. C'est l'ordre dans lequel un lecteur cherche ces
  * informations sur un papier à en-tête.
  */
-export const buildHeaderLines = (profile: EstablishmentProfile): string[] => {
+export const buildHeaderLines = (issuer: DocumentIssuer): string[] => {
   const lines: string[] = [];
 
-  const address = compact([profile.address, profile.postalCode], ' ');
-  const place = compact([address, profile.city, profile.island, profile.country], ', ');
+  const address = compact([issuer.address, issuer.postalCode], ' ');
+  const place = compact([address, issuer.city, issuer.island, issuer.country], ', ');
   if (place) lines.push(place);
 
-  const phones = compact([profile.phone, profile.phoneSecondary], ' / ');
+  const phones = compact([issuer.phone, issuer.phoneSecondary], ' / ');
   const contact = compact([
     phones ? `Tél. ${phones}` : '',
-    profile.whatsapp ? `WhatsApp ${profile.whatsapp}` : '',
-    profile.email,
-    profile.website,
+    issuer.whatsapp ? `WhatsApp ${issuer.whatsapp}` : '',
+    issuer.email,
+    issuer.website,
   ]);
   if (contact) lines.push(contact);
 
   const identifiers = compact([
-    profile.authorizationNumber ? `Autorisation ${profile.authorizationNumber}` : '',
-    profile.tradeRegister ? `RC ${profile.tradeRegister}` : '',
-    profile.taxId ? `NIF ${profile.taxId}` : '',
+    issuer.authorizationNumber ? `Autorisation ${issuer.authorizationNumber}` : '',
+    issuer.tradeRegister ? `RC ${issuer.tradeRegister}` : '',
+    issuer.taxId ? `NIF ${issuer.taxId}` : '',
   ]);
   if (identifiers) lines.push(identifiers);
 
@@ -165,47 +209,47 @@ export const buildHeaderLines = (profile: EstablishmentProfile): string[] => {
  * Le NIF y figure même s'il est déjà en tête : une facture peut être détachée
  * de sa première page, et l'administration fiscale le cherche en bas.
  */
-export const buildFooterLines = (profile: EstablishmentProfile): string[] => {
+export const buildFooterLines = (issuer: DocumentIssuer): string[] => {
   const lines: string[] = [];
 
   const identity = compact([
-    profile.legalName || profile.name,
-    profile.authorizationNumber ? `Autorisation ${profile.authorizationNumber}` : '',
-    profile.taxId ? `NIF ${profile.taxId}` : '',
+    issuer.legalName || issuer.name,
+    issuer.authorizationNumber ? `Autorisation ${issuer.authorizationNumber}` : '',
+    issuer.taxId ? `NIF ${issuer.taxId}` : '',
   ]);
   if (identity) lines.push(identity);
 
   const reach = compact([
-    compact([profile.city, profile.country], ', '),
-    profile.phone,
-    profile.supportEmail || profile.email,
+    compact([issuer.city, issuer.country], ', '),
+    issuer.phone,
+    issuer.supportEmail || issuer.email,
   ]);
   if (reach) lines.push(reach);
 
-  if (profile.legalMentions.trim()) {
-    lines.push(profile.legalMentions.trim());
+  if (issuer.legalMentions.trim()) {
+    lines.push(issuer.legalMentions.trim());
   }
 
   return lines;
 };
 
 export const brandingOf = (
-  profile: EstablishmentProfile,
+  issuer: DocumentIssuer,
   kind?: DocumentKind,
 ): DocumentBranding => ({
-  template: templateFor(profile, kind),
-  title: profile.legalName || profile.name,
-  slogan: profile.slogan,
-  logoUrl: profile.logoUrl,
-  signatureUrl: profile.signatureUrl,
-  signatureHolder: profile.signatureHolder,
-  stampUrl: profile.stampUrl,
-  primaryColor: profile.primaryColor,
-  secondaryColor: profile.secondaryColor,
-  currency: profile.currency,
-  headerLines: buildHeaderLines(profile),
-  footerLines: buildFooterLines(profile),
-  legalMentions: profile.legalMentions,
+  template: templateFor(issuer, kind),
+  title: issuer.legalName || issuer.name,
+  slogan: issuer.slogan,
+  logoUrl: issuer.logoUrl,
+  signatureUrl: issuer.signatureUrl,
+  signatureHolder: issuer.signatureHolder,
+  stampUrl: issuer.stampUrl,
+  primaryColor: issuer.primaryColor,
+  secondaryColor: issuer.secondaryColor,
+  currency: issuer.currency,
+  headerLines: buildHeaderLines(issuer),
+  footerLines: buildFooterLines(issuer),
+  legalMentions: issuer.legalMentions,
 });
 
 /**
@@ -214,12 +258,12 @@ export const brandingOf = (
  * BP28C §9 : un modèle par défaut pour l'établissement, et la possibilité d'en
  * attribuer un autre à certains types de documents.
  */
-export const templateFor = (profile: EstablishmentProfile, kind?: DocumentKind): TemplateId => {
+export const templateFor = (issuer: DocumentIssuer, kind?: DocumentKind): TemplateId => {
   if (kind) {
-    const override = profile.documentTemplates?.[kind];
+    const override = issuer.documentTemplates?.[kind];
     if (override) return asTemplateId(override);
   }
-  return asTemplateId(profile.pdfTemplate);
+  return asTemplateId(issuer.pdfTemplate);
 };
 
 // ---------------------------------------------------------------------------

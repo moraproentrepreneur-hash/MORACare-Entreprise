@@ -280,12 +280,27 @@ describe('Règle FEFO (BR-087)', () => {
 });
 
 describe('Délivrance (BR-085, BR-086)', () => {
+  /**
+   * Délivrance nominative.
+   *
+   * BR-085 exige qu'elle soit rattachée à une prescription, et la base le
+   * refuse désormais : chaque délivrance de ce test crée donc l'ordonnance qui
+   * la justifie, déjà validée par le pharmacien.
+   */
   const dispense = async (lotId: string, quantity: number): Promise<string> => {
+    const prescription = await one<{ id: string }>(
+      `INSERT INTO public.prescriptions
+         (establishment_id, patient_id, doctor_id, medications, pharmacy_status,
+          validated_by, validated_at)
+       VALUES ($1, $2, $3, '[]'::JSONB, 'validated', $3, NOW()) RETURNING id`,
+      [establishment, patient, pharmacist],
+    );
+
     const head = await one<{ id: string }>(
       `INSERT INTO public.dispensations
-         (establishment_id, pharmacy_id, patient_id, dispensed_by, status)
-       VALUES ($1, $2, $3, $4, 'delivered') RETURNING id`,
-      [establishment, pharmacy, patient, pharmacist],
+         (establishment_id, pharmacy_id, patient_id, prescription_id, dispensed_by, status)
+       VALUES ($1, $2, $3, $4, $5, 'delivered') RETURNING id`,
+      [establishment, pharmacy, patient, prescription.id, pharmacist],
     );
 
     await db.query(

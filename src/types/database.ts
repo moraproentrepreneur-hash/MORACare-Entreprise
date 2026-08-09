@@ -141,6 +141,29 @@ export type StockInventoryLineRow = Row<'stock_inventory_lines'>;
 export type SubscriptionInvoiceRow = Row<'subscription_invoices'>;
 export type SubscriptionPaymentRow = Row<'subscription_payments'>;
 
+// --- Identité documentaire de l'éditeur (BP28C, BP30) ---
+export type PlatformIdentityRow = Row<'platform_identity'>;
+
+// --- Achats et approvisionnements (BP17) ---
+export type PurchaseRequisitionRow = Row<'purchase_requisitions'>;
+export type PurchaseRequisitionLineRow = Row<'purchase_requisition_lines'>;
+export type SupplierQuoteRow = Row<'supplier_quotes'>;
+export type SupplierQuoteLineRow = Row<'supplier_quote_lines'>;
+export type PurchaseReceiptRow = Row<'purchase_receipts'>;
+export type PurchaseReceiptLineRow = Row<'purchase_receipt_lines'>;
+export type SupplierReturnRow = Row<'supplier_returns'>;
+export type SupplierReturnLineRow = Row<'supplier_return_lines'>;
+
+// --- Logistique interne (BP18 §12) ---
+export type StockTransferRow = Row<'stock_transfers'>;
+export type StockTransferLineRow = Row<'stock_transfer_lines'>;
+
+// --- Plans thérapeutiques et dispensation hospitalière (BP19 §6, §11) ---
+export type TherapeuticPlanRow = Row<'therapeutic_plans'>;
+export type TherapeuticPlanLineRow = Row<'therapeutic_plan_lines'>;
+export type WardRoundRow = Row<'ward_rounds'>;
+export type WardRoundAdministrationRow = Row<'ward_round_administrations'>;
+
 /**
  * Vues de synthèse.
  *

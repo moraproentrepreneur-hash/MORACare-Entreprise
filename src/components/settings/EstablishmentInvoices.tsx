@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FileText, Receipt } from 'lucide-react';
+import { Eye, FileText, Receipt } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useDocument } from '@/hooks/useDocument';
+import { useBranding } from '@/context/BrandingContext';
+import { buildSubscriptionInvoiceDocument } from '@/lib/documents/subscription-invoice';
 import type { ActionItem } from '@/components/ui/ActionMenu';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import {
   listInvoices,
   summarise,
@@ -25,7 +27,10 @@ import { Metric, Notice } from '@/components/hospitalization/shared';
  */
 export const EstablishmentInvoices: React.FC = () => {
   const { user } = useAuth();
-  const { print, error: documentError } = useDocument();
+  const { platform } = useBranding();
+  // La facture est émise par MORA Shawiri : elle porte son en-tête, et non
+  // celui de l'établissement qui la reçoit.
+  const { print, preview, error: documentError } = useDocument(platform);
 
   const [invoices, setInvoices] = useState<SubscriptionInvoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,74 +59,15 @@ export const EstablishmentInvoices: React.FC = () => {
 
   const totals = useMemo(() => summarise(invoices), [invoices]);
 
-  const printInvoice = (invoice: SubscriptionInvoice) => {
-    void print({
-      kind: 'invoice',
-      reference: invoice.reference,
-      title: "Facture d'abonnement",
-      subtitle: `Période du ${formatDate(invoice.periodStart)} au ${formatDate(invoice.periodEnd)}`,
-      highlight: [
-        { label: 'Formule', value: invoice.planName },
-        { label: 'Durée', value: `${invoice.durationMonths} mois` },
-        { label: 'Montant', value: formatCurrency(invoice.totalAmount, invoice.currency) },
-        { label: 'Reste dû', value: formatCurrency(invoice.balance, invoice.currency) },
-      ],
-      sections: [
-        {
-          title: 'Détail',
-          table: {
-            columns: ['Désignation', 'Durée', 'Prix mensuel', 'Total'],
-            rows: [
-              [
-                `Abonnement ${invoice.planName}`,
-                `${invoice.durationMonths} mois`,
-                formatCurrency(invoice.monthlyPrice, invoice.currency),
-                formatCurrency(invoice.totalAmount, invoice.currency),
-              ],
-            ],
-          },
-        },
-        {
-          title: 'Conditions',
-          fields: [
-            { label: 'Émise le', value: formatDate(invoice.issuedOn) },
-            { label: 'Échéance', value: invoice.dueOn ? formatDate(invoice.dueOn) : '—' },
-            {
-              label: 'Remise accordée',
-              value:
-                invoice.discountAmount > 0
-                  ? formatCurrency(invoice.discountAmount, invoice.currency)
-                  : 'Aucune',
-            },
-            { label: 'Déjà réglé', value: formatCurrency(invoice.paidAmount, invoice.currency) },
-          ],
-        },
-        ...(invoice.payments.length > 0
-          ? [
-              {
-                title: 'Vos règlements',
-                table: {
-                  columns: ['Date', 'Référence', 'Mode', 'Montant'],
-                  rows: invoice.payments.map((payment) => [
-                    formatDate(payment.paidOn),
-                    payment.reference,
-                    payment.paymentMethod,
-                    formatCurrency(payment.amount, invoice.currency),
-                  ]),
-                },
-              },
-            ]
-          : []),
-      ],
-      note:
-        invoice.balance > 0
-          ? `Reste à régler : ${formatCurrency(invoice.balance, invoice.currency)}. Règlement auprès de MORA Shawiri, éditeur de MORACare Enterprise.`
-          : 'Facture intégralement réglée.',
-    });
-  };
+  const printInvoice = (invoice: SubscriptionInvoice) =>
+    void print(buildSubscriptionInvoiceDocument(invoice));
+
+  const previewInvoice = (invoice: SubscriptionInvoice) =>
+    void preview(buildSubscriptionInvoiceDocument(invoice));
 
   const actionsFor = (invoice: SubscriptionInvoice): ActionItem[] => [
     { label: 'Consulter le détail', icon: Receipt, onSelect: () => setDetail(invoice) },
+    { label: 'Aperçu de la facture', icon: Eye, onSelect: () => previewInvoice(invoice) },
     { label: 'Télécharger la facture', icon: FileText, onSelect: () => printInvoice(invoice) },
   ];
 

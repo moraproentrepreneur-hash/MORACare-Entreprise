@@ -11,6 +11,9 @@ import {
   Layers,
   Package,
   Pill,
+  ShoppingCart,
+  Stethoscope,
+  Truck,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
@@ -51,6 +54,19 @@ import { LotsPanel } from '@/components/pharmacy/LotsPanel';
 import { DispensationPanel } from '@/components/pharmacy/DispensationPanel';
 import { InventoryPanel } from '@/components/pharmacy/InventoryPanel';
 import { OrganisationPanel } from '@/components/pharmacy/OrganisationPanel';
+import { SalesPanel } from '@/components/pharmacy/SalesPanel';
+import { TherapeuticPanel } from '@/components/pharmacy/TherapeuticPanel';
+import { ProcurementPanel } from '@/components/procurement/ProcurementPanel';
+import {
+  buildPurchaseOrderDocument,
+  buildReceiptDocument,
+  buildSaleReceipt,
+  buildSupplierReturnDocument,
+  buildTherapeuticPlanDocument,
+  buildTransferDocument,
+  buildWardRoundDocument,
+} from '@/lib/documents/pharmacy-documents';
+import { listPaymentMethods } from '@/services/subscription.service';
 import {
   Badge,
   EmptyState,
@@ -72,7 +88,16 @@ import {
  * de le prescrire, mais aucune écriture.
  */
 
-type Tab = 'stock' | 'lots' | 'dispensation' | 'inventory' | 'movements' | 'organisation';
+type Tab =
+  | 'stock'
+  | 'lots'
+  | 'sales'
+  | 'dispensation'
+  | 'therapeutic'
+  | 'procurement'
+  | 'inventory'
+  | 'movements'
+  | 'organisation';
 
 const ALL_TABS: readonly {
   id: Tab;
@@ -82,7 +107,10 @@ const ALL_TABS: readonly {
 }[] = [
   { id: 'stock', label: 'Stock', icon: Package, managerOnly: false },
   { id: 'lots', label: 'Lots', icon: Layers, managerOnly: false },
+  { id: 'sales', label: 'Ventes', icon: ShoppingCart, managerOnly: true },
   { id: 'dispensation', label: 'Délivrance', icon: HandCoins, managerOnly: true },
+  { id: 'therapeutic', label: 'Plans & tournées', icon: Stethoscope, managerOnly: true },
+  { id: 'procurement', label: 'Achats & logistique', icon: Truck, managerOnly: true },
   { id: 'inventory', label: 'Inventaires', icon: ClipboardList, managerOnly: true },
   { id: 'movements', label: 'Mouvements', icon: History, managerOnly: false },
   { id: 'organisation', label: 'Organisation', icon: Building, managerOnly: true },
@@ -105,6 +133,7 @@ export const PharmacyModule: React.FC = () => {
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [locations, setLocations] = useState<StockLocation[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [focusItemId, setFocusItemId] = useState<string | null>(null);
@@ -161,12 +190,14 @@ export const PharmacyModule: React.FC = () => {
           loadedInventories,
           loadedLocations,
           loadedSuppliers,
+          loadedMethods,
         ] = await Promise.all([
           listDispensations(),
           listPrescriptionsForPharmacy(),
           listInventories(),
           listLocations(),
           listSuppliers(),
+          listPaymentMethods(),
         ]);
 
         setDispensations(loadedDispensations);
@@ -174,6 +205,7 @@ export const PharmacyModule: React.FC = () => {
         setInventories(loadedInventories);
         setLocations(loadedLocations);
         setSuppliers(loadedSuppliers);
+        setPaymentMethods(loadedMethods.map((method) => method.label));
       }
 
       setError(null);
@@ -434,9 +466,57 @@ export const PharmacyModule: React.FC = () => {
             />
           )}
 
+          {currentTab === 'sales' && (
+            <SalesPanel
+              sales={dispensations.filter((entry) => entry.channel === 'sale')}
+              stock={stock}
+              pharmacies={pharmacies}
+              patients={patients}
+              paymentMethods={paymentMethods}
+              currency={currency}
+              canSell={canManage}
+              ctx={ctx}
+              onPrint={(sale) => void print(buildSaleReceipt(sale, currency))}
+              onChanged={reload}
+            />
+          )}
+
+          {currentTab === 'therapeutic' && (
+            <TherapeuticPanel
+              medications={medications}
+              pharmacies={pharmacies}
+              patients={patients}
+              settings={hospitalizationSettings}
+              routes={settings.administrationRoutes}
+              canManage={canManage}
+              ctx={ctx}
+              onPrintPlan={(plan) => void print(buildTherapeuticPlanDocument(plan))}
+              onPrintRound={(round) => void print(buildWardRoundDocument(round))}
+            />
+          )}
+
+          {currentTab === 'procurement' && (
+            <ProcurementPanel
+              medications={medications}
+              lots={lots}
+              pharmacies={pharmacies}
+              suppliers={suppliers}
+              services={hospitalizationSettings.admissionServices}
+              currency={currency}
+              canManage={canManage}
+              ctx={ctx}
+              onPrintOrder={(order) => void print(buildPurchaseOrderDocument(order, currency))}
+              onPrintReceipt={(receipt) => void print(buildReceiptDocument(receipt, currency))}
+              onPrintTransfer={(transfer) => void print(buildTransferDocument(transfer))}
+              onPrintReturn={(entry) => void print(buildSupplierReturnDocument(entry, currency))}
+            />
+          )}
+
           {currentTab === 'dispensation' && (
             <DispensationPanel
-              dispensations={dispensations}
+              // Les ventes au comptoir ont leur propre écran : les mêler aux
+              // délivrances sur ordonnance rendrait l'un et l'autre illisibles.
+              dispensations={dispensations.filter((entry) => entry.channel !== 'sale')}
               prescriptions={prescriptions}
               stock={stock}
               pharmacies={pharmacies}

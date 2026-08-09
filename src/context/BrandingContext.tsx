@@ -7,6 +7,12 @@ import {
   getEstablishmentProfile,
   type EstablishmentProfile,
 } from '@/services/establishment.service';
+import {
+  FALLBACK_PLATFORM_IDENTITY,
+  getPlatformIdentity,
+  type PlatformIdentity,
+} from '@/services/platform.service';
+import type { DocumentIssuer } from '@/lib/documents/branding';
 
 /**
  * Identité visuelle de l'établissement, appliquée à l'interface.
@@ -24,6 +30,17 @@ import {
 
 interface BrandingContextValue {
   profile: EstablishmentProfile | null;
+  /** Identité documentaire de l'éditeur, lisible par tous les comptes. */
+  platform: PlatformIdentity;
+  /**
+   * Émetteur par défaut des documents produits depuis l'espace courant :
+   * l'établissement pour un soignant, la plateforme pour le Super Admin.
+   *
+   * Un document a toujours un émetteur. Faute d'en trouver un, le moteur
+   * refusait de produire quoi que ce soit depuis la console de l'éditeur —
+   * c'est ce qui empêchait le téléchargement des factures d'abonnement.
+   */
+  issuer: DocumentIssuer;
   isLoading: boolean;
   /** À appeler après un enregistrement des Paramètres. */
   refresh: () => Promise<void>;
@@ -50,20 +67,40 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { user, isAuthenticated } = useAuth();
 
   const [profile, setProfile] = useState<EstablishmentProfile | null>(null);
+  const [platform, setPlatform] = useState<PlatformIdentity>(FALLBACK_PLATFORM_IDENTITY);
   const [isLoading, setIsLoading] = useState(false);
 
   const establishmentId = user?.establishment_id ?? null;
 
   const refresh = useCallback(async () => {
-    if (!isAuthenticated || !establishmentId) {
+    if (!isAuthenticated) {
       setProfile(null);
-      // Retour à la charte de l'éditeur : le Super Admin n'appartient à aucun
-      // établissement, et la couleur du dernier consulté ne doit pas rester.
       applyColors(null, null);
       return;
     }
 
     setIsLoading(true);
+
+    // L'identité de l'éditeur est chargée pour tout le monde : elle habille les
+    // documents de plateforme, y compris la facture d'abonnement qu'un
+    // responsable télécharge depuis son propre espace.
+    try {
+      setPlatform(await getPlatformIdentity());
+    } catch {
+      // Le repli porte l'identité officielle : un document sans émetteur n'a
+      // aucune valeur, un en-tête approximatif vaut mieux qu'aucun.
+      setPlatform(FALLBACK_PLATFORM_IDENTITY);
+    }
+
+    if (!establishmentId) {
+      setProfile(null);
+      // Retour à la charte de l'éditeur : le Super Admin n'appartient à aucun
+      // établissement, et la couleur du dernier consulté ne doit pas rester.
+      applyColors(null, null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const loaded = await getEstablishmentProfile(establishmentId);
       setProfile(loaded);
@@ -83,8 +120,18 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [refresh]);
 
   const value = useMemo<BrandingContextValue>(
-    () => ({ profile, isLoading, refresh }),
-    [profile, isLoading, refresh],
+    () => ({
+      profile,
+      platform,
+      // Un établissement signe ses documents de soin ; l'éditeur signe les
+      // siens. `EstablishmentProfile` et `PlatformIdentity` portent les mêmes
+      // champs d'émetteur, ce qui rend la substitution possible sans que le
+      // moteur documentaire n'ait à connaître leur nature.
+      issuer: (profile as DocumentIssuer | null) ?? platform,
+      isLoading,
+      refresh,
+    }),
+    [profile, platform, isLoading, refresh],
   );
 
   return <BrandingContext.Provider value={value}>{children}</BrandingContext.Provider>;

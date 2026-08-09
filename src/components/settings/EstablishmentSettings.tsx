@@ -1,21 +1,18 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   Check,
   Clock,
   FileText,
   Globe2,
-  ImagePlus,
   Landmark,
   LayoutTemplate,
-  Loader2,
   MapPin,
   Palette,
   Phone,
   Stethoscope,
-  Trash2,
   X,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -29,11 +26,18 @@ import {
   getEstablishmentProfile,
   saveEstablishmentProfile,
   uploadEstablishmentAsset,
-  type AssetKind,
   type DayKey,
   type EstablishmentProfile,
 } from '@/services/establishment.service';
 import { useBranding } from '@/context/BrandingContext';
+import {
+  AssetField,
+  ColorField,
+  Field,
+  FIELD,
+  Panel,
+  TemplatePreview,
+} from './settings-ui';
 import {
   DOCUMENT_KINDS,
   TEMPLATES,
@@ -95,8 +99,6 @@ const SECTIONS: readonly { id: Section; label: string; icon: React.ElementType }
   { id: 'documents', label: 'Documents & identité visuelle', icon: FileText },
 ];
 
-const FIELD =
-  'w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 outline-none focus:ring-2 focus:ring-mora-green disabled:opacity-60';
 
 export const EstablishmentSettings: React.FC = () => {
   const { user } = useAuth();
@@ -324,22 +326,20 @@ export const EstablishmentSettings: React.FC = () => {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <AssetField
-              kind="logo"
               label="Logo"
+              upload={(file) => uploadEstablishmentAsset(draft.id, 'logo', file)}
               hint="Carré de préférence. PNG, JPEG, WebP ou SVG, 2 Mio maximum."
               url={draft.logoUrl}
               editable={editable}
-              establishmentId={draft.id}
               onChange={(url) => update({ logoUrl: url })}
               onError={setError}
             />
             <AssetField
-              kind="banner"
               label="Bannière"
+              upload={(file) => uploadEstablishmentAsset(draft.id, 'banner', file)}
               hint="Image large, affichée en en-tête."
               url={draft.bannerUrl}
               editable={editable}
-              establishmentId={draft.id}
               onChange={(url) => update({ bannerUrl: url })}
               onError={setError}
               wide
@@ -826,24 +826,22 @@ export const EstablishmentSettings: React.FC = () => {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <AssetField
-                kind="signature"
                 label="Signature numérisée"
+              upload={(file) => uploadEstablishmentAsset(draft.id, 'signature', file)}
                 hint="Fond transparent de préférence (PNG)."
                 url={draft.signatureUrl}
                 editable={editable}
-                establishmentId={draft.id}
                 onChange={(url) => update({ signatureUrl: url })}
                 onError={setError}
                 wide
               />
               <AssetField
-                kind="stamp"
                 label="Cachet de l'établissement"
+              upload={(file) => uploadEstablishmentAsset(draft.id, 'stamp', file)}
                 hint="Fond transparent de préférence (PNG)."
                 url={draft.stampUrl}
                 editable={editable}
-                establishmentId={draft.id}
-                onChange={(url) => update({ stampUrl: url })}
+                  onChange={(url) => update({ stampUrl: url })}
                 onError={setError}
               />
             </div>
@@ -915,120 +913,6 @@ export const EstablishmentSettings: React.FC = () => {
 // Éléments de mise en page
 // ---------------------------------------------------------------------------
 
-const Panel: React.FC<{
-  title: string;
-  description?: string;
-  icon?: React.ElementType;
-  children: React.ReactNode;
-}> = ({ title, description, icon: Icon, children }) => (
-  <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-6">
-    <div>
-      <h4 className="flex items-center gap-2 text-sm font-bold text-white">
-        {Icon && <Icon className="h-4 w-4 shrink-0 text-mora-green" />}
-        {title}
-      </h4>
-      {description && <p className="mt-1 text-xs text-slate-400">{description}</p>}
-    </div>
-    {children}
-  </section>
-);
-
-const Field: React.FC<{
-  label: string;
-  htmlFor: string;
-  hint?: string;
-  required?: boolean;
-  children: React.ReactNode;
-}> = ({ label, htmlFor, hint, required, children }) => (
-  <div>
-    <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-semibold text-slate-300">
-      {label} {required && <span className="text-mora-green">*</span>}
-    </label>
-    {children}
-    {hint && <p className="mt-1 text-[11px] text-slate-500">{hint}</p>}
-  </div>
-);
-
-/**
- * Vignette d'un modèle.
- *
- * Une miniature en HTML, et non une image : elle reprend les couleurs saisies,
- * de sorte que le choix se fasse sur le rendu réel de l'établissement et non
- * sur une capture générique.
- */
-const TemplatePreview: React.FC<{
-  templateId: string;
-  primary: string;
-  secondary: string;
-}> = ({ templateId, primary, secondary }) => (
-  <div className="h-20 overflow-hidden rounded-lg border border-slate-800 bg-white">
-    {templateId === 'premium_classic' && (
-      <>
-        <div className="h-6" style={{ backgroundColor: primary }} />
-        <div className="space-y-1 p-1.5">
-          <div className="h-1 w-1/2 rounded-full bg-slate-300" />
-          <div className="h-1 w-full rounded-full bg-slate-200" />
-          <div className="h-1 w-4/5 rounded-full bg-slate-200" />
-        </div>
-      </>
-    )}
-
-    {templateId === 'premium_medical' && (
-      <>
-        <div className="h-5 bg-slate-100" />
-        <div className="h-0.5" style={{ backgroundColor: secondary }} />
-        <div className="space-y-1 p-1.5">
-          <div
-            className="h-3 w-full rounded"
-            style={{ backgroundColor: `${secondary}22` }}
-          />
-          <div className="h-1 w-full rounded-full bg-slate-200" />
-          <div className="h-1 w-3/5 rounded-full bg-slate-200" />
-        </div>
-      </>
-    )}
-
-    {templateId === 'premium_executive' && (
-      <div className="space-y-1 p-1.5">
-        <div className="h-1.5 w-2/3 rounded-full" style={{ backgroundColor: primary }} />
-        <div className="h-0.5 w-full" style={{ backgroundColor: primary }} />
-        <div className="h-px w-full" style={{ backgroundColor: secondary }} />
-        <div className="h-1 w-full rounded-full bg-slate-200" />
-        <div className="h-1 w-5/6 rounded-full bg-slate-200" />
-        <div className="h-1 w-2/3 rounded-full bg-slate-200" />
-      </div>
-    )}
-  </div>
-);
-
-const ColorField: React.FC<{
-  label: string;
-  id: string;
-  value: string;
-  editable: boolean;
-  onChange: (value: string) => void;
-}> = ({ label, id, value, editable, onChange }) => (
-  <Field label={label} htmlFor={id}>
-    <div className="flex items-center gap-2">
-      <input
-        id={id}
-        type="color"
-        disabled={!editable}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-slate-700 bg-slate-800 disabled:opacity-60"
-      />
-      <input
-        aria-label={`${label} en hexadécimal`}
-        disabled={!editable}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${FIELD} font-mono uppercase`}
-      />
-    </div>
-  </Field>
-);
-
 const DayRow: React.FC<{
   day: DayKey;
   value: { closed: boolean; open: string; close: string };
@@ -1080,92 +964,3 @@ const DayRow: React.FC<{
  * l'enregistrement du formulaire : annuler laisse un fichier orphelin dans le
  * compartiment, ce qui est préférable à une image affichée avant confirmation.
  */
-const AssetField: React.FC<{
-  kind: AssetKind;
-  label: string;
-  hint: string;
-  url: string;
-  editable: boolean;
-  establishmentId: string;
-  onChange: (url: string) => void;
-  onError: (message: string) => void;
-  wide?: boolean;
-}> = ({ kind, label, hint, url, editable, establishmentId, onChange, onError, wide }) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-
-  const handleFile = async (file: File) => {
-    setIsUploading(true);
-    try {
-      onChange(await uploadEstablishmentAsset(establishmentId, kind, file));
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Téléversement impossible.');
-    } finally {
-      setIsUploading(false);
-      if (inputRef.current) inputRef.current.value = '';
-    }
-  };
-
-  return (
-    <div>
-      <p className="mb-1.5 text-xs font-semibold text-slate-300">{label}</p>
-
-      <div
-        className={`flex items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-700 bg-slate-950 ${
-          wide ? 'h-24' : 'h-24 sm:h-28'
-        }`}
-      >
-        {url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={label} className="max-h-full max-w-full object-contain" />
-        ) : (
-          <span className="flex flex-col items-center gap-1 text-slate-600">
-            <ImagePlus className="h-6 w-6" />
-            <span className="text-[10px]">Aucun fichier</span>
-          </span>
-        )}
-      </div>
-
-      <div className="mt-2 flex flex-wrap gap-2">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/svg+xml"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void handleFile(file);
-          }}
-        />
-        <button
-          type="button"
-          disabled={!editable || isUploading}
-          onClick={() => inputRef.current?.click()}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-2.5 py-1.5 text-[11px] font-semibold text-slate-200 transition-colors hover:bg-slate-700 disabled:opacity-50"
-        >
-          {isUploading ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Envoi…
-            </>
-          ) : (
-            <>
-              <ImagePlus className="h-3.5 w-3.5" /> {url ? 'Remplacer' : 'Téléverser'}
-            </>
-          )}
-        </button>
-
-        {url && editable && (
-          <button
-            type="button"
-            onClick={() => onChange('')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-red-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-red-400 transition-colors hover:bg-red-500/20"
-          >
-            <Trash2 className="h-3.5 w-3.5" /> Retirer
-          </button>
-        )}
-      </div>
-
-      <p className="mt-1 text-[11px] text-slate-500">{hint}</p>
-    </div>
-  );
-};

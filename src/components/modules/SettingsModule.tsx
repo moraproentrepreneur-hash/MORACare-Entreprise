@@ -10,6 +10,7 @@ import {
   Database,
   History,
   CreditCard,
+  FileText,
   BedDouble,
   Pill
 } from 'lucide-react';
@@ -21,6 +22,7 @@ import { AuditLogPanel } from '@/components/settings/AuditLogPanel';
 import { EstablishmentSettings } from '@/components/settings/EstablishmentSettings';
 import { SubscriptionPanel } from '@/components/settings/SubscriptionPanel';
 import { EstablishmentInvoices } from '@/components/settings/EstablishmentInvoices';
+import { PlatformDocumentSettings } from '@/components/settings/PlatformDocumentSettings';
 import { SecurityPanel } from '@/components/settings/SecurityPanel';
 import { ModuleSettingsTab } from '@/components/settings/ModuleSettingsTab';
 import { BackupsPanel } from '@/components/settings/BackupsPanel';
@@ -34,6 +36,7 @@ import { BackupsPanel } from '@/components/settings/BackupsPanel';
 
 type SettingsTab =
   | 'establishment'
+  | 'platform_documents'
   | 'subscription'
   | 'modules'
   | 'hospitalization'
@@ -69,6 +72,10 @@ interface TabDefinition {
  */
 const TABS: readonly TabDefinition[] = [
   { id: 'establishment', label: 'Établissement', icon: Building2 },
+  // Identité documentaire de l'éditeur. Strictement séparée de celle des
+  // établissements : elle habille les documents que la plateforme émet, et un
+  // établissement ne peut ni la voir ici ni la modifier.
+  { id: 'platform_documents', label: 'Documents de la plateforme', icon: FileText, superAdminOnly: true },
   { id: 'subscription', label: 'Abonnement & Licence', icon: CreditCard },
   { id: 'modules', label: 'Modules Applicatifs', icon: Boxes },
   {
@@ -150,6 +157,7 @@ export const SettingsModule: React.FC = () => {
       )}
 
       {currentTab === 'establishment' && <EstablishmentSettings />}
+      {currentTab === 'platform_documents' && <PlatformDocumentSettings />}
 
       {currentTab === 'subscription' && (
         <div className="space-y-6">

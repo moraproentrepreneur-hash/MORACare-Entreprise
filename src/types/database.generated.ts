@@ -760,60 +760,81 @@ export type Database = {
       dispensations: {
         Row: {
           business_reference: string
+          channel: Database["public"]["Enums"]["dispensation_channel"]
           created_at: string
           created_by: string | null
+          customer_name: string | null
           deleted_at: string | null
           dispensed_at: string
           dispensed_by: string | null
           establishment_id: string
           hospitalization_id: string | null
           id: string
+          invoice_id: string | null
           notes: string | null
+          paid_amount: number
           patient_id: string | null
+          payment_method: string | null
           pharmacy_id: string | null
           prescription_id: string | null
           status: Database["public"]["Enums"]["dispensation_state"]
+          therapeutic_plan_id: string | null
           total_amount: number
           updated_at: string
           updated_by: string | null
+          ward_round_id: string | null
         }
         Insert: {
           business_reference: string
+          channel?: Database["public"]["Enums"]["dispensation_channel"]
           created_at?: string
           created_by?: string | null
+          customer_name?: string | null
           deleted_at?: string | null
           dispensed_at?: string
           dispensed_by?: string | null
           establishment_id: string
           hospitalization_id?: string | null
           id?: string
+          invoice_id?: string | null
           notes?: string | null
+          paid_amount?: number
           patient_id?: string | null
+          payment_method?: string | null
           pharmacy_id?: string | null
           prescription_id?: string | null
           status?: Database["public"]["Enums"]["dispensation_state"]
+          therapeutic_plan_id?: string | null
           total_amount?: number
           updated_at?: string
           updated_by?: string | null
+          ward_round_id?: string | null
         }
         Update: {
           business_reference?: string
+          channel?: Database["public"]["Enums"]["dispensation_channel"]
           created_at?: string
           created_by?: string | null
+          customer_name?: string | null
           deleted_at?: string | null
           dispensed_at?: string
           dispensed_by?: string | null
           establishment_id?: string
           hospitalization_id?: string | null
           id?: string
+          invoice_id?: string | null
           notes?: string | null
+          paid_amount?: number
           patient_id?: string | null
+          payment_method?: string | null
           pharmacy_id?: string | null
           prescription_id?: string | null
           status?: Database["public"]["Enums"]["dispensation_state"]
+          therapeutic_plan_id?: string | null
           total_amount?: number
           updated_at?: string
           updated_by?: string | null
+          ward_round_id?: string | null
         }
         Relationships: [
           {
@@ -852,6 +873,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "dispensations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "dispensations_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
@@ -863,6 +891,13 @@ export type Database = {
             columns: ["pharmacy_id"]
             isOneToOne: false
             referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispensations_plan_fk"
+            columns: ["therapeutic_plan_id"]
+            isOneToOne: false
+            referencedRelation: "therapeutic_plans"
             referencedColumns: ["id"]
           },
           {
@@ -3202,6 +3237,122 @@ export type Database = {
           },
         ]
       }
+      platform_identity: {
+        Row: {
+          address: string
+          authorization_number: string
+          city: string
+          country: string
+          created_at: string
+          currency: string
+          document_templates: Json | null
+          email: string
+          id: string
+          island: string
+          legal_mentions: string
+          legal_name: string
+          logo_url: string
+          name: string
+          pdf_template: string
+          phone: string
+          phone_secondary: string
+          postal_code: string
+          primary_color: string
+          secondary_color: string
+          short_name: string
+          signature_holder: string
+          signature_url: string
+          singleton: boolean
+          slogan: string
+          stamp_url: string
+          support_email: string
+          tax_id: string
+          trade_register: string
+          updated_at: string
+          updated_by: string | null
+          website: string
+          whatsapp: string
+        }
+        Insert: {
+          address?: string
+          authorization_number?: string
+          city?: string
+          country?: string
+          created_at?: string
+          currency?: string
+          document_templates?: Json | null
+          email?: string
+          id?: string
+          island?: string
+          legal_mentions?: string
+          legal_name?: string
+          logo_url?: string
+          name?: string
+          pdf_template?: string
+          phone?: string
+          phone_secondary?: string
+          postal_code?: string
+          primary_color?: string
+          secondary_color?: string
+          short_name?: string
+          signature_holder?: string
+          signature_url?: string
+          singleton?: boolean
+          slogan?: string
+          stamp_url?: string
+          support_email?: string
+          tax_id?: string
+          trade_register?: string
+          updated_at?: string
+          updated_by?: string | null
+          website?: string
+          whatsapp?: string
+        }
+        Update: {
+          address?: string
+          authorization_number?: string
+          city?: string
+          country?: string
+          created_at?: string
+          currency?: string
+          document_templates?: Json | null
+          email?: string
+          id?: string
+          island?: string
+          legal_mentions?: string
+          legal_name?: string
+          logo_url?: string
+          name?: string
+          pdf_template?: string
+          phone?: string
+          phone_secondary?: string
+          postal_code?: string
+          primary_color?: string
+          secondary_color?: string
+          short_name?: string
+          signature_holder?: string
+          signature_url?: string
+          singleton?: boolean
+          slogan?: string
+          stamp_url?: string
+          support_email?: string
+          tax_id?: string
+          trade_register?: string
+          updated_at?: string
+          updated_by?: string | null
+          website?: string
+          whatsapp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_identity_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prescriptions: {
         Row: {
           business_reference: string
@@ -3218,6 +3369,7 @@ export type Database = {
           pharmacist_note: string | null
           pharmacy_status: string
           status: string | null
+          therapeutic_plan_id: string | null
           updated_at: string
           updated_by: string | null
           validated_at: string | null
@@ -3238,6 +3390,7 @@ export type Database = {
           pharmacist_note?: string | null
           pharmacy_status?: string
           status?: string | null
+          therapeutic_plan_id?: string | null
           updated_at?: string
           updated_by?: string | null
           validated_at?: string | null
@@ -3258,6 +3411,7 @@ export type Database = {
           pharmacist_note?: string | null
           pharmacy_status?: string
           status?: string | null
+          therapeutic_plan_id?: string | null
           updated_at?: string
           updated_by?: string | null
           validated_at?: string | null
@@ -3297,6 +3451,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_therapeutic_plan_id_fkey"
+            columns: ["therapeutic_plan_id"]
+            isOneToOne: false
+            referencedRelation: "therapeutic_plans"
             referencedColumns: ["id"]
           },
           {
@@ -3477,16 +3638,23 @@ export type Database = {
           created_at: string
           created_by: string | null
           deleted_at: string | null
+          delivery_mode: string | null
+          discount_amount: number
           establishment_id: string
           expected_on: string | null
           id: string
           notes: string | null
           ordered_on: string
+          payment_terms: string | null
           pharmacy_id: string | null
           priority: string
+          quote_id: string | null
           received_on: string | null
+          requisition_id: string | null
+          shipping_cost: number
           status: Database["public"]["Enums"]["purchase_state"]
           supplier_id: string
+          tax_amount: number
           total_amount: number
           updated_at: string
           updated_by: string | null
@@ -3498,16 +3666,23 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          delivery_mode?: string | null
+          discount_amount?: number
           establishment_id: string
           expected_on?: string | null
           id?: string
           notes?: string | null
           ordered_on?: string
+          payment_terms?: string | null
           pharmacy_id?: string | null
           priority?: string
+          quote_id?: string | null
           received_on?: string | null
+          requisition_id?: string | null
+          shipping_cost?: number
           status?: Database["public"]["Enums"]["purchase_state"]
           supplier_id: string
+          tax_amount?: number
           total_amount?: number
           updated_at?: string
           updated_by?: string | null
@@ -3519,16 +3694,23 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
+          delivery_mode?: string | null
+          discount_amount?: number
           establishment_id?: string
           expected_on?: string | null
           id?: string
           notes?: string | null
           ordered_on?: string
+          payment_terms?: string | null
           pharmacy_id?: string | null
           priority?: string
+          quote_id?: string | null
           received_on?: string | null
+          requisition_id?: string | null
+          shipping_cost?: number
           status?: Database["public"]["Enums"]["purchase_state"]
           supplier_id?: string
+          tax_amount?: number
           total_amount?: number
           updated_at?: string
           updated_by?: string | null
@@ -3558,6 +3740,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchase_orders_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_requisition_id_fkey"
+            columns: ["requisition_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requisitions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "purchase_orders_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -3574,6 +3770,363 @@ export type Database = {
           {
             foreignKeyName: "purchase_orders_validated_by_fkey"
             columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_receipt_lines: {
+        Row: {
+          created_at: string
+          expires_on: string | null
+          id: string
+          item_id: string
+          lot_number: string | null
+          manufactured_on: string | null
+          observations: string | null
+          order_line_id: string | null
+          quantity_received: number
+          receipt_id: string
+          serial_number: string | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          expires_on?: string | null
+          id?: string
+          item_id: string
+          lot_number?: string | null
+          manufactured_on?: string | null
+          observations?: string | null
+          order_line_id?: string | null
+          quantity_received: number
+          receipt_id: string
+          serial_number?: string | null
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          expires_on?: string | null
+          id?: string
+          item_id?: string
+          lot_number?: string | null
+          manufactured_on?: string | null
+          observations?: string | null
+          order_line_id?: string | null
+          quantity_received?: number
+          receipt_id?: string
+          serial_number?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_receipt_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipt_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_stock_state"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "purchase_receipt_lines_order_line_id_fkey"
+            columns: ["order_line_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipt_lines_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_receipts: {
+        Row: {
+          business_reference: string
+          controlled_at: string | null
+          controlled_by: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          delivery_note: string | null
+          establishment_id: string
+          id: string
+          notes: string | null
+          order_id: string
+          pharmacy_id: string | null
+          quality_note: string | null
+          quality_result: Database["public"]["Enums"]["quality_result"] | null
+          received_by: string | null
+          received_on: string
+          stocked_at: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          business_reference: string
+          controlled_at?: string | null
+          controlled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          delivery_note?: string | null
+          establishment_id: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          pharmacy_id?: string | null
+          quality_note?: string | null
+          quality_result?: Database["public"]["Enums"]["quality_result"] | null
+          received_by?: string | null
+          received_on?: string
+          stocked_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          business_reference?: string
+          controlled_at?: string | null
+          controlled_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          delivery_note?: string | null
+          establishment_id?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          pharmacy_id?: string | null
+          quality_note?: string | null
+          quality_result?: Database["public"]["Enums"]["quality_result"] | null
+          received_by?: string | null
+          received_on?: string
+          stocked_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_receipts_controlled_by_fkey"
+            columns: ["controlled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipts_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipts_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipts_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_requisition_lines: {
+        Row: {
+          created_at: string
+          estimated_price: number
+          id: string
+          item_id: string | null
+          label: string
+          notes: string | null
+          quantity: number
+          requisition_id: string
+          unit: string | null
+        }
+        Insert: {
+          created_at?: string
+          estimated_price?: number
+          id?: string
+          item_id?: string | null
+          label: string
+          notes?: string | null
+          quantity: number
+          requisition_id: string
+          unit?: string | null
+        }
+        Update: {
+          created_at?: string
+          estimated_price?: number
+          id?: string
+          item_id?: string | null
+          label?: string
+          notes?: string | null
+          quantity?: number
+          requisition_id?: string
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_requisition_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requisition_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_stock_state"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "purchase_requisition_lines_requisition_id_fkey"
+            columns: ["requisition_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requisitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_requisitions: {
+        Row: {
+          business_reference: string
+          created_at: string
+          created_by: string | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          deleted_at: string | null
+          establishment_id: string
+          id: string
+          justification: string
+          needed_by: string | null
+          pharmacy_id: string | null
+          priority: string
+          requested_by: string | null
+          requesting_service: string
+          status: Database["public"]["Enums"]["requisition_state"]
+          submitted_at: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          business_reference: string
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          deleted_at?: string | null
+          establishment_id: string
+          id?: string
+          justification: string
+          needed_by?: string | null
+          pharmacy_id?: string | null
+          priority?: string
+          requested_by?: string | null
+          requesting_service: string
+          status?: Database["public"]["Enums"]["requisition_state"]
+          submitted_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          business_reference?: string
+          created_at?: string
+          created_by?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          deleted_at?: string | null
+          establishment_id?: string
+          id?: string
+          justification?: string
+          needed_by?: string | null
+          pharmacy_id?: string | null
+          priority?: string
+          requested_by?: string | null
+          requesting_service?: string
+          status?: Database["public"]["Enums"]["requisition_state"]
+          submitted_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_requisitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requisitions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requisitions_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requisitions_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requisitions_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requisitions_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -4508,6 +5061,185 @@ export type Database = {
           },
         ]
       }
+      stock_transfer_lines: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          lot_id: string | null
+          quantity_requested: number
+          quantity_shipped: number
+          transfer_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          lot_id?: string | null
+          quantity_requested: number
+          quantity_shipped?: number
+          transfer_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          lot_id?: string | null
+          quantity_requested?: number
+          quantity_shipped?: number
+          transfer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_transfer_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_stock_state"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_lines_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "medication_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_lines_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "stock_transfers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_transfers: {
+        Row: {
+          business_reference: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          establishment_id: string
+          from_pharmacy_id: string
+          id: string
+          notes: string | null
+          received_at: string | null
+          received_by: string | null
+          requested_by: string | null
+          requested_on: string
+          shipped_at: string | null
+          shipped_by: string | null
+          status: string
+          to_pharmacy_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          business_reference: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          establishment_id: string
+          from_pharmacy_id: string
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          requested_by?: string | null
+          requested_on?: string
+          shipped_at?: string | null
+          shipped_by?: string | null
+          status?: string
+          to_pharmacy_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          business_reference?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          establishment_id?: string
+          from_pharmacy_id?: string
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          requested_by?: string | null
+          requested_on?: string
+          shipped_at?: string | null
+          shipped_by?: string | null
+          status?: string
+          to_pharmacy_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_transfers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_from_pharmacy_id_fkey"
+            columns: ["from_pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_shipped_by_fkey"
+            columns: ["shipped_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_to_pharmacy_id_fkey"
+            columns: ["to_pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_events: {
         Row: {
           comment: string | null
@@ -4965,6 +5697,347 @@ export type Database = {
           },
         ]
       }
+      supplier_quote_lines: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string | null
+          label: string
+          quantity: number
+          quote_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          label: string
+          quantity: number
+          quote_id: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          label?: string
+          quantity?: number
+          quote_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_quote_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quote_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_stock_state"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "supplier_quote_lines_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_quotes: {
+        Row: {
+          business_reference: string
+          consultation_type: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          delivery_days: number | null
+          establishment_id: string
+          id: string
+          is_selected: boolean
+          notes: string | null
+          payment_terms: string | null
+          quality_note: number | null
+          received_on: string | null
+          requested_on: string
+          requisition_id: string | null
+          selection_reason: string | null
+          shipping_cost: number
+          supplier_id: string
+          total_amount: number
+          updated_at: string
+          updated_by: string | null
+          valid_until: string | null
+          warranty_months: number | null
+        }
+        Insert: {
+          business_reference: string
+          consultation_type?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          delivery_days?: number | null
+          establishment_id: string
+          id?: string
+          is_selected?: boolean
+          notes?: string | null
+          payment_terms?: string | null
+          quality_note?: number | null
+          received_on?: string | null
+          requested_on?: string
+          requisition_id?: string | null
+          selection_reason?: string | null
+          shipping_cost?: number
+          supplier_id: string
+          total_amount?: number
+          updated_at?: string
+          updated_by?: string | null
+          valid_until?: string | null
+          warranty_months?: number | null
+        }
+        Update: {
+          business_reference?: string
+          consultation_type?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          delivery_days?: number | null
+          establishment_id?: string
+          id?: string
+          is_selected?: boolean
+          notes?: string | null
+          payment_terms?: string | null
+          quality_note?: number | null
+          received_on?: string | null
+          requested_on?: string
+          requisition_id?: string | null
+          selection_reason?: string | null
+          shipping_cost?: number
+          supplier_id?: string
+          total_amount?: number
+          updated_at?: string
+          updated_by?: string | null
+          valid_until?: string | null
+          warranty_months?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_quotes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quotes_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quotes_requisition_id_fkey"
+            columns: ["requisition_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requisitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quotes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quotes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_return_lines: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          lot_id: string | null
+          observations: string | null
+          quantity: number
+          return_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          lot_id?: string | null
+          observations?: string | null
+          quantity: number
+          return_id: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          lot_id?: string | null
+          observations?: string | null
+          quantity?: number
+          return_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_return_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_return_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_stock_state"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "supplier_return_lines_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "medication_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_return_lines_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_returns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_returns: {
+        Row: {
+          business_reference: string
+          created_at: string
+          created_by: string | null
+          credit_amount: number
+          deleted_at: string | null
+          establishment_id: string
+          id: string
+          order_id: string | null
+          pharmacy_id: string | null
+          posted_at: string | null
+          reason: string
+          receipt_id: string | null
+          return_type: string
+          returned_on: string
+          status: string
+          supplier_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          business_reference: string
+          created_at?: string
+          created_by?: string | null
+          credit_amount?: number
+          deleted_at?: string | null
+          establishment_id: string
+          id?: string
+          order_id?: string | null
+          pharmacy_id?: string | null
+          posted_at?: string | null
+          reason: string
+          receipt_id?: string | null
+          return_type?: string
+          returned_on?: string
+          status?: string
+          supplier_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          business_reference?: string
+          created_at?: string
+          created_by?: string | null
+          credit_amount?: number
+          deleted_at?: string | null
+          establishment_id?: string
+          id?: string
+          order_id?: string | null
+          pharmacy_id?: string | null
+          posted_at?: string | null
+          reason?: string
+          receipt_id?: string | null
+          return_type?: string
+          returned_on?: string
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_returns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_returns_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_returns_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_returns_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_returns_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_returns_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_returns_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           address: string | null
@@ -5110,6 +6183,195 @@ export type Database = {
           },
         ]
       }
+      therapeutic_plan_lines: {
+        Row: {
+          administration_times: string[] | null
+          created_at: string
+          dosage: string | null
+          duration_days: number | null
+          frequency: string | null
+          id: string
+          instructions: string | null
+          is_continuous: boolean
+          item_id: string | null
+          medication_label: string
+          plan_id: string
+          quantity_per_intake: number | null
+          route: string | null
+          status: string
+          treatment_type: string
+          updated_at: string
+        }
+        Insert: {
+          administration_times?: string[] | null
+          created_at?: string
+          dosage?: string | null
+          duration_days?: number | null
+          frequency?: string | null
+          id?: string
+          instructions?: string | null
+          is_continuous?: boolean
+          item_id?: string | null
+          medication_label: string
+          plan_id: string
+          quantity_per_intake?: number | null
+          route?: string | null
+          status?: string
+          treatment_type?: string
+          updated_at?: string
+        }
+        Update: {
+          administration_times?: string[] | null
+          created_at?: string
+          dosage?: string | null
+          duration_days?: number | null
+          frequency?: string | null
+          id?: string
+          instructions?: string | null
+          is_continuous?: boolean
+          item_id?: string | null
+          medication_label?: string
+          plan_id?: string
+          quantity_per_intake?: number | null
+          route?: string | null
+          status?: string
+          treatment_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapeutic_plan_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapeutic_plan_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_stock_state"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "therapeutic_plan_lines_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "therapeutic_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      therapeutic_plans: {
+        Row: {
+          business_reference: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          doctor_id: string | null
+          ended_on: string | null
+          establishment_id: string
+          hospitalization_id: string | null
+          id: string
+          indication: string | null
+          label: string
+          notes: string | null
+          patient_id: string
+          started_on: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          business_reference: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          doctor_id?: string | null
+          ended_on?: string | null
+          establishment_id: string
+          hospitalization_id?: string | null
+          id?: string
+          indication?: string | null
+          label: string
+          notes?: string | null
+          patient_id: string
+          started_on?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          business_reference?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          doctor_id?: string | null
+          ended_on?: string | null
+          establishment_id?: string
+          hospitalization_id?: string | null
+          id?: string
+          indication?: string | null
+          label?: string
+          notes?: string | null
+          patient_id?: string
+          started_on?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapeutic_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapeutic_plans_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapeutic_plans_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapeutic_plans_hospitalization_id_fkey"
+            columns: ["hospitalization_id"]
+            isOneToOne: false
+            referencedRelation: "bed_availability"
+            referencedColumns: ["hospitalization_id"]
+          },
+          {
+            foreignKeyName: "therapeutic_plans_hospitalization_id_fkey"
+            columns: ["hospitalization_id"]
+            isOneToOne: false
+            referencedRelation: "hospitalizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapeutic_plans_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "therapeutic_plans_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       verification_codes: {
         Row: {
           attempts: number
@@ -5145,6 +6407,210 @@ export type Database = {
           {
             foreignKeyName: "verification_codes_profile_id_fkey"
             columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ward_round_administrations: {
+        Row: {
+          administered_at: string | null
+          administered_by: string | null
+          created_at: string
+          hospitalization_id: string
+          id: string
+          item_id: string | null
+          medication_label: string
+          observations: string | null
+          plan_line_id: string | null
+          quantity: number
+          refusal_reason: string | null
+          round_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          administered_at?: string | null
+          administered_by?: string | null
+          created_at?: string
+          hospitalization_id: string
+          id?: string
+          item_id?: string | null
+          medication_label: string
+          observations?: string | null
+          plan_line_id?: string | null
+          quantity: number
+          refusal_reason?: string | null
+          round_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          administered_at?: string | null
+          administered_by?: string | null
+          created_at?: string
+          hospitalization_id?: string
+          id?: string
+          item_id?: string | null
+          medication_label?: string
+          observations?: string | null
+          plan_line_id?: string | null
+          quantity?: number
+          refusal_reason?: string | null
+          round_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ward_round_administrations_administered_by_fkey"
+            columns: ["administered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ward_round_administrations_hospitalization_id_fkey"
+            columns: ["hospitalization_id"]
+            isOneToOne: false
+            referencedRelation: "bed_availability"
+            referencedColumns: ["hospitalization_id"]
+          },
+          {
+            foreignKeyName: "ward_round_administrations_hospitalization_id_fkey"
+            columns: ["hospitalization_id"]
+            isOneToOne: false
+            referencedRelation: "hospitalizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ward_round_administrations_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ward_round_administrations_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_stock_state"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "ward_round_administrations_plan_line_id_fkey"
+            columns: ["plan_line_id"]
+            isOneToOne: false
+            referencedRelation: "therapeutic_plan_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ward_round_administrations_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "ward_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ward_rounds: {
+        Row: {
+          business_reference: string
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          establishment_id: string
+          id: string
+          notes: string | null
+          pharmacy_id: string | null
+          prepared_by: string | null
+          round_date: string
+          service: string | null
+          slot: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          business_reference: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          establishment_id: string
+          id?: string
+          notes?: string | null
+          pharmacy_id?: string | null
+          prepared_by?: string | null
+          round_date?: string
+          service?: string | null
+          slot?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          business_reference?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          establishment_id?: string
+          id?: string
+          notes?: string | null
+          pharmacy_id?: string | null
+          prepared_by?: string | null
+          round_date?: string
+          service?: string | null
+          slot?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ward_rounds_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ward_rounds_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ward_rounds_establishment_id_fkey"
+            columns: ["establishment_id"]
+            isOneToOne: false
+            referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ward_rounds_pharmacy_id_fkey"
+            columns: ["pharmacy_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ward_rounds_prepared_by_fkey"
+            columns: ["prepared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ward_rounds_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -5242,6 +6708,14 @@ export type Database = {
         Args: { p_subscription_id: string; p_user?: string }
         Returns: string
       }
+      post_purchase_receipt: {
+        Args: { p_receipt_id: string; p_user: string }
+        Returns: number
+      }
+      post_supplier_return: {
+        Args: { p_return_id: string; p_user: string }
+        Returns: number
+      }
       purge_expired_audit_logs: { Args: never; Returns: number }
       refresh_overdue_invoices: { Args: never; Returns: number }
       seed_role_permission: {
@@ -5254,6 +6728,10 @@ export type Database = {
           p_view: boolean
         }
         Returns: undefined
+      }
+      ship_stock_transfer: {
+        Args: { p_transfer_id: string; p_user: string }
+        Returns: number
       }
       subscription_state_of: {
         Args: {
@@ -5287,6 +6765,7 @@ export type Database = {
         | "paid"
         | "overdue"
         | "canceled"
+      dispensation_channel: "prescription" | "sale" | "ward_round"
       dispensation_state:
         | "prepared"
         | "partially_delivered"
@@ -5310,6 +6789,15 @@ export type Database = {
         | "ordered"
         | "partially_received"
         | "received"
+        | "closed"
+        | "canceled"
+      quality_result: "accepted" | "accepted_with_reserve" | "refused"
+      requisition_state:
+        | "draft"
+        | "submitted"
+        | "approved"
+        | "rejected"
+        | "ordered"
         | "closed"
         | "canceled"
       room_state: "available" | "occupied" | "maintenance" | "closed"
@@ -5505,6 +6993,7 @@ export const Constants = {
         "overdue",
         "canceled",
       ],
+      dispensation_channel: ["prescription", "sale", "ward_round"],
       dispensation_state: [
         "prepared",
         "partially_delivered",
@@ -5530,6 +7019,16 @@ export const Constants = {
         "ordered",
         "partially_received",
         "received",
+        "closed",
+        "canceled",
+      ],
+      quality_result: ["accepted", "accepted_with_reserve", "refused"],
+      requisition_state: [
+        "draft",
+        "submitted",
+        "approved",
+        "rejected",
+        "ordered",
         "closed",
         "canceled",
       ],

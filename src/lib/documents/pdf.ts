@@ -5,10 +5,10 @@ import {
   hexToRgb,
   readableTextOn,
   type DocumentBranding,
+  type DocumentIssuer,
   type DocumentKind,
   type TemplateId,
 } from './branding';
-import type { EstablishmentProfile } from '@/services/establishment.service';
 import { formatDate } from '@/lib/utils';
 
 /**
@@ -377,13 +377,13 @@ const SKINS: Record<TemplateId, Skin> = {
 export type DocumentOutput = 'download' | 'preview';
 
 export const generateDocument = async (
-  profile: EstablishmentProfile,
+  issuer: DocumentIssuer,
   payload: DocumentPayload,
   output: DocumentOutput = 'download',
 ): Promise<void> => {
   if (typeof window === 'undefined') return;
 
-  const branding = brandingOf(profile, payload.kind);
+  const branding = brandingOf(issuer, payload.kind);
   const skin = SKINS[branding.template];
 
   const { jsPDF: JsPdf } = await import('jspdf');

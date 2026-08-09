@@ -42,6 +42,8 @@ export interface SubscriptionInvoice {
   reference: string;
   establishmentId: string;
   establishmentName: string;
+  /** Coordonnées du client, telles qu'elles figureront sur la facture. */
+  customer: InvoiceCustomer;
   subscriptionId: string | null;
   planName: string;
   periodStart: string;
@@ -83,9 +85,15 @@ interface NamedProfile {
 const fullName = (person: NamedProfile | null | undefined): string =>
   person ? `${person.first_name ?? ''} ${person.last_name ?? ''}`.trim() : '';
 
+const join = (values: (string | null | undefined)[], separator = ', '): string =>
+  values.map((v) => (v ?? '').trim()).filter((v) => v !== '').join(separator);
+
 const INVOICE_SELECT = `
   *,
-  establishment:establishments(name),
+  establishment:establishments(
+    name, legal_name, address, postal_code, city, island, country,
+    phone, email, tax_id, trade_register
+  ),
   payments:subscription_payments(
     id, business_reference, invoice_id, amount, payment_method,
     transaction_reference, paid_on, notes,
@@ -93,8 +101,35 @@ const INVOICE_SELECT = `
   )
 `;
 
+/** Coordonnées du client, reprises sur la facture (BP30 §8). */
+export interface InvoiceCustomer {
+  name: string;
+  legalName: string;
+  address: string;
+  city: string;
+  country: string;
+  phone: string;
+  email: string;
+  taxId: string;
+  tradeRegister: string;
+}
+
+interface EstablishmentJoin {
+  name: string;
+  legal_name: string | null;
+  address: string | null;
+  postal_code: string | null;
+  city: string | null;
+  island: string | null;
+  country: string | null;
+  phone: string | null;
+  email: string | null;
+  tax_id: string | null;
+  trade_register: string | null;
+}
+
 interface InvoiceJoined {
-  establishment?: { name: string } | null;
+  establishment?: EstablishmentJoin | null;
   payments?: {
     id: string;
     business_reference: string;
@@ -107,6 +142,18 @@ interface InvoiceJoined {
     recorder?: NamedProfile | null;
   }[];
 }
+
+const toCustomer = (row: EstablishmentJoin | null): InvoiceCustomer => ({
+  name: row?.name ?? '',
+  legalName: row?.legal_name ?? '',
+  address: join([row?.address, row?.postal_code], ' '),
+  city: join([row?.city, row?.island], ' — '),
+  country: row?.country ?? '',
+  phone: row?.phone ?? '',
+  email: row?.email ?? '',
+  taxId: row?.tax_id ?? '',
+  tradeRegister: row?.trade_register ?? '',
+});
 
 /**
  * Marque en retard les factures échues et non soldées.
@@ -149,6 +196,7 @@ export const listInvoices = async (establishmentId?: string): Promise<Subscripti
       reference: row.business_reference,
       establishmentId: row.establishment_id,
       establishmentName: joined.establishment?.name ?? '',
+      customer: toCustomer(joined.establishment ?? null),
       subscriptionId: row.subscription_id,
       planName: row.plan_name,
       periodStart: row.period_start,

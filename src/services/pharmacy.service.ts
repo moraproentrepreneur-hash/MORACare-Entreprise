@@ -215,10 +215,17 @@ export interface Supplier {
 export interface Dispensation {
   id: string;
   reference: string;
+  channel: DispensationChannel;
   pharmacyName: string | null;
   patientId: string | null;
   patientName: string | null;
+  /** Acquéreur d'une vente sans dossier patient. */
+  customerName: string | null;
   prescriptionId: string | null;
+  hospitalizationId: string | null;
+  invoiceId: string | null;
+  paymentMethod: string | null;
+  paidAmount: number;
   status: string;
   dispensedAt: string;
   dispensedByName: string | null;
@@ -876,11 +883,33 @@ export const suggestLots = async (
   }));
 };
 
+/**
+ * Canal d'une sortie de pharmacie (BP19 §10, §11).
+ *
+ * Délivrer sur ordonnance, vendre au comptoir et administrer en tournée sont le
+ * même geste au regard du stock. Ce qui les distingue — la pièce justificative
+ * et le règlement — tient dans ce canal, ce qui évite d'entretenir trois
+ * circuits parallèles pour des médicaments soumis aux mêmes contrôles.
+ */
+export type DispensationChannel = 'prescription' | 'sale' | 'ward_round';
+
+export const CHANNEL_LABELS: Record<DispensationChannel, string> = {
+  prescription: 'Sur ordonnance',
+  sale: 'Vente au comptoir',
+  ward_round: 'Dispensation hospitalière',
+};
+
 export interface DispensationInput {
+  channel?: DispensationChannel;
   pharmacyId: string | null;
   patientId: string | null;
   prescriptionId: string | null;
   hospitalizationId: string | null;
+  therapeuticPlanId?: string | null;
+  /** Acquéreur d'une vente sans dossier patient. */
+  customerName?: string | null;
+  paymentMethod?: string | null;
+  paidAmount?: number;
   notes?: string;
   lines: {
     itemId: string;
@@ -909,10 +938,15 @@ export const recordDispensation = async (
     .from('dispensations')
     .insert({
       ...auditColumns(ctx),
+      channel: input.channel ?? 'prescription',
       pharmacy_id: input.pharmacyId,
       patient_id: input.patientId,
       prescription_id: input.prescriptionId,
       hospitalization_id: input.hospitalizationId,
+      therapeutic_plan_id: input.therapeuticPlanId ?? null,
+      customer_name: input.customerName?.trim() || null,
+      payment_method: input.paymentMethod ?? null,
+      paid_amount: input.paidAmount ?? 0,
       status: 'delivered',
       dispensed_by: ctx.userId,
       notes: input.notes?.trim() || null,
@@ -948,6 +982,134 @@ export const recordDispensation = async (
   }
 
   return dispensationId;
+};
+
+/**
+ * Vente au comptoir (BP19 §10).
+ *
+ * Une vente est une délivrance dont le canal indique qu'elle est réglée sur
+ * place. Elle emprunte donc exactement le même circuit — contrôle du lot,
+ * blocage des périmés, refus des lots rappelés, mouvement de sortie,
+ * décrémentation du stock — sans qu'aucune de ces règles n'ait été réécrite.
+ *
+ * La facture patient est créée dans la foulée lorsque l'acquéreur est un
+ * patient de la base : c'est ce qui relie la pharmacie au module Finance
+ * (BP19 §24). Son échec n'annule pas la vente — les médicaments sont sortis, le
+ * stock doit le refléter — mais il est signalé à l'appelant.
+ */
+export interface SaleInput {
+  pharmacyId: string | null;
+  patientId: string | null;
+  customerName: string | null;
+  paymentMethod: string;
+  paidAmount: number;
+  notes?: string;
+  lines: {
+    itemId: string;
+    lotId: string | null;
+    quantity: number;
+    unitPrice: number;
+    posology?: string;
+  }[];
+}
+
+export interface SaleResult {
+  dispensationId: string;
+  invoiceId: string | null;
+  /** Renseigné si la vente a bien eu lieu mais que la facture a échoué. */
+  invoiceWarning: string | null;
+}
+
+export const recordSale = async (input: SaleInput, ctx: WriteContext): Promise<SaleResult> => {
+  const client = getClient();
+
+  const dispensationId = await recordDispensation(
+    {
+      channel: 'sale',
+      pharmacyId: input.pharmacyId,
+      patientId: input.patientId,
+      prescriptionId: null,
+      hospitalizationId: null,
+      customerName: input.customerName,
+      paymentMethod: input.paymentMethod,
+      paidAmount: input.paidAmount,
+      notes: input.notes,
+      lines: input.lines,
+    },
+    ctx,
+  );
+
+  const total = input.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
+
+  if (!input.patientId) {
+    // Vente à un acquéreur sans dossier : le reçu tient lieu de justificatif,
+    // et la facturation patient n'a pas d'objet.
+    return { dispensationId, invoiceId: null, invoiceWarning: null };
+  }
+
+  try {
+    const { data: invoice, error: invoiceError } = await client
+      .from('invoices')
+      .insert({
+        ...auditColumns(ctx),
+        patient_id: input.patientId,
+        invoice_date: new Date().toISOString(),
+        subtotal: total,
+        tax_amount: 0,
+        discount_amount: 0,
+        total_amount: total,
+        paid_amount: input.paidAmount,
+        status: input.paidAmount >= total ? 'paid' : 'pending',
+      })
+      .select('id')
+      .single();
+
+    if (invoiceError) throw new Error(invoiceError.message);
+    const invoiceId = invoice?.id as string;
+
+    const { data: catalogue } = await client
+      .from('pharmacy_items')
+      .select('id, name, dosage, form')
+      .in('id', [...new Set(input.lines.map((line) => line.itemId))]);
+
+    const names = new Map(
+      (catalogue ?? []).map((item) => [
+        item.id,
+        [item.name, item.form, item.dosage].filter(Boolean).join(' · '),
+      ]),
+    );
+
+    const { error: itemsError } = await client.from('invoice_items').insert(
+      input.lines.map((line) => ({
+        establishment_id: ctx.establishmentId,
+        invoice_id: invoiceId,
+        description: names.get(line.itemId) ?? 'Médicament',
+        quantity: line.quantity,
+        unit_price: line.unitPrice,
+        line_total: line.quantity * line.unitPrice,
+        created_by: ctx.userId,
+        updated_by: ctx.userId,
+      })),
+    );
+
+    if (itemsError) throw new Error(itemsError.message);
+
+    await client
+      .from('dispensations')
+      .update({ invoice_id: invoiceId })
+      .eq('id', dispensationId);
+
+    return { dispensationId, invoiceId, invoiceWarning: null };
+  } catch (err) {
+    return {
+      dispensationId,
+      invoiceId: null,
+      invoiceWarning:
+        err instanceof Error
+          ? `La vente est enregistrée et le stock à jour, mais la facture n'a pas pu être créée : ${err.message}`
+          : "La vente est enregistrée, mais la facture n'a pas pu être créée.",
+    };
+  }
 };
 
 export const listDispensations = async (limit = 100): Promise<Dispensation[]> => {
@@ -988,10 +1150,16 @@ export const listDispensations = async (limit = 100): Promise<Dispensation[]> =>
     return {
       id: row.id,
       reference: row.business_reference,
+      channel: (row.channel ?? 'prescription') as DispensationChannel,
       pharmacyName: joined.pharmacy?.name ?? null,
       patientId: row.patient_id,
       patientName: joined.patient ? fullName(joined.patient) : null,
+      customerName: row.customer_name,
       prescriptionId: row.prescription_id,
+      hospitalizationId: row.hospitalization_id,
+      invoiceId: row.invoice_id,
+      paymentMethod: row.payment_method,
+      paidAmount: Number(row.paid_amount ?? 0),
       status: row.status,
       dispensedAt: row.dispensed_at,
       dispensedByName: joined.dispenser ? fullName(joined.dispenser) : null,
