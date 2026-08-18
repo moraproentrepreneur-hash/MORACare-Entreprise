@@ -19,7 +19,17 @@ export function formatCurrency(amount: number, currency: string = 'KMF'): string
     style: 'currency',
     currency,
     maximumFractionDigits: 0,
-  }).format(amount);
+  })
+    .format(amount)
+    // `Intl` sépare les milliers par une espace **fine** insécable (U+202F).
+    // Elle est hors du jeu Latin-1, ce qui suffisait à faire basculer toute la
+    // chaîne en UTF-16 à l'impression : « 18 000 KMF » sortait « 1 8 0 0 0 ».
+    //
+    // On la ramène à l'espace insécable ordinaire (U+00A0), qui appartient à
+    // Latin-1. Le montant reste insécable à l'écran — il ne se coupe pas en fin
+    // de ligne entre « 18 » et « 000 » — et devient imprimable sans dépendre
+    // d'aucune transposition en aval.
+    .replace(/ /g, ' ');
 }
 
 export function formatDate(dateString: string): string {

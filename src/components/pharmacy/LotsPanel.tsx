@@ -456,7 +456,11 @@ const EntryForm: React.FC<{
               onChange={(event) => setForm({ ...form, lotNumber: event.target.value })}
             />
           </Field>
-          <Field label="Fabrication" htmlFor="lot-made">
+          <Field
+            label="Fabrication"
+            htmlFor="lot-made"
+            hint="Facultative : tous les conditionnements ne la portent pas."
+          >
             <input
               id="lot-made"
               type="date"
@@ -465,10 +469,15 @@ const EntryForm: React.FC<{
               onChange={(event) => setForm({ ...form, manufacturedOn: event.target.value })}
             />
           </Field>
-          <Field label="Péremption" htmlFor="lot-expiry">
+          <Field
+            label="Péremption *"
+            htmlFor="lot-expiry"
+            hint="Obligatoire : elle commande la règle FEFO et les alertes."
+          >
             <input
               id="lot-expiry"
               type="date"
+              required
               className={FIELD}
               value={form.expiresOn}
               onChange={(event) => setForm({ ...form, expiresOn: event.target.value })}

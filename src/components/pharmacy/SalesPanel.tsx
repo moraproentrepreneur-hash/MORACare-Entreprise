@@ -261,6 +261,7 @@ const SaleForm: React.FC<{
     customerName: string | null;
     paymentMethod: string;
     paidAmount: number;
+    tenderedAmount: number;
     notes?: string;
     lines: { itemId: string; lotId: string | null; quantity: number; unitPrice: number }[];
   }) => Promise<void>;
@@ -284,7 +285,16 @@ const SaleForm: React.FC<{
   const available = useMemo(() => stock.filter((line) => line.quantity > 0), [stock]);
 
   const total = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
-  const [paidAmount, setPaidAmount] = useState(0);
+
+  /** Montant remis par le client. Zéro vaut « appoint exact ». */
+  const [tendered, setTendered] = useState(0);
+
+  const given = tendered > 0 ? tendered : total;
+  // On n'encaisse jamais plus que ce qui est dû : au-delà, c'est de la monnaie
+  // à rendre, pas une recette.
+  const collected = Math.min(given, total);
+  const change = Math.max(0, given - total);
+
   const blocked = lines.some((line) => line.shortfall > 0);
 
   const addLine = async () => {
@@ -362,7 +372,8 @@ const SaleForm: React.FC<{
       patientId: buyer === 'patient' ? patientId : null,
       customerName: buyer === 'walk_in' ? customerName : null,
       paymentMethod,
-      paidAmount: paidAmount > 0 ? paidAmount : total,
+      paidAmount: collected,
+      tenderedAmount: given,
       notes,
       lines: payload,
     });
@@ -512,31 +523,77 @@ const SaleForm: React.FC<{
           )}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Mode de règlement *">
-            <Select
-              value={paymentMethod}
-              onChange={setPaymentMethod}
-              options={(paymentMethods.length > 0 ? paymentMethods : ['Espèces']).map((entry) => ({
-                value: entry,
-                label: entry,
-              }))}
-            />
-          </Field>
-          <Field
-            label={`Montant encaissé (${currency})`}
-            htmlFor="sale-paid"
-            hint="Laissez à zéro pour encaisser la totalité."
-          >
-            <input
-              id="sale-paid"
-              type="number"
-              min={0}
-              className={FIELD}
-              value={paidAmount}
-              onChange={(event) => setPaidAmount(Math.max(0, Number(event.target.value) || 0))}
-            />
-          </Field>
+        {/*
+          Encaissement.
+
+          Seul le montant remis par le client est saisi : c'est la seule donnée
+          que le système ne peut pas connaître. L'encaissé et la monnaie à
+          rendre s'en déduisent, et les faire saisir à la main reviendrait à
+          demander à l'opérateur de poser une soustraction que la caisse doit
+          faire pour lui — avec le risque d'erreur qui va avec.
+        */}
+        <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Mode de règlement *">
+              <Select
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                options={(paymentMethods.length > 0 ? paymentMethods : ['Espèces']).map((entry) => ({
+                  value: entry,
+                  label: entry,
+                }))}
+              />
+            </Field>
+            <Field
+              label={`Montant donné par le client (${currency})`}
+              htmlFor="sale-tendered"
+              hint="Laissez à zéro pour un règlement de l'appoint exact."
+            >
+              <input
+                id="sale-tendered"
+                type="number"
+                min={0}
+                className={FIELD}
+                value={tendered}
+                onChange={(event) => setTendered(Math.max(0, Number(event.target.value) || 0))}
+              />
+            </Field>
+          </div>
+
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
+            {[
+              { label: 'Total à payer', value: formatCurrency(total, currency), tone: 'text-white' },
+              {
+                label: 'Montant donné',
+                value: formatCurrency(given, currency),
+                tone: 'text-slate-200',
+              },
+              {
+                label: 'Montant encaissé',
+                value: formatCurrency(collected, currency),
+                tone: collected < total ? 'text-amber-400' : 'text-mora-green',
+              },
+              {
+                label: 'Monnaie à rendre',
+                value: formatCurrency(change, currency),
+                tone: change > 0 ? 'text-mora-gold' : 'text-slate-400',
+              },
+            ].map((entry) => (
+              <div key={entry.label}>
+                <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  {entry.label}
+                </dt>
+                <dd className={`mt-0.5 text-sm font-bold ${entry.tone}`}>{entry.value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {given > 0 && given < total && (
+            <Notice tone="info">
+              Règlement partiel : {formatCurrency(total - given, currency)} resteront dus. Le reçu
+              le mentionnera.
+            </Notice>
+          )}
         </div>
 
         <Field label="Observations" htmlFor="sale-notes">

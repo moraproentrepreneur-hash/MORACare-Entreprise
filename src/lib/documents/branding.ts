@@ -145,6 +145,50 @@ export const DOCUMENT_KINDS = {
 
 export type DocumentKind = keyof typeof DOCUMENT_KINDS;
 
+/**
+ * Qui émet ce type de document.
+ *
+ * BP30 §13 est explicite : la facturation SaaS — devis, factures, paiements —
+ * « concerne exclusivement la relation entre MORA Shawiri et les établissements
+ * clients » et reste « totalement indépendante de la facturation médicale
+ * réalisée par les établissements ».
+ *
+ * Un ordonnance, un compte rendu de consultation ou un bulletin
+ * d'hospitalisation n'ont donc rien à faire dans les réglages du Super Admin :
+ * il n'en émet aucun, et lui en proposer le paramétrage laisse croire que la
+ * plateforme intervient dans l'activité clinique. À l'inverse, une facture ou
+ * un reçu existent des deux côtés — l'un pour l'abonnement, l'autre pour le
+ * patient — et chacun conserve son propre modèle.
+ */
+export type DocumentAudience = 'platform' | 'establishment' | 'both';
+
+const DOCUMENT_AUDIENCES: Record<DocumentKind, DocumentAudience> = {
+  // Activité clinique et pharmaceutique : l'établissement seul.
+  patient_record: 'establishment',
+  prescription: 'establishment',
+  consultation: 'establishment',
+  lab_result: 'establishment',
+  imaging_report: 'establishment',
+  hospitalization: 'establishment',
+  discharge: 'establishment',
+  dispensation: 'establishment',
+  stock_state: 'establishment',
+  inventory_sheet: 'establishment',
+  bed_occupancy: 'establishment',
+
+  // Documents commerciaux : les deux niveaux en produisent, chacun les siens.
+  invoice: 'both',
+  receipt: 'both',
+  quote: 'both',
+};
+
+/** Types de documents qu'un émetteur donné peut réellement configurer. */
+export const documentKindsFor = (audience: 'platform' | 'establishment'): DocumentKind[] =>
+  (Object.keys(DOCUMENT_KINDS) as DocumentKind[]).filter((kind) => {
+    const scope = DOCUMENT_AUDIENCES[kind];
+    return scope === 'both' || scope === audience;
+  });
+
 // ---------------------------------------------------------------------------
 // Composition de l'en-tête et du pied de page
 // ---------------------------------------------------------------------------

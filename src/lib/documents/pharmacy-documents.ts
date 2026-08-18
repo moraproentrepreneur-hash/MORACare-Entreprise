@@ -65,8 +65,22 @@ export const buildSaleReceipt = (sale: Dispensation, currency: string): Document
         fields: [
           { label: 'Date et heure', value: formatDateTime(sale.dispensedAt) },
           { label: 'Mode de paiement', value: sale.paymentMethod ?? '—' },
-          { label: 'Montant total', value: formatCurrency(sale.totalAmount, currency) },
+          { label: 'Total à payer', value: formatCurrency(sale.totalAmount, currency) },
           { label: 'Montant encaissé', value: formatCurrency(sale.paidAmount, currency) },
+          // La monnaie rendue ne se déduit pas du reçu si on ne l'y porte pas :
+          // le client doit pouvoir vérifier ce qui lui a été remis.
+          ...(sale.tenderedAmount !== null && sale.tenderedAmount > sale.totalAmount
+            ? [
+                {
+                  label: 'Montant donné',
+                  value: formatCurrency(sale.tenderedAmount, currency),
+                },
+                {
+                  label: 'Monnaie rendue',
+                  value: formatCurrency(sale.tenderedAmount - sale.totalAmount, currency),
+                },
+              ]
+            : []),
           { label: 'Reste dû', value: formatCurrency(balance, currency) },
           { label: 'Servi par', value: sale.dispensedByName ?? '—' },
         ],

@@ -16,6 +16,7 @@ import {
 import {
   DOCUMENT_KINDS,
   TEMPLATES,
+  documentKindsFor,
   TEMPLATE_IDS,
   buildFooterLines,
   buildHeaderLines,
@@ -490,10 +491,10 @@ export const PlatformDocumentSettings: React.FC = () => {
 
           <Panel
             title="Modèle par type de document"
-            description="Facultatif. Un type sans modèle propre utilise celui de la plateforme."
+            description="Facultatif. Seuls les documents émis par la plateforme figurent ici : la facturation SaaS est indépendante de la facturation médicale des établissements (BP30 §13)."
           >
             <div className="grid gap-4 sm:grid-cols-2">
-              {(Object.keys(DOCUMENT_KINDS) as (keyof typeof DOCUMENT_KINDS)[]).map((kind) => (
+              {documentKindsFor('platform').map((kind) => (
                 <Field key={kind} label={DOCUMENT_KINDS[kind]} htmlFor={`pf-tpl-${kind}`}>
                   <Select
                     id={`pf-tpl-${kind}`}

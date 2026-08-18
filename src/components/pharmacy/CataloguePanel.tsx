@@ -11,10 +11,12 @@ import {
   archiveMedication,
   createMedication,
   daysBeforeExpiry,
+  recordStockEntry,
   updateMedication,
   type IssueRule,
   type Medication,
   type MedicationInput,
+  type Pharmacy,
   type StockState,
 } from '@/services/pharmacy.service';
 import { CONTROLLED_CLASSES } from '@/services/pharmacy.service';
@@ -52,6 +54,15 @@ const emptyForm = (settings: PharmacySettings): MedicationInput => ({
 });
 
 /** Unités de conditionnement usuelles en pharmacie hospitalière. */
+/** Stock initial vierge, proposé à la création d'une fiche produit. */
+const EMPTY_INITIAL_STOCK = {
+  quantity: 0,
+  lotNumber: '',
+  manufacturedOn: '',
+  expiresOn: '',
+  pharmacyId: '',
+};
+
 const UNITS = ['Boîte', 'Comprimé', 'Flacon', 'Ampoule', 'Sachet', 'Tube', 'Poche', 'Unité'];
 
 type Filter = 'all' | 'low' | 'out' | 'expiring' | 'controlled';
@@ -59,13 +70,16 @@ type Filter = 'all' | 'low' | 'out' | 'expiring' | 'controlled';
 export const CataloguePanel: React.FC<{
   stock: readonly StockState[];
   medications: readonly Medication[];
+  pharmacies: readonly Pharmacy[];
   settings: PharmacySettings;
   currency: string;
   canManage: boolean;
   ctx: WriteContext | null;
   onOpenLots: (itemId: string) => void;
   onChanged: () => Promise<void>;
-}> = ({ stock, medications, settings, currency, canManage, ctx, onOpenLots, onChanged }) => {
+}> = ({ stock, medications, pharmacies, settings, currency, canManage, ctx, onOpenLots, onChanged }) => {
+  const defaultPharmacyId =
+    pharmacies.find((entry) => entry.isDefault)?.id ?? pharmacies[0]?.id ?? null;
   const [isOpen, setIsOpen] = useState(false);
   const [editing, setEditing] = useState<Medication | null>(null);
   const [form, setForm] = useState<MedicationInput>(emptyForm(settings));
@@ -73,6 +87,7 @@ export const CataloguePanel: React.FC<{
   const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const [initial, setInitial] = useState(EMPTY_INITIAL_STOCK);
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -96,6 +111,7 @@ export const CataloguePanel: React.FC<{
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm(settings));
+    setInitial(EMPTY_INITIAL_STOCK);
     setError(null);
     setIsOpen(true);
   };
@@ -138,7 +154,26 @@ export const CataloguePanel: React.FC<{
       if (editing) {
         await updateMedication(editing.id, form, ctx.userId);
       } else {
-        await createMedication(form, ctx);
+        // La fiche d'abord, son premier lot ensuite : le lot référence le
+        // produit, il ne peut pas naître avant lui.
+        const itemId = await createMedication(form, ctx);
+
+        if (initial.quantity > 0) {
+          await recordStockEntry(
+            {
+              itemId,
+              pharmacyId: initial.pharmacyId || defaultPharmacyId,
+              supplierId: null,
+              lotNumber: initial.lotNumber.trim() || 'LOT-INITIAL',
+              manufacturedOn: initial.manufacturedOn || null,
+              expiresOn: initial.expiresOn || null,
+              quantity: initial.quantity,
+              unitCost: form.purchasePrice,
+              reason: 'Stock initial à la création de la fiche',
+            },
+            ctx,
+          );
+        }
       }
       await onChanged();
       setIsOpen(false);
@@ -552,6 +587,96 @@ export const CataloguePanel: React.FC<{
               </div>
             )}
           </div>
+
+          {/*
+            Stock initial.
+
+            Proposé à la création seulement : enregistrer une fiche produit puis
+            aller saisir son premier lot dans un autre onglet est un aller-retour
+            que rien ne justifie. La péremption y est obligatoire dès qu'une
+            quantité est saisie — c'est elle qui commande la règle FEFO, les
+            alertes et le blocage des produits périmés.
+          */}
+          {!editing && (
+            <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-950 p-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-300">Stock initial (facultatif)</p>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  Renseignez une quantité pour créer le premier lot en même temps que la fiche.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Quantité reçue" htmlFor="med-initial-qty">
+                  <input
+                    id="med-initial-qty"
+                    type="number"
+                    min={0}
+                    className={FIELD}
+                    value={initial.quantity}
+                    onChange={(event) =>
+                      setInitial({
+                        ...initial,
+                        quantity: Math.max(0, Number(event.target.value) || 0),
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Numéro de lot" htmlFor="med-initial-lot">
+                  <input
+                    id="med-initial-lot"
+                    className={FIELD}
+                    placeholder="LOT-2026-001"
+                    value={initial.lotNumber}
+                    onChange={(event) => setInitial({ ...initial, lotNumber: event.target.value })}
+                  />
+                </Field>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field
+                  label="Date de fabrication"
+                  htmlFor="med-initial-made"
+                  hint="Facultative : tous les conditionnements ne la portent pas."
+                >
+                  <input
+                    id="med-initial-made"
+                    type="date"
+                    className={FIELD}
+                    value={initial.manufacturedOn}
+                    onChange={(event) =>
+                      setInitial({ ...initial, manufacturedOn: event.target.value })
+                    }
+                  />
+                </Field>
+                <Field
+                  label={`Date de péremption${initial.quantity > 0 ? ' *' : ''}`}
+                  htmlFor="med-initial-expiry"
+                  hint="Obligatoire dès qu'un lot est créé."
+                >
+                  <input
+                    id="med-initial-expiry"
+                    type="date"
+                    required={initial.quantity > 0}
+                    className={FIELD}
+                    value={initial.expiresOn}
+                    onChange={(event) => setInitial({ ...initial, expiresOn: event.target.value })}
+                  />
+                </Field>
+              </div>
+
+              {initial.quantity > 0 && pharmacies.length > 0 && (
+                <Field label="Pharmacie de réception">
+                  <Select
+                    value={initial.pharmacyId}
+                    onChange={(value) => setInitial({ ...initial, pharmacyId: value })}
+                    placeholder="— Pharmacie par défaut —"
+                    options={pharmacies.map((entry) => ({ value: entry.id, label: entry.name }))}
+                  />
+                </Field>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-col gap-2 pt-2 sm:flex-row">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)} className="flex-1">

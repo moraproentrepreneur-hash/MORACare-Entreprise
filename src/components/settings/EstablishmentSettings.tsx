@@ -41,6 +41,7 @@ import {
 import {
   DOCUMENT_KINDS,
   TEMPLATES,
+  documentKindsFor,
   TEMPLATE_IDS,
   buildFooterLines,
   buildHeaderLines,
@@ -742,7 +743,7 @@ export const EstablishmentSettings: React.FC = () => {
             description="Facultatif. Un type sans modèle propre utilise celui de l'établissement."
           >
             <div className="grid gap-4 sm:grid-cols-2">
-              {(Object.keys(DOCUMENT_KINDS) as (keyof typeof DOCUMENT_KINDS)[]).map((kind) => (
+              {documentKindsFor('establishment').map((kind) => (
                 <Field key={kind} label={DOCUMENT_KINDS[kind]} htmlFor={`es-tpl-${kind}`}>
                   <Select
                     id={`es-tpl-${kind}`}

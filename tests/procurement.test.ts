@@ -800,3 +800,148 @@ describe('Identité documentaire de la plateforme (BP28C, BP30)', () => {
     ).rejects.toThrow();
   });
 });
+
+describe('Encaissement et monnaie rendue (BP19 §10, BP22B)', () => {
+  const sell = async (
+    quantity: number,
+    money: { paid: number; tendered: number | null },
+  ): Promise<{ id: string; total: number }> => {
+    const lot = await one<{ id: string }>(
+      `SELECT id FROM public.medication_lots
+        WHERE lot_number = 'LOT-RECEP-1' AND pharmacy_id = $1`,
+      [pharmacy],
+    );
+
+    const head = await one<{ id: string }>(
+      `INSERT INTO public.dispensations
+         (establishment_id, pharmacy_id, patient_id, channel, payment_method,
+          paid_amount, dispensed_by, status)
+       VALUES ($1, $2, $3, 'sale', 'Espèces', 0, $4, 'delivered') RETURNING id`,
+      [establishment, pharmacy, patient, pharmacist],
+    );
+
+    await db.query(
+      `INSERT INTO public.dispensation_lines (dispensation_id, item_id, lot_id, quantity, unit_price)
+       VALUES ($1, $2, $3, $4, 1200)`,
+      [head.id, item, lot.id, quantity],
+    );
+
+    await db.query(
+      `UPDATE public.dispensations SET paid_amount = $2, tendered_amount = $3 WHERE id = $1`,
+      [head.id, money.paid, money.tendered],
+    );
+
+    return { id: head.id, total: quantity * 1200 };
+  };
+
+  it('enregistre le montant remis et permet d’en déduire la monnaie', async () => {
+    // 5 × 1 200 = 6 000 dus, 10 000 donnés : 4 000 à rendre.
+    const sale = await sell(5, { paid: 6000, tendered: 10000 });
+
+    const row = await one<{ total_amount: string; paid_amount: string; tendered_amount: string }>(
+      `SELECT total_amount, paid_amount, tendered_amount FROM public.dispensations WHERE id = $1`,
+      [sale.id],
+    );
+
+    expect(Number(row.total_amount)).toBe(6000);
+    expect(Number(row.paid_amount)).toBe(6000);
+    expect(Number(row.tendered_amount)).toBe(10000);
+    expect(Number(row.tendered_amount) - Number(row.total_amount)).toBe(4000);
+  });
+
+  it('refuse d’encaisser plus que ce qui est dû', async () => {
+    // Au-delà du total, la différence est de la monnaie à rendre, pas une
+    // recette : l'accepter gonflerait le chiffre d'affaires du jour.
+    await expect(sell(2, { paid: 10000, tendered: 10000 })).rejects.toThrow();
+  });
+
+  it('refuse un montant remis inférieur à ce qui est encaissé', async () => {
+    await expect(sell(3, { paid: 3600, tendered: 1000 })).rejects.toThrow();
+  });
+
+  it('accepte un règlement partiel', async () => {
+    const sale = await sell(4, { paid: 2000, tendered: 2000 });
+
+    const row = await one<{ total_amount: string; paid_amount: string }>(
+      `SELECT total_amount, paid_amount FROM public.dispensations WHERE id = $1`,
+      [sale.id],
+    );
+
+    expect(Number(row.total_amount)).toBe(4800);
+    expect(Number(row.paid_amount)).toBe(2000);
+  });
+});
+
+describe('Péremption obligatoire à la création d’un lot (BP19 §14)', () => {
+  it('refuse un lot sans date de péremption', async () => {
+    await expect(
+      db.query(
+        `INSERT INTO public.medication_lots (establishment_id, item_id, lot_number)
+         VALUES ($1, $2, 'SANS-DATE')`,
+        [establishment, item],
+      ),
+    ).rejects.toThrow(/date de péremption est obligatoire/);
+  });
+
+  it('l’accepte lorsque l’établissement ne suit pas les lots', async () => {
+    // Un établissement qui gère des consommables sans péremption ne doit pas
+    // être bloqué sur des produits qui n'en portent pas.
+    await db.query(
+      `UPDATE public.establishments
+          SET module_settings = jsonb_set(module_settings, '{pharmacy,trackLots}', 'false')
+        WHERE id = $1`,
+      [establishment],
+    );
+
+    await expect(
+      db.query(
+        `INSERT INTO public.medication_lots (establishment_id, item_id, lot_number)
+         VALUES ($1, $2, 'CONSOMMABLE')`,
+        [establishment, item],
+      ),
+    ).resolves.toBeTruthy();
+
+    await db.query(
+      `UPDATE public.establishments
+          SET module_settings = jsonb_set(module_settings, '{pharmacy,trackLots}', 'true')
+        WHERE id = $1`,
+      [establishment],
+    );
+  });
+
+  it('refuse tout mouvement sur une pharmacie désactivée', async () => {
+    const closed = await one<{ id: string }>(
+      `INSERT INTO public.pharmacies (establishment_id, name, is_active)
+       VALUES ($1, 'Pharmacie fermée', FALSE) RETURNING id`,
+      [establishment],
+    );
+
+    await expect(
+      db.query(
+        `INSERT INTO public.stock_movements
+           (establishment_id, item_id, pharmacy_id, kind, quantity, reason)
+         VALUES ($1, $2, $3, 'entry', 10, 'Test')`,
+        [establishment, item, closed.id],
+      ),
+    ).rejects.toThrow(/désactivée/);
+  });
+
+  it('ventile le stock par emplacement', async () => {
+    const rows = await queryAsAuthenticated<{
+      pharmacy_name: string;
+      available_quantity: number;
+    }>(
+      db,
+      pharmacist,
+      `SELECT pharmacy_name, available_quantity
+         FROM public.pharmacy_stock_by_location
+        WHERE item_id = $1 ORDER BY pharmacy_name`,
+      [item],
+    );
+
+    // Le lot a été partiellement transféré vers l'armoire de service : les deux
+    // magasins doivent apparaître séparément.
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    expect(rows.map((r) => r.pharmacy_name)).toContain('Armoire Réanimation');
+  });
+});

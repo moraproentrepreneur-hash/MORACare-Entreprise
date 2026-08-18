@@ -226,6 +226,8 @@ export interface Dispensation {
   invoiceId: string | null;
   paymentMethod: string | null;
   paidAmount: number;
+  /** Montant remis par le client. La monnaie rendue en découle. */
+  tenderedAmount: number | null;
   status: string;
   dispensedAt: string;
   dispensedByName: string | null;
@@ -374,15 +376,19 @@ const medicationColumns = (input: MedicationInput) => ({
   issue_rule: input.issueRule,
 });
 
+/** Crée la fiche produit et renvoie son identifiant, pour y rattacher un lot. */
 export const createMedication = async (
   input: MedicationInput,
   ctx: WriteContext,
-): Promise<void> => {
-  const { error } = await getClient()
+): Promise<string> => {
+  const { data, error } = await getClient()
     .from('pharmacy_items')
-    .insert({ ...auditColumns(ctx), ...medicationColumns(input) });
+    .insert({ ...auditColumns(ctx), ...medicationColumns(input) })
+    .select('id')
+    .single();
 
   failIf(error, 'Création du médicament');
+  return data?.id as string;
 };
 
 export const updateMedication = async (
@@ -496,6 +502,9 @@ export const listPharmacies = async (): Promise<Pharmacy[]> => {
 
 export interface PharmacyInput {
   name: string;
+  phone?: string;
+  openingHours?: string;
+  notes?: string;
   locationId?: string | null;
   isServiceCabinet: boolean;
   service?: string | null;
@@ -517,6 +526,9 @@ export const createPharmacy = async (
       service: input.service || null,
       supplied_by: input.suppliedBy || null,
       is_default: input.isDefault,
+      phone: input.phone?.trim() || null,
+      opening_hours: input.openingHours?.trim() || null,
+      notes: input.notes?.trim() || null,
     });
 
   failIf(error, 'Création de la pharmacie');
@@ -910,6 +922,8 @@ export interface DispensationInput {
   customerName?: string | null;
   paymentMethod?: string | null;
   paidAmount?: number;
+  /** Montant remis par le client ; la monnaie rendue s'en déduit. */
+  tenderedAmount?: number;
   notes?: string;
   lines: {
     itemId: string;
@@ -946,7 +960,14 @@ export const recordDispensation = async (
       therapeutic_plan_id: input.therapeuticPlanId ?? null,
       customer_name: input.customerName?.trim() || null,
       payment_method: input.paymentMethod ?? null,
-      paid_amount: input.paidAmount ?? 0,
+      /*
+       * Le règlement est porté après les lignes.
+       *
+       * Le total naît des lignes, que la base cumule au fur et à mesure : à cet
+       * instant il vaut encore zéro, et inscrire ici un montant encaissé le
+       * rendrait supérieur au total — ce que la base refuse, à juste titre.
+       */
+      paid_amount: 0,
       status: 'delivered',
       dispensed_by: ctx.userId,
       notes: input.notes?.trim() || null,
@@ -971,6 +992,28 @@ export const recordDispensation = async (
   if (linesError) {
     await client.from('dispensations').delete().eq('id', dispensationId);
     failIf(linesError, 'Enregistrement des lignes de délivrance');
+  }
+
+  /*
+   * Règlement, maintenant que le total est connu.
+   *
+   * On n'encaisse jamais plus que ce qui est dû : au-delà, la différence est de
+   * la monnaie à rendre, pas une recette. La borne est aussi posée en base,
+   * pour que ce soit vrai quelle que soit la voie d'écriture.
+   */
+  if (input.paidAmount || input.tenderedAmount) {
+    const total = input.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
+    const tendered = input.tenderedAmount ?? input.paidAmount ?? 0;
+
+    const { error: paymentError } = await client
+      .from('dispensations')
+      .update({
+        paid_amount: Math.min(input.paidAmount ?? tendered, total),
+        tendered_amount: tendered > 0 ? tendered : null,
+      })
+      .eq('id', dispensationId);
+
+    failIf(paymentError, 'Enregistrement du règlement');
   }
 
   // Une prescription entièrement servie change d'état (BP19 §19).
@@ -1003,6 +1046,7 @@ export interface SaleInput {
   customerName: string | null;
   paymentMethod: string;
   paidAmount: number;
+  tenderedAmount: number;
   notes?: string;
   lines: {
     itemId: string;
@@ -1033,6 +1077,7 @@ export const recordSale = async (input: SaleInput, ctx: WriteContext): Promise<S
       customerName: input.customerName,
       paymentMethod: input.paymentMethod,
       paidAmount: input.paidAmount,
+      tenderedAmount: input.tenderedAmount,
       notes: input.notes,
       lines: input.lines,
     },
@@ -1160,6 +1205,7 @@ export const listDispensations = async (limit = 100): Promise<Dispensation[]> =>
       invoiceId: row.invoice_id,
       paymentMethod: row.payment_method,
       paidAmount: Number(row.paid_amount ?? 0),
+      tenderedAmount: row.tendered_amount === null ? null : Number(row.tendered_amount),
       status: row.status,
       dispensedAt: row.dispensed_at,
       dispensedByName: joined.dispenser ? fullName(joined.dispenser) : null,
@@ -1448,5 +1494,147 @@ export const listPharmacyItems = async (): Promise<PharmacyItem[]> => {
     reorder_level: row.reorder_level ?? 0,
     is_active: row.is_active ?? true,
     created_at: row.created_at,
+  }));
+};
+
+// ---------------------------------------------------------------------------
+// Administration des pharmacies et des emplacements (BP18 §5-§7, BP19 §4)
+// ---------------------------------------------------------------------------
+
+export const updatePharmacy = async (
+  id: string,
+  input: PharmacyInput,
+  userId: string,
+): Promise<void> => {
+  const { error } = await getClient()
+    .from('pharmacies')
+    .update({
+      name: input.name.trim(),
+      location_id: input.locationId || null,
+      is_service_cabinet: input.isServiceCabinet,
+      service: input.service || null,
+      supplied_by: input.suppliedBy || null,
+      is_default: input.isDefault,
+      phone: input.phone?.trim() || null,
+      opening_hours: input.openingHours?.trim() || null,
+      notes: input.notes?.trim() || null,
+      updated_by: userId,
+    })
+    .eq('id', id);
+
+  failIf(error, 'Mise à jour de la pharmacie');
+};
+
+/**
+ * Ouvre ou ferme une pharmacie.
+ *
+ * Une pharmacie fermée disparaît des listes **et** refuse tout mouvement : la
+ * base y veille, de sorte qu'un écran resté ouvert ne puisse pas y enregistrer
+ * une sortie après coup.
+ */
+export const setPharmacyActive = async (
+  id: string,
+  isActive: boolean,
+  userId: string,
+): Promise<void> => {
+  const client = getClient();
+
+  if (!isActive) {
+    // Fermer un magasin dont les rayons ne sont pas vides ferait disparaître du
+    // stock réellement présent : il faut d'abord le transférer.
+    const { data: remaining } = await client
+      .from('medication_lots')
+      .select('id')
+      .eq('pharmacy_id', id)
+      .gt('quantity', 0)
+      .is('deleted_at', null)
+      .limit(1);
+
+    if ((remaining ?? []).length > 0) {
+      throw new Error(
+        'Cette pharmacie détient encore du stock. Transférez-le vers un autre magasin avant de la fermer.',
+      );
+    }
+  }
+
+  const { error } = await client
+    .from('pharmacies')
+    .update({ is_active: isActive, updated_by: userId })
+    .eq('id', id);
+
+  failIf(error, isActive ? 'Réouverture de la pharmacie' : 'Fermeture de la pharmacie');
+};
+
+export const updateLocation = async (
+  id: string,
+  input: { code: string; name: string; capacity?: number | null; notes?: string },
+  userId: string,
+): Promise<void> => {
+  const { error } = await getClient()
+    .from('stock_locations')
+    .update({
+      code: input.code.trim(),
+      name: input.name.trim(),
+      capacity: input.capacity ?? null,
+      notes: input.notes?.trim() || null,
+      updated_by: userId,
+    })
+    .eq('id', id);
+
+  failIf(error, "Mise à jour de l'emplacement");
+};
+
+export const setLocationActive = async (
+  id: string,
+  isActive: boolean,
+  userId: string,
+): Promise<void> => {
+  const { error } = await getClient()
+    .from('stock_locations')
+    .update({ is_active: isActive, updated_by: userId })
+    .eq('id', id);
+
+  failIf(error, "Mise à jour de l'emplacement");
+};
+
+/** Ventilation du stock par pharmacie et par emplacement (BP18 §7). */
+export interface StockByLocation {
+  itemId: string;
+  itemName: string;
+  unit: string;
+  pharmacyId: string | null;
+  pharmacyName: string | null;
+  isServiceCabinet: boolean;
+  locationId: string | null;
+  locationName: string | null;
+  locationCode: string | null;
+  lotCount: number;
+  availableQuantity: number;
+  totalQuantity: number;
+  nextExpiry: string | null;
+}
+
+export const loadStockByLocation = async (): Promise<StockByLocation[]> => {
+  const { data, error } = await getClient()
+    .from('pharmacy_stock_by_location')
+    .select('*')
+    .order('item_name');
+
+  failIf(error, 'Chargement du stock par emplacement');
+
+  return (data ?? []).map((row) => ({
+    itemId: row.item_id as string,
+    itemName: row.item_name as string,
+    unit: (row.unit as string) ?? 'Unité',
+    pharmacyId: row.pharmacy_id as string | null,
+    pharmacyName: row.pharmacy_name as string | null,
+    isServiceCabinet: (row.is_service_cabinet as boolean) ?? false,
+    locationId: row.location_id as string | null,
+    locationName: row.location_name as string | null,
+    locationCode: row.location_code as string | null,
+    lotCount: Number(row.lot_count ?? 0),
+    availableQuantity: Number(row.available_quantity ?? 0),
+    totalQuantity: Number(row.total_quantity ?? 0),
+    nextExpiry: row.next_expiry as string | null,
   }));
 };

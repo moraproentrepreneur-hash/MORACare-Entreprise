@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Building, MapPin, Plus, Truck } from 'lucide-react';
+import { Building, MapPin, Pencil, Plus, Power, PowerOff, Truck } from 'lucide-react';
+import { ActionMenu } from '@/components/ui/ActionMenu';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
@@ -10,9 +11,12 @@ import {
   SUPPLIER_TYPES,
   createLocation,
   createPharmacy,
+  setPharmacyActive,
+  updatePharmacy,
   createSupplier,
   type LocationLevel,
   type Pharmacy,
+  type StockByLocation,
   type StockLocation,
   type Supplier,
 } from '@/services/pharmacy.service';
@@ -34,13 +38,24 @@ const LEVELS: LocationLevel[] = ['site', 'warehouse', 'zone', 'aisle', 'shelf', 
 export const OrganisationPanel: React.FC<{
   pharmacies: readonly Pharmacy[];
   locations: readonly StockLocation[];
+  stockByLocation: readonly StockByLocation[];
   suppliers: readonly Supplier[];
   hospitalizationSettings: HospitalizationSettings;
   canManage: boolean;
   ctx: WriteContext | null;
   onChanged: () => Promise<void>;
-}> = ({ pharmacies, locations, suppliers, hospitalizationSettings, canManage, ctx, onChanged }) => {
+}> = ({
+  pharmacies,
+  locations,
+  stockByLocation,
+  suppliers,
+  hospitalizationSettings,
+  canManage,
+  ctx,
+  onChanged,
+}) => {
   const [dialog, setDialog] = useState<'pharmacy' | 'location' | 'supplier' | null>(null);
+  const [editingPharmacy, setEditingPharmacy] = useState<Pharmacy | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const run = async (task: () => Promise<void>) => {
@@ -49,6 +64,7 @@ export const OrganisationPanel: React.FC<{
       await task();
       await onChanged();
       setDialog(null);
+      setEditingPharmacy(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "L'opération a échoué.");
     }
@@ -84,22 +100,54 @@ export const OrganisationPanel: React.FC<{
           />
         ) : (
           <ul className="divide-y divide-slate-800">
-            {pharmacies.map((entry) => (
-              <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 p-4">
-                <div className="min-w-0">
-                  <p className="flex flex-wrap items-center gap-2 text-xs font-bold text-white">
-                    {entry.name}
-                    {entry.isDefault && <Badge label="Par défaut" tone="good" />}
-                    {entry.isServiceCabinet && <Badge label="Armoire de service" tone="info" />}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-slate-500">
-                    {entry.reference}
-                    {entry.service && ` · ${entry.service}`}
-                    {entry.locationName && ` · ${entry.locationName}`}
-                  </p>
-                </div>
-              </li>
-            ))}
+            {pharmacies.map((entry) => {
+              // Quantité réellement détenue : c'est elle qui interdit la
+              // fermeture d'un magasin dont les rayons ne sont pas vides.
+              const held = stockByLocation
+                .filter((line) => line.pharmacyId === entry.id)
+                .reduce((sum, line) => sum + line.availableQuantity, 0);
+
+              return (
+                <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 p-4">
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-2 text-xs font-bold text-white">
+                      {entry.name}
+                      {entry.isDefault && <Badge label="Par défaut" tone="good" />}
+                      {entry.isServiceCabinet && <Badge label="Armoire de service" tone="info" />}
+                      {!entry.isActive && <Badge label="Fermée" tone="bad" />}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      {entry.reference}
+                      {entry.service && ` · ${entry.service}`}
+                      {entry.locationName && ` · ${entry.locationName}`}
+                      {` · ${held} unité(s) en stock`}
+                    </p>
+                  </div>
+
+                  <ActionMenu
+                    label={`Actions pour ${entry.name}`}
+                    items={[
+                      {
+                        label: 'Modifier',
+                        icon: Pencil,
+                        disabled: !canManage,
+                        onSelect: () => setEditingPharmacy(entry),
+                      },
+                      {
+                        label: entry.isActive ? 'Fermer la pharmacie' : 'Rouvrir la pharmacie',
+                        icon: entry.isActive ? PowerOff : Power,
+                        destructive: entry.isActive,
+                        disabled: !canManage || entry.isDefault,
+                        onSelect: () =>
+                          void run(() =>
+                            setPharmacyActive(entry.id, !entry.isActive, ctx?.userId ?? ''),
+                          ),
+                      },
+                    ]}
+                  />
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
@@ -189,6 +237,20 @@ export const OrganisationPanel: React.FC<{
         )}
       </section>
 
+      {editingPharmacy && (
+        <PharmacyForm
+          pharmacies={pharmacies}
+          locations={locations}
+          services={hospitalizationSettings.admissionServices}
+          hasDefault={pharmacies.some((entry) => entry.isDefault && entry.id !== editingPharmacy.id)}
+          existing={editingPharmacy}
+          onCancel={() => setEditingPharmacy(null)}
+          onSubmit={(input) =>
+            run(() => updatePharmacy(editingPharmacy.id, input, ctx?.userId ?? ''))
+          }
+        />
+      )}
+
       {dialog === 'pharmacy' && (
         <PharmacyForm
           pharmacies={pharmacies}
@@ -225,6 +287,8 @@ const PharmacyForm: React.FC<{
   locations: readonly StockLocation[];
   services: readonly string[];
   hasDefault: boolean;
+  /** Pharmacie à modifier ; absente, le formulaire en crée une. */
+  existing?: Pharmacy;
   onCancel: () => void;
   onSubmit: (input: {
     name: string;
@@ -234,14 +298,14 @@ const PharmacyForm: React.FC<{
     suppliedBy: string | null;
     isDefault: boolean;
   }) => Promise<void>;
-}> = ({ pharmacies, locations, services, hasDefault, onCancel, onSubmit }) => {
+}> = ({ pharmacies, locations, services, hasDefault, existing, onCancel, onSubmit }) => {
   const [form, setForm] = useState({
-    name: '',
-    locationId: '',
-    isServiceCabinet: false,
-    service: '',
-    suppliedBy: '',
-    isDefault: !hasDefault,
+    name: existing?.name ?? '',
+    locationId: existing?.locationId ?? '',
+    isServiceCabinet: existing?.isServiceCabinet ?? false,
+    service: existing?.service ?? '',
+    suppliedBy: existing?.suppliedBy ?? '',
+    isDefault: existing?.isDefault ?? !hasDefault,
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -266,7 +330,7 @@ const PharmacyForm: React.FC<{
   );
 
   return (
-    <Modal isOpen onClose={onCancel} title="Nouvelle pharmacie">
+    <Modal isOpen onClose={onCancel} title={existing ? `Pharmacie ${existing.name}` : 'Nouvelle pharmacie'}>
       <form onSubmit={submit} className="space-y-4">
         <Field label="Nom *" htmlFor="pharmacy-name">
           <input
@@ -354,7 +418,7 @@ const PharmacyForm: React.FC<{
             Annuler
           </Button>
           <Button type="submit" variant="secondary" isLoading={isSaving} className="flex-1 font-bold">
-            Créer
+            {existing ? 'Enregistrer' : 'Créer'}
           </Button>
         </div>
       </form>

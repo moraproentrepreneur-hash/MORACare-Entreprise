@@ -174,6 +174,18 @@ export type WardRoundAdministrationRow = Row<'ward_round_administrations'>;
 export type BedAvailabilityRow = Database['public']['Views']['bed_availability']['Row'];
 export type PharmacyStockStateRow =
   Database['public']['Views']['pharmacy_stock_state']['Row'];
+export type PharmacyStockByLocationRow =
+  Database['public']['Views']['pharmacy_stock_by_location']['Row'];
+export type PatientActiveAlertsRow =
+  Database['public']['Views']['patient_active_alerts']['Row'];
+
+// --- Dossier patient, rendez-vous et consultations (BP13, BP14, BP15) ---
+export type PatientContactRow = Row<'patient_contacts'>;
+export type PatientInsuranceRow = Row<'patient_insurances'>;
+export type PatientAlertRow = Row<'patient_alerts'>;
+export type AppointmentEventRow = Row<'appointment_events'>;
+export type ConsultationDiagnosisRow = Row<'consultation_diagnoses'>;
+export type MedicalCertificateRow = Row<'medical_certificates'>;
 
 /** Motif d'un code de vérification à six chiffres. */
 export type VerificationPurpose =

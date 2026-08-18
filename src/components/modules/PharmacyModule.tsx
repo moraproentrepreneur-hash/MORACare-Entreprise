@@ -36,6 +36,7 @@ import {
   listPharmacies,
   listPrescriptionsForPharmacy,
   listSuppliers,
+  loadStockByLocation,
   loadStockState,
   type Dispensation,
   type Inventory,
@@ -45,6 +46,7 @@ import {
   type MovementKind,
   type PendingPrescription,
   type Pharmacy,
+  type StockByLocation,
   type StockLocation,
   type StockState,
   type Supplier,
@@ -132,6 +134,7 @@ export const PharmacyModule: React.FC = () => {
   const [inventories, setInventories] = useState<Inventory[]>([]);
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [locations, setLocations] = useState<StockLocation[]>([]);
+  const [stockByLocation, setStockByLocation] = useState<StockByLocation[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -189,6 +192,7 @@ export const PharmacyModule: React.FC = () => {
           loadedPrescriptions,
           loadedInventories,
           loadedLocations,
+          loadedByLocation,
           loadedSuppliers,
           loadedMethods,
         ] = await Promise.all([
@@ -196,6 +200,7 @@ export const PharmacyModule: React.FC = () => {
           listPrescriptionsForPharmacy(),
           listInventories(),
           listLocations(),
+          loadStockByLocation(),
           listSuppliers(),
           listPaymentMethods(),
         ]);
@@ -204,6 +209,7 @@ export const PharmacyModule: React.FC = () => {
         setPrescriptions(loadedPrescriptions);
         setInventories(loadedInventories);
         setLocations(loadedLocations);
+        setStockByLocation(loadedByLocation);
         setSuppliers(loadedSuppliers);
         setPaymentMethods(loadedMethods.map((method) => method.label));
       }
@@ -441,6 +447,7 @@ export const PharmacyModule: React.FC = () => {
             <CataloguePanel
               stock={stock}
               medications={medications}
+              pharmacies={pharmacies}
               settings={settings}
               currency={currency}
               canManage={canManage}
@@ -549,6 +556,7 @@ export const PharmacyModule: React.FC = () => {
             <OrganisationPanel
               pharmacies={pharmacies}
               locations={locations}
+              stockByLocation={stockByLocation}
               suppliers={suppliers}
               hospitalizationSettings={hospitalizationSettings}
               canManage={canManage}
